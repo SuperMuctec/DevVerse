@@ -3,9 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { X, Plus, Trash2, Zap, Clock } from 'lucide-react';
+import { X, Plus, Trash2, Zap, Clock, Sparkles } from 'lucide-react';
 import { GlassPanel } from '../ui/GlassPanel';
 import { CreateBattleData } from '../../types';
+import { toast } from 'react-hot-toast';
 
 const battleSchema = z.object({
   title: z.string().min(1, 'Title is required').max(100, 'Title must be less than 100 characters'),
@@ -30,12 +31,170 @@ interface CreateBattleModalProps {
   onSubmit: (data: CreateBattleData) => void;
 }
 
+// AI Challenge Generator
+const generateAIChallenge = (difficulty: 'easy' | 'medium' | 'hard') => {
+  const challenges = {
+    easy: [
+      {
+        title: "Two Sum",
+        description: "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.",
+        examples: [
+          {
+            input: "nums = [2,7,11,15], target = 9",
+            output: "[0,1]",
+            explanation: "Because nums[0] + nums[1] == 9, we return [0, 1]."
+          }
+        ],
+        constraints: [
+          "2 <= nums.length <= 10^4",
+          "-10^9 <= nums[i] <= 10^9",
+          "Only one valid answer exists."
+        ]
+      },
+      {
+        title: "Palindrome Number",
+        description: "Given an integer x, return true if x is a palindrome, and false otherwise.",
+        examples: [
+          {
+            input: "x = 121",
+            output: "true",
+            explanation: "121 reads as 121 from left to right and from right to left."
+          }
+        ],
+        constraints: [
+          "-2^31 <= x <= 2^31 - 1"
+        ]
+      },
+      {
+        title: "Valid Parentheses",
+        description: "Given a string s containing just the characters '(', ')', '{', '}', '[' and ']', determine if the input string is valid.",
+        examples: [
+          {
+            input: "s = \"()\"",
+            output: "true"
+          },
+          {
+            input: "s = \"()[]{}\"",
+            output: "true"
+          }
+        ],
+        constraints: [
+          "1 <= s.length <= 10^4",
+          "s consists of parentheses only '()[]{}'."
+        ]
+      }
+    ],
+    medium: [
+      {
+        title: "Longest Substring Without Repeating Characters",
+        description: "Given a string s, find the length of the longest substring without repeating characters.",
+        examples: [
+          {
+            input: "s = \"abcabcbb\"",
+            output: "3",
+            explanation: "The answer is \"abc\", with the length of 3."
+          }
+        ],
+        constraints: [
+          "0 <= s.length <= 5 * 10^4",
+          "s consists of English letters, digits, symbols and spaces."
+        ]
+      },
+      {
+        title: "Add Two Numbers",
+        description: "You are given two non-empty linked lists representing two non-negative integers. Add the two numbers and return the sum as a linked list.",
+        examples: [
+          {
+            input: "l1 = [2,4,3], l2 = [5,6,4]",
+            output: "[7,0,8]",
+            explanation: "342 + 465 = 807."
+          }
+        ],
+        constraints: [
+          "The number of nodes in each linked list is in the range [1, 100].",
+          "0 <= Node.val <= 9"
+        ]
+      },
+      {
+        title: "Container With Most Water",
+        description: "Given n non-negative integers representing an elevation map, find two lines that together with the x-axis form a container that holds the most water.",
+        examples: [
+          {
+            input: "height = [1,8,6,2,5,4,8,3,7]",
+            output: "49",
+            explanation: "The maximum area of water the container can store is 49."
+          }
+        ],
+        constraints: [
+          "n >= 2",
+          "0 <= height[i] <= 3 * 10^4"
+        ]
+      }
+    ],
+    hard: [
+      {
+        title: "Median of Two Sorted Arrays",
+        description: "Given two sorted arrays nums1 and nums2 of size m and n respectively, return the median of the two sorted arrays.",
+        examples: [
+          {
+            input: "nums1 = [1,3], nums2 = [2]",
+            output: "2.00000",
+            explanation: "merged array = [1,2,3] and median is 2."
+          }
+        ],
+        constraints: [
+          "nums1.length == m",
+          "nums2.length == n",
+          "0 <= m <= 1000",
+          "The overall run time complexity should be O(log (m+n))."
+        ]
+      },
+      {
+        title: "Regular Expression Matching",
+        description: "Given an input string s and a pattern p, implement regular expression matching with support for '.' and '*'.",
+        examples: [
+          {
+            input: "s = \"aa\", p = \"a*\"",
+            output: "true",
+            explanation: "'*' means zero or more of the preceding element, 'a'."
+          }
+        ],
+        constraints: [
+          "1 <= s.length <= 20",
+          "1 <= p.length <= 30",
+          "s contains only lowercase English letters."
+        ]
+      },
+      {
+        title: "Merge k Sorted Lists",
+        description: "You are given an array of k linked-lists lists, each linked-list is sorted in ascending order. Merge all the linked-lists into one sorted linked-list and return it.",
+        examples: [
+          {
+            input: "lists = [[1,4,5],[1,3,4],[2,6]]",
+            output: "[1,1,2,3,4,4,5,6]",
+            explanation: "The linked-lists are merged into one sorted list."
+          }
+        ],
+        constraints: [
+          "k == lists.length",
+          "0 <= k <= 10^4",
+          "0 <= lists[i].length <= 500"
+        ]
+      }
+    ]
+  };
+
+  const difficultyPool = challenges[difficulty];
+  return difficultyPool[Math.floor(Math.random() * difficultyPool.length)];
+};
+
 export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
   isOpen,
   onClose,
   onSubmit,
 }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const {
     register,
@@ -44,11 +203,12 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
     reset,
     control,
     watch,
+    setValue,
   } = useForm<BattleFormData>({
     resolver: zodResolver(battleSchema),
     defaultValues: {
       difficulty: 'easy',
-      timeLimit: 30,
+      timeLimit: 5,
       examples: [{ input: '', output: '', explanation: '' }],
       constraints: [''],
     },
@@ -66,6 +226,16 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
 
   const difficulty = watch('difficulty');
 
+  // Set time limits based on difficulty
+  React.useEffect(() => {
+    const timeLimits = {
+      easy: 5,
+      medium: 10,
+      hard: 20
+    };
+    setValue('timeLimit', timeLimits[difficulty]);
+  }, [difficulty, setValue]);
+
   const handleFormSubmit = async (data: BattleFormData) => {
     setIsLoading(true);
     try {
@@ -74,6 +244,27 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
       onClose();
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const generateChallenge = async () => {
+    setIsGenerating(true);
+    try {
+      // Simulate AI generation delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      const challenge = generateAIChallenge(difficulty);
+      
+      setValue('problemTitle', challenge.title);
+      setValue('problemDescription', challenge.description);
+      setValue('examples', challenge.examples);
+      setValue('constraints', challenge.constraints);
+      setValue('title', `${challenge.title} Challenge`);
+      setValue('description', `AI-generated ${difficulty} level challenge: ${challenge.title}`);
+      
+      toast.success('🤖 AI Challenge Generated!');
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -86,6 +277,15 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
     }
   };
 
+  const getTimeRange = (diff: string) => {
+    switch (diff) {
+      case 'easy': return '5 minutes';
+      case 'medium': return '10 minutes';
+      case 'hard': return '20-30 minutes';
+      default: return '';
+    }
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -93,7 +293,7 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4 overflow-y-auto"
           onClick={onClose}
         >
           <motion.div
@@ -102,7 +302,7 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
             exit={{ opacity: 0, scale: 0.9, rotateY: 15 }}
             transition={{ type: "spring", duration: 0.5 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-4xl my-8"
+            className="w-full max-w-4xl my-8 max-h-[90vh] overflow-y-auto"
           >
             <GlassPanel glowColor="#ff00ff">
               <div className="flex items-center justify-between mb-6">
@@ -117,6 +317,32 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
                 >
                   <X className="w-5 h-5 text-white/70" />
                 </motion.button>
+              </div>
+
+              {/* AI Challenge Generator */}
+              <div className="mb-6 p-4 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-lg border border-purple-500/30">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-2">
+                    <Sparkles className="w-5 h-5 text-purple-400" />
+                    <h3 className="font-orbitron text-lg font-bold text-purple-400">
+                      AI Challenge Generator
+                    </h3>
+                  </div>
+                  <motion.button
+                    onClick={generateChallenge}
+                    disabled={isGenerating}
+                    className="flex items-center space-x-2 bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-2 rounded-lg font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span>{isGenerating ? 'Generating...' : 'Generate Challenge'}</span>
+                  </motion.button>
+                </div>
+                <p className="text-white/70 text-sm">
+                  Let AI create a coding challenge based on your selected difficulty level. 
+                  Time limit will be automatically set: {getTimeRange(difficulty)}
+                </p>
               </div>
 
               <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
@@ -198,9 +424,14 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
                           className="hidden"
                         />
                         <Zap className="w-4 h-4" style={{ color: getDifficultyColor(diff) }} />
-                        <span className="capitalize font-semibold" style={{ color: getDifficultyColor(diff) }}>
-                          {diff}
-                        </span>
+                        <div>
+                          <span className="capitalize font-semibold" style={{ color: getDifficultyColor(diff) }}>
+                            {diff}
+                          </span>
+                          <div className="text-xs text-white/60">
+                            {getTimeRange(diff)}
+                          </div>
+                        </div>
                       </motion.label>
                     ))}
                   </div>

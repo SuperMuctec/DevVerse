@@ -78,7 +78,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
           onClick={onClose}
         >
           <motion.div
@@ -87,7 +87,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
             exit={{ opacity: 0, scale: 0.9, rotateX: 15 }}
             transition={{ type: "spring", duration: 0.5 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-2xl"
+            className="w-full max-w-2xl max-h-[90vh] overflow-y-auto"
           >
             <GlassPanel glowColor="#00ffff">
               <div className="flex items-center justify-between mb-6">

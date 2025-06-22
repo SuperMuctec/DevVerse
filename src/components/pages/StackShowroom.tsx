@@ -8,6 +8,8 @@ export const StackShowroom: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [sortBy, setSortBy] = useState('popular');
+  const [displayedPlanets, setDisplayedPlanets] = useState(6);
+  const [isLoading, setIsLoading] = useState(false);
 
   const filters = [
     { id: 'all', label: 'All Planets' },
@@ -31,6 +33,29 @@ export const StackShowroom: React.FC = () => {
     likes: Math.floor(Math.random() * 1000) + 100,
     views: Math.floor(Math.random() * 5000) + 500,
   }));
+
+  // Create more planets for demonstration
+  const allPlanets = [
+    ...featuredPlanets,
+    ...Array.from({ length: 20 }, (_, i) => ({
+      ...featuredPlanets[i % featuredPlanets.length],
+      id: `planet-${i + featuredPlanets.length}`,
+      name: `${featuredPlanets[i % featuredPlanets.length].name} ${i + 1}`,
+      owner: `Developer${i + 1}`,
+      likes: Math.floor(Math.random() * 500) + 50,
+      views: Math.floor(Math.random() * 2000) + 200,
+    }))
+  ];
+
+  const loadMorePlanets = async () => {
+    setIsLoading(true);
+    // Simulate loading delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    setDisplayedPlanets(prev => Math.min(prev + 6, allPlanets.length));
+    setIsLoading(false);
+  };
+
+  const hasMorePlanets = displayedPlanets < allPlanets.length;
 
   return (
     <div className="min-h-screen pt-20 px-4">
@@ -195,11 +220,11 @@ export const StackShowroom: React.FC = () => {
         {/* All Planets Grid */}
         <div>
           <h2 className="font-orbitron text-2xl font-bold text-white mb-6">
-            All Planets
+            All Planets ({allPlanets.length})
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {featuredPlanets.map((planet, index) => (
+            {allPlanets.slice(0, displayedPlanets).map((planet, index) => (
               <motion.div
                 key={planet.id}
                 initial={{ opacity: 0, y: 20 }}
@@ -272,15 +297,26 @@ export const StackShowroom: React.FC = () => {
         </div>
 
         {/* Load More */}
-        <div className="mt-12 text-center">
-          <motion.button
-            className="interactive bg-gradient-to-r from-cyber-blue to-cyber-pink px-8 py-4 rounded-xl font-orbitron font-bold text-lg hover:scale-105 transition-transform duration-300"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            Load More Planets
-          </motion.button>
-        </div>
+        {hasMorePlanets && (
+          <div className="mt-12 text-center">
+            <motion.button
+              onClick={loadMorePlanets}
+              disabled={isLoading}
+              className="interactive bg-gradient-to-r from-cyber-blue to-cyber-pink px-8 py-4 rounded-xl font-orbitron font-bold text-lg hover:scale-105 transition-transform duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              {isLoading ? (
+                <div className="flex items-center space-x-2">
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Loading More Planets...</span>
+                </div>
+              ) : (
+                `Load More Planets (${allPlanets.length - displayedPlanets} remaining)`
+              )}
+            </motion.button>
+          </div>
+        )}
       </div>
     </div>
   );

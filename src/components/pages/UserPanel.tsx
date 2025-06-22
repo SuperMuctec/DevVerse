@@ -24,6 +24,7 @@ import {
 import { GlassPanel } from '../ui/GlassPanel';
 import { useAuth } from '../../contexts/AuthContext';
 import { CreateProjectModal } from '../modals/CreateProjectModal';
+import { ProfilePictureModal } from '../modals/ProfilePictureModal';
 import { Project, CreateProjectData } from '../../types';
 import { toast } from 'react-hot-toast';
 
@@ -51,6 +52,7 @@ export const UserPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'profile' | 'projects' | 'security'>('profile');
   const [isEditing, setIsEditing] = useState(false);
   const [showCreateProject, setShowCreateProject] = useState(false);
+  const [showProfilePicture, setShowProfilePicture] = useState(false);
   const { user, updateUser } = useAuth();
 
   const profileForm = useForm<ProfileFormData>({
@@ -81,16 +83,8 @@ export const UserPanel: React.FC = () => {
     toast.success('Password updated successfully!');
   };
 
-  const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        updateUser({ avatar: e.target?.result as string });
-        toast.success('Avatar updated successfully!');
-      };
-      reader.readAsDataURL(file);
-    }
+  const handleAvatarSave = (croppedImage: string) => {
+    updateUser({ avatar: croppedImage });
   };
 
   const handleCreateProject = (data: CreateProjectData) => {
@@ -155,15 +149,14 @@ export const UserPanel: React.FC = () => {
                     alt="Avatar"
                     className="w-20 h-20 rounded-full border-2 border-cyber-blue"
                   />
-                  <label className="absolute bottom-0 right-0 w-6 h-6 bg-cyber-blue rounded-full flex items-center justify-center cursor-pointer hover:bg-cyber-pink transition-colors">
+                  <motion.button
+                    onClick={() => setShowProfilePicture(true)}
+                    className="absolute bottom-0 right-0 w-6 h-6 bg-cyber-blue rounded-full flex items-center justify-center cursor-pointer hover:bg-cyber-pink transition-colors"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
                     <Camera className="w-3 h-3 text-white" />
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleAvatarChange}
-                      className="hidden"
-                    />
-                  </label>
+                  </motion.button>
                 </div>
                 <h2 className="font-orbitron text-xl font-bold text-white mt-3">
                   {user?.username}
@@ -541,6 +534,13 @@ export const UserPanel: React.FC = () => {
           isOpen={showCreateProject}
           onClose={() => setShowCreateProject(false)}
           onSubmit={handleCreateProject}
+        />
+
+        <ProfilePictureModal
+          isOpen={showProfilePicture}
+          onClose={() => setShowProfilePicture(false)}
+          onSave={handleAvatarSave}
+          currentAvatar={user?.avatar}
         />
       </div>
     </div>
