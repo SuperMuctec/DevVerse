@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Zap, Clock, Trophy, Users, Play, Code, CheckCircle, Plus } from 'lucide-react';
+import { Zap, Clock, Trophy, Play, Code, CheckCircle, Plus } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import { GlassPanel } from '../ui/GlassPanel';
 import { CreateBattleModal } from '../modals/CreateBattleModal';
@@ -36,7 +36,7 @@ const mockBattleProblem: BattleProblem = {
 };
 
 export const CodeArena: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'lobby' | 'battle'>('lobby');
+  const [activeTab, setActiveTab] = useState<'practice' | 'battle'>('practice');
   const [selectedBattle, setSelectedBattle] = useState<CodeBattle | null>(null);
   const [code, setCode] = useState('// Write your solution here\nfunction twoSum(nums, target) {\n    \n}');
   const [language, setLanguage] = useState('javascript');
@@ -44,42 +44,28 @@ export const CodeArena: React.FC = () => {
   const [testResults, setTestResults] = useState<{ passed: number; total: number } | null>(null);
   const [showCreateBattle, setShowCreateBattle] = useState(false);
   const [battles, setBattles] = useState<CodeBattle[]>([]);
+  const [userStats, setUserStats] = useState({
+    totalChallenges: 0,
+    challengesCompleted: 0,
+    averageTime: 0,
+    bestTime: 0,
+    currentStreak: 0
+  });
   const { user } = useAuth();
 
-  const mockBattles: CodeBattle[] = [
-    {
-      id: '1',
-      title: 'Two Sum Showdown',
-      description: 'Classic algorithm challenge - find two numbers that sum to target',
-      difficulty: 'easy',
-      timeLimit: 30,
-      participants: [
-        { userId: '1', username: 'CodeNinja', code: '', language: 'javascript', testsPassed: 0, totalTests: 3 },
-        { userId: '2', username: 'AlgoMaster', code: '', language: 'python', testsPassed: 0, totalTests: 3 }
-      ],
-      status: 'waiting',
-      createdAt: new Date(),
-      problem: mockBattleProblem
-    },
-    {
-      id: '2',
-      title: 'Binary Search Battle',
-      description: 'Implement efficient binary search algorithm',
-      difficulty: 'medium',
-      timeLimit: 45,
-      participants: [
-        { userId: '3', username: 'SearchGuru', code: '', language: 'java', testsPassed: 2, totalTests: 5 }
-      ],
-      status: 'active',
-      createdAt: new Date(),
-      startedAt: new Date(),
-      problem: mockBattleProblem
-    }
-  ];
-
+  // Load user stats from localStorage
   useEffect(() => {
-    setBattles(mockBattles);
-  }, []);
+    const savedStats = localStorage.getItem(`arena_stats_${user?.id}`);
+    if (savedStats) {
+      setUserStats(JSON.parse(savedStats));
+    }
+  }, [user?.id]);
+
+  // Save user stats to localStorage
+  const saveUserStats = (newStats: typeof userStats) => {
+    setUserStats(newStats);
+    localStorage.setItem(`arena_stats_${user?.id}`, JSON.stringify(newStats));
+  };
 
   useEffect(() => {
     if (activeTab === 'battle' && selectedBattle?.status === 'active') {
@@ -107,7 +93,7 @@ export const CodeArena: React.FC = () => {
     };
 
     setBattles(prev => [newBattle, ...prev]);
-    toast.success('Battle created successfully!');
+    toast.success('Challenge created successfully!');
   };
 
   const formatTime = (seconds: number) => {
@@ -133,14 +119,31 @@ export const CodeArena: React.FC = () => {
   };
 
   const submitSolution = () => {
+    const startTime = Date.now();
     runTests();
-    toast.success('Solution submitted successfully!');
+    
+    if (testResults && testResults.passed === testResults.total) {
+      const completionTime = Math.floor((Date.now() - startTime) / 1000);
+      const newStats = {
+        ...userStats,
+        totalChallenges: userStats.totalChallenges + 1,
+        challengesCompleted: userStats.challengesCompleted + 1,
+        averageTime: Math.floor((userStats.averageTime * userStats.challengesCompleted + completionTime) / (userStats.challengesCompleted + 1)),
+        bestTime: userStats.bestTime === 0 ? completionTime : Math.min(userStats.bestTime, completionTime),
+        currentStreak: userStats.currentStreak + 1
+      };
+      saveUserStats(newStats);
+      toast.success('Challenge completed successfully! 🎉');
+    } else {
+      toast.error('Some tests failed. Keep trying!');
+    }
   };
 
-  const joinBattle = (battle: CodeBattle) => {
+  const startChallenge = (battle: CodeBattle) => {
     setSelectedBattle(battle);
     setActiveTab('battle');
-    toast.success(`Joined ${battle.title}!`);
+    setTimeLeft(battle.timeLimit * 60);
+    toast.success(`Started ${battle.title}!`);
   };
 
   if (activeTab === 'battle' && selectedBattle) {
@@ -168,17 +171,13 @@ export const CodeArena: React.FC = () => {
                     <Clock className="w-4 h-4" />
                     <span>{formatTime(timeLeft)}</span>
                   </div>
-                  <div className="flex items-center space-x-1 text-white/70">
-                    <Users className="w-4 h-4" />
-                    <span>{selectedBattle.participants.length} participants</span>
-                  </div>
                 </div>
               </div>
               <button
-                onClick={() => setActiveTab('lobby')}
+                onClick={() => setActiveTab('practice')}
                 className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
               >
-                Back to Lobby
+                Back to Practice
               </button>
             </div>
           </div>
@@ -186,7 +185,7 @@ export const CodeArena: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Problem Description */}
             <GlassPanel glowColor="#00ffff">
-              <div className="h-full overflow-y-auto">
+              <div className="h-full">
                 <h2 className="font-orbitron text-xl font-bold text-cyber-blue mb-4">
                   Problem Statement
                 </h2>
@@ -302,46 +301,6 @@ export const CodeArena: React.FC = () => {
               </div>
             </GlassPanel>
           </div>
-
-          {/* Participants */}
-          <div className="mt-6">
-            <GlassPanel glowColor="#ffff00">
-              <h2 className="font-orbitron text-xl font-bold text-cyber-yellow mb-4">
-                Battle Participants
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {selectedBattle.participants.map((participant) => (
-                  <div
-                    key={participant.userId}
-                    className="bg-white/5 p-4 rounded-lg border border-white/10"
-                  >
-                    <div className="flex items-center space-x-3 mb-2">
-                      <div className="w-8 h-8 bg-gradient-to-r from-cyber-blue to-cyber-pink rounded-full flex items-center justify-center">
-                        <span className="text-white font-bold text-sm">
-                          {participant.username[0].toUpperCase()}
-                        </span>
-                      </div>
-                      <div>
-                        <div className="font-semibold text-white">{participant.username}</div>
-                        <div className="text-xs text-white/60">{participant.language}</div>
-                      </div>
-                    </div>
-                    <div className="text-sm text-white/70">
-                      Tests: {participant.testsPassed}/{participant.totalTests}
-                    </div>
-                    <div className="w-full bg-white/10 rounded-full h-2 mt-2">
-                      <div
-                        className="bg-gradient-to-r from-cyber-green to-cyber-blue h-2 rounded-full transition-all duration-300"
-                        style={{
-                          width: `${(participant.testsPassed / participant.totalTests) * 100}%`
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </GlassPanel>
-          </div>
         </div>
       </div>
     );
@@ -360,7 +319,7 @@ export const CodeArena: React.FC = () => {
             <span className="neon-text text-cyber-pink">Arena</span>
           </h1>
           <p className="font-sora text-xl text-white/70">
-            Battle other developers in real-time coding challenges
+            Practice coding challenges and improve your skills
           </p>
         </motion.div>
 
@@ -369,38 +328,42 @@ export const CodeArena: React.FC = () => {
           <GlassPanel glowColor="#00ffff">
             <div className="text-center">
               <Zap className="w-8 h-8 text-cyber-blue mx-auto mb-2" />
-              <div className="text-2xl font-orbitron font-bold text-cyber-blue">{battles.length}</div>
-              <div className="text-white/70 text-sm">Active Battles</div>
+              <div className="text-2xl font-orbitron font-bold text-cyber-blue">{userStats.challengesCompleted}</div>
+              <div className="text-white/70 text-sm">Completed</div>
             </div>
           </GlassPanel>
           <GlassPanel glowColor="#ff00ff">
             <div className="text-center">
-              <Users className="w-8 h-8 text-cyber-pink mx-auto mb-2" />
-              <div className="text-2xl font-orbitron font-bold text-cyber-pink">1,337</div>
-              <div className="text-white/70 text-sm">Online Warriors</div>
+              <Trophy className="w-8 h-8 text-cyber-pink mx-auto mb-2" />
+              <div className="text-2xl font-orbitron font-bold text-cyber-pink">{userStats.currentStreak}</div>
+              <div className="text-white/70 text-sm">Current Streak</div>
             </div>
           </GlassPanel>
           <GlassPanel glowColor="#ffff00">
             <div className="text-center">
-              <Trophy className="w-8 h-8 text-cyber-yellow mx-auto mb-2" />
-              <div className="text-2xl font-orbitron font-bold text-cyber-yellow">42</div>
-              <div className="text-white/70 text-sm">Your Wins</div>
+              <Clock className="w-8 h-8 text-cyber-yellow mx-auto mb-2" />
+              <div className="text-2xl font-orbitron font-bold text-cyber-yellow">
+                {userStats.averageTime > 0 ? `${Math.floor(userStats.averageTime / 60)}:${(userStats.averageTime % 60).toString().padStart(2, '0')}` : '--:--'}
+              </div>
+              <div className="text-white/70 text-sm">Avg Time</div>
             </div>
           </GlassPanel>
           <GlassPanel glowColor="#00ff00">
             <div className="text-center">
               <Clock className="w-8 h-8 text-cyber-green mx-auto mb-2" />
-              <div className="text-2xl font-orbitron font-bold text-cyber-green">15:30</div>
+              <div className="text-2xl font-orbitron font-bold text-cyber-green">
+                {userStats.bestTime > 0 ? `${Math.floor(userStats.bestTime / 60)}:${(userStats.bestTime % 60).toString().padStart(2, '0')}` : '--:--'}
+              </div>
               <div className="text-white/70 text-sm">Best Time</div>
             </div>
           </GlassPanel>
         </div>
 
-        {/* Battle Lobby */}
+        {/* Practice Challenges */}
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="font-orbitron text-2xl font-bold text-white">
-              Available Battles
+              Practice Challenges
             </h2>
             <motion.button
               onClick={() => setShowCreateBattle(true)}
@@ -409,7 +372,7 @@ export const CodeArena: React.FC = () => {
               whileTap={{ scale: 0.95 }}
             >
               <Plus className="w-4 h-4" />
-              <span>Create Battle</span>
+              <span>Create Challenge</span>
             </motion.button>
           </div>
 
@@ -430,19 +393,18 @@ export const CodeArena: React.FC = () => {
                       <h3 className="font-orbitron text-xl font-bold text-white mb-2">
                         {battle.title}
                       </h3>
-                
                       <p className="text-white/70 text-sm mb-3">
                         {battle.description}
                       </p>
                     </div>
                     <span 
-                      className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        battle.status === 'waiting' ? 'bg-cyber-yellow/20 text-cyber-yellow' :
-                        battle.status === 'active' ? 'bg-cyber-green/20 text-cyber-green' :
-                        'bg-white/20 text-white'
-                      }`}
+                      className="px-2 py-1 rounded-full text-xs font-semibold"
+                      style={{ 
+                        backgroundColor: `${getDifficultyColor(battle.difficulty)}20`,
+                        color: getDifficultyColor(battle.difficulty)
+                      }}
                     >
-                      {battle.status.toUpperCase()}
+                      {battle.difficulty.toUpperCase()}
                     </span>
                   </div>
 
@@ -458,39 +420,15 @@ export const CodeArena: React.FC = () => {
                       <Clock className="w-4 h-4" />
                       <span>{battle.timeLimit}min</span>
                     </div>
-                    <div className="flex items-center space-x-1">
-                      <Users className="w-4 h-4" />
-                      <span>{battle.participants.length}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-2 mb-4">
-                    {battle.participants.slice(0, 3).map((participant, i) => (
-                      <div
-                        key={participant.userId}
-                        className="w-8 h-8 bg-gradient-to-r from-cyber-blue to-cyber-pink rounded-full flex items-center justify-center text-white text-xs font-bold"
-                      >
-                        {participant.username[0].toUpperCase()}
-                      </div>
-                    ))}
-                    {battle.participants.length > 3 && (
-                      <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center text-white text-xs">
-                        +{battle.participants.length - 3}
-                      </div>
-                    )}
                   </div>
 
                   <motion.button
-                    onClick={() => joinBattle(battle)}
-                    className={`w-full py-2 px-4 rounded-lg font-semibold transition-colors ${
-                      battle.status === 'waiting' 
-                        ? 'bg-cyber-blue/20 hover:bg-cyber-blue/30 text-cyber-blue'
-                        : 'bg-cyber-green/20 hover:bg-cyber-green/30 text-cyber-green'
-                    }`}
+                    onClick={() => startChallenge(battle)}
+                    className="w-full py-2 px-4 rounded-lg font-semibold transition-colors bg-cyber-blue/20 hover:bg-cyber-blue/30 text-cyber-blue"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
-                    {battle.status === 'waiting' ? 'Join Battle' : 'Spectate'}
+                    Start Challenge
                   </motion.button>
                 </GlassPanel>
               </motion.div>

@@ -158,7 +158,7 @@ export const ProfilePictureModal: React.FC<ProfilePictureModalProps> = ({
             exit={{ opacity: 0, scale: 0.9, rotateY: 15 }}
             transition={{ type: "spring", duration: 0.5 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+            className="w-full max-w-4xl"
           >
             <GlassPanel glowColor="#00ffff">
               <div className="flex items-center justify-between mb-6">

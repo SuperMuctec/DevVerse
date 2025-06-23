@@ -293,7 +293,7 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4 overflow-y-auto"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
           onClick={onClose}
         >
           <motion.div
@@ -302,12 +302,12 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
             exit={{ opacity: 0, scale: 0.9, rotateY: 15 }}
             transition={{ type: "spring", duration: 0.5 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-4xl my-8 max-h-[90vh] overflow-y-auto"
+            className="w-full max-w-6xl"
           >
             <GlassPanel glowColor="#ff00ff">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="font-orbitron text-2xl font-bold text-cyber-pink">
-                  Create Code Battle
+                  Create AI Challenge
                 </h2>
                 <motion.button
                   onClick={onClose}
@@ -349,7 +349,7 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-white/80 mb-2">
-                      Battle Title
+                      Challenge Title
                     </label>
                     <input
                       {...register('title')}
@@ -384,7 +384,7 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
 
                 <div>
                   <label className="block text-sm font-medium text-white/80 mb-2">
-                    Battle Description
+                    Challenge Description
                   </label>
                   <textarea
                     {...register('description')}
@@ -594,7 +594,7 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
-                    {isLoading ? 'Creating Battle...' : 'Create Battle'}
+                    {isLoading ? 'Creating Challenge...' : 'Create Challenge'}
                   </motion.button>
                 </div>
               </form>
