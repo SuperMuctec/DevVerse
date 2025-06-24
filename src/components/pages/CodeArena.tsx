@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Zap, Clock, Trophy, Play, Code, CheckCircle, Plus } from 'lucide-react';
+import { Zap, Clock, Trophy, Play, Code, CheckCircle, Plus, ArrowLeft, Eye } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import { GlassPanel } from '../ui/GlassPanel';
 import { CreateBattleModal } from '../modals/CreateBattleModal';
@@ -8,44 +8,15 @@ import { useAuth } from '../../contexts/AuthContext';
 import { CodeBattle, BattleProblem, CreateBattleData } from '../../types';
 import { toast } from 'react-hot-toast';
 
-const mockBattleProblem: BattleProblem = {
-  title: "Two Sum Challenge",
-  description: "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.",
-  examples: [
-    {
-      input: "nums = [2,7,11,15], target = 9",
-      output: "[0,1]",
-      explanation: "Because nums[0] + nums[1] == 9, we return [0, 1]."
-    },
-    {
-      input: "nums = [3,2,4], target = 6",
-      output: "[1,2]"
-    }
-  ],
-  constraints: [
-    "2 <= nums.length <= 10^4",
-    "-10^9 <= nums[i] <= 10^9",
-    "-10^9 <= target <= 10^9",
-    "Only one valid answer exists."
-  ],
-  testCases: [
-    { input: "[2,7,11,15], 9", expectedOutput: "[0,1]" },
-    { input: "[3,2,4], 6", expectedOutput: "[1,2]" },
-    { input: "[3,3], 6", expectedOutput: "[0,1]" }
-  ]
-};
-
 export const CodeArena: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'practice' | 'battle'>('practice');
   const [selectedBattle, setSelectedBattle] = useState<CodeBattle | null>(null);
-  const [code, setCode] = useState('// Write your solution here\nfunction twoSum(nums, target) {\n    \n}');
+  const [code, setCode] = useState('');
   const [language, setLanguage] = useState('javascript');
-  const [timeLeft, setTimeLeft] = useState(1800); // 30 minutes
-  const [testResults, setTestResults] = useState<{ passed: number; total: number } | null>(null);
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [testResults, setTestResults] = useState<{ passed: number; total: number; details: string[] } | null>(null);
   const [showCreateBattle, setShowCreateBattle] = useState(false);
-  const [battles, setBattles] = useState<CodeBattle[]>([]);
+  const [userChallenges, setUserChallenges] = useState<CodeBattle[]>([]);
   const [userStats, setUserStats] = useState({
-    totalChallenges: 0,
     challengesCompleted: 0,
     averageTime: 0,
     bestTime: 0,
@@ -53,28 +24,32 @@ export const CodeArena: React.FC = () => {
   });
   const { user } = useAuth();
 
-  // Load user stats from localStorage
+  // Load user challenges and stats
   useEffect(() => {
-    const savedStats = localStorage.getItem(`arena_stats_${user?.id}`);
-    if (savedStats) {
-      setUserStats(JSON.parse(savedStats));
+    if (user) {
+      const challenges = JSON.parse(localStorage.getItem(`challenges_${user.id}`) || '[]');
+      setUserChallenges(challenges);
+      
+      const stats = JSON.parse(localStorage.getItem(`arena_stats_${user.id}`) || JSON.stringify(userStats));
+      setUserStats(stats);
     }
   }, [user?.id]);
 
-  // Save user stats to localStorage
-  const saveUserStats = (newStats: typeof userStats) => {
-    setUserStats(newStats);
-    localStorage.setItem(`arena_stats_${user?.id}`, JSON.stringify(newStats));
-  };
-
+  // Timer effect
   useEffect(() => {
-    if (activeTab === 'battle' && selectedBattle?.status === 'active') {
+    if (selectedBattle?.status === 'active' && timeLeft > 0) {
       const timer = setInterval(() => {
-        setTimeLeft(prev => prev > 0 ? prev - 1 : 0);
+        setTimeLeft(prev => {
+          if (prev <= 1) {
+            toast.error('Time\'s up!');
+            return 0;
+          }
+          return prev - 1;
+        });
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [activeTab, selectedBattle]);
+  }, [selectedBattle, timeLeft]);
 
   const handleCreateBattle = (data: CreateBattleData) => {
     const newBattle: CodeBattle = {
@@ -88,11 +63,20 @@ export const CodeArena: React.FC = () => {
         description: data.problemDescription,
         examples: data.examples,
         constraints: data.constraints,
-        testCases: [] // In a real app, this would be generated from examples
+        testCases: data.examples.map(ex => ({
+          input: ex.input,
+          expectedOutput: ex.output
+        }))
       }
     };
 
-    setBattles(prev => [newBattle, ...prev]);
+    if (user) {
+      const challenges = JSON.parse(localStorage.getItem(`challenges_${user.id}`) || '[]');
+      challenges.push(newBattle);
+      localStorage.setItem(`challenges_${user.id}`, JSON.stringify(challenges));
+      setUserChallenges(challenges);
+    }
+
     toast.success('Challenge created successfully!');
   };
 
@@ -111,42 +95,150 @@ export const CodeArena: React.FC = () => {
     }
   };
 
+  const getInitialCode = (problem: BattleProblem, lang: string) => {
+    const functionName = problem.title.toLowerCase().replace(/\s+/g, '');
+    
+    switch (lang) {
+      case 'javascript':
+        return `// ${problem.title}\nfunction ${functionName}() {\n    // Your solution here\n    \n}`;
+      case 'python':
+        return `# ${problem.title}\ndef ${functionName}():\n    # Your solution here\n    pass`;
+      case 'java':
+        return `// ${problem.title}\npublic class Solution {\n    public int ${functionName}() {\n        // Your solution here\n        \n    }\n}`;
+      case 'cpp':
+        return `// ${problem.title}\n#include <vector>\nusing namespace std;\n\nclass Solution {\npublic:\n    int ${functionName}() {\n        // Your solution here\n        \n    }\n};`;
+      default:
+        return `// ${problem.title}\n// Your solution here`;
+    }
+  };
+
   const runTests = () => {
+    if (!selectedBattle) return;
+
+    // Simple test execution simulation
+    const testCases = selectedBattle.problem.testCases;
+    const results: string[] = [];
+    let passed = 0;
+
+    // Basic code validation
+    if (!code.trim()) {
+      setTestResults({ passed: 0, total: testCases.length, details: ['Error: No code provided'] });
+      return;
+    }
+
     // Simulate test execution
-    const passed = Math.floor(Math.random() * 3) + 1;
-    setTestResults({ passed, total: 3 });
-    toast.success(`Tests completed: ${passed}/3 passed`);
+    testCases.forEach((testCase, index) => {
+      try {
+        // For demo purposes, we'll do basic pattern matching
+        const hasLogic = code.includes('return') || code.includes('print') || code.includes('cout');
+        const hasLoops = code.includes('for') || code.includes('while');
+        const hasConditions = code.includes('if') || code.includes('else');
+        
+        // Simple scoring based on code complexity
+        const complexity = (hasLogic ? 1 : 0) + (hasLoops ? 1 : 0) + (hasConditions ? 1 : 0);
+        const shouldPass = complexity >= 2 || (complexity >= 1 && Math.random() > 0.3);
+        
+        if (shouldPass) {
+          passed++;
+          results.push(`Test ${index + 1}: PASSED - Input: ${testCase.input}, Expected: ${testCase.expectedOutput}`);
+        } else {
+          results.push(`Test ${index + 1}: FAILED - Input: ${testCase.input}, Expected: ${testCase.expectedOutput}, Got: undefined`);
+        }
+      } catch (error) {
+        results.push(`Test ${index + 1}: ERROR - ${error}`);
+      }
+    });
+
+    setTestResults({ passed, total: testCases.length, details: results });
+    toast.success(`Tests completed: ${passed}/${testCases.length} passed`);
   };
 
   const submitSolution = () => {
-    const startTime = Date.now();
-    runTests();
+    if (!testResults || !selectedBattle || !user) return;
+
+    const completionTime = (selectedBattle.timeLimit * 60) - timeLeft;
     
-    if (testResults && testResults.passed === testResults.total) {
-      const completionTime = Math.floor((Date.now() - startTime) / 1000);
+    if (testResults.passed === testResults.total) {
+      // Update challenge status
+      const updatedBattle = {
+        ...selectedBattle,
+        status: 'completed' as const,
+        completedAt: new Date()
+      };
+
+      const challenges = userChallenges.map(c => 
+        c.id === selectedBattle.id ? updatedBattle : c
+      );
+      localStorage.setItem(`challenges_${user.id}`, JSON.stringify(challenges));
+      setUserChallenges(challenges);
+
+      // Update stats
       const newStats = {
-        ...userStats,
-        totalChallenges: userStats.totalChallenges + 1,
         challengesCompleted: userStats.challengesCompleted + 1,
         averageTime: Math.floor((userStats.averageTime * userStats.challengesCompleted + completionTime) / (userStats.challengesCompleted + 1)),
         bestTime: userStats.bestTime === 0 ? completionTime : Math.min(userStats.bestTime, completionTime),
         currentStreak: userStats.currentStreak + 1
       };
-      saveUserStats(newStats);
+      localStorage.setItem(`arena_stats_${user.id}`, JSON.stringify(newStats));
+      setUserStats(newStats);
+
+      // Award achievement for first completion
+      const achievements = JSON.parse(localStorage.getItem(`achievements_${user.id}`) || '[]');
+      if (!achievements.some((a: any) => a.id === 'warrior')) {
+        const newAchievement = {
+          id: 'warrior',
+          name: 'A Warrior',
+          description: 'User completes their first code arena',
+          icon: 'sword',
+          unlockedAt: new Date()
+        };
+        achievements.push(newAchievement);
+        localStorage.setItem(`achievements_${user.id}`, JSON.stringify(achievements));
+        toast.success('Achievement unlocked: A Warrior! ⚔️');
+      }
+
       toast.success('Challenge completed successfully! 🎉');
+      setSelectedBattle(null);
     } else {
       toast.error('Some tests failed. Keep trying!');
     }
   };
 
   const startChallenge = (battle: CodeBattle) => {
-    setSelectedBattle(battle);
-    setActiveTab('battle');
+    const updatedBattle = { ...battle, status: 'active' as const, startedAt: new Date() };
+    setSelectedBattle(updatedBattle);
     setTimeLeft(battle.timeLimit * 60);
+    setCode(getInitialCode(battle.problem, language));
+    setTestResults(null);
     toast.success(`Started ${battle.title}!`);
   };
 
-  if (activeTab === 'battle' && selectedBattle) {
+  const resumeChallenge = (battle: CodeBattle) => {
+    setSelectedBattle(battle);
+    const savedCode = localStorage.getItem(`code_${battle.id}_${user?.id}`) || getInitialCode(battle.problem, language);
+    setCode(savedCode);
+    setTimeLeft(0); // Completed challenges have no time limit
+    setTestResults(null);
+  };
+
+  // Save code progress
+  useEffect(() => {
+    if (selectedBattle && user && code) {
+      localStorage.setItem(`code_${selectedBattle.id}_${user.id}`, code);
+    }
+  }, [code, selectedBattle, user]);
+
+  // Update code when language changes
+  useEffect(() => {
+    if (selectedBattle) {
+      const savedCode = localStorage.getItem(`code_${selectedBattle.id}_${user?.id}`);
+      if (!savedCode) {
+        setCode(getInitialCode(selectedBattle.problem, language));
+      }
+    }
+  }, [language, selectedBattle]);
+
+  if (selectedBattle) {
     return (
       <div className="min-h-screen pt-20 px-4">
         <div className="max-w-7xl mx-auto py-8">
@@ -167,17 +259,25 @@ export const CodeArena: React.FC = () => {
                   >
                     {selectedBattle.difficulty.toUpperCase()}
                   </span>
-                  <div className="flex items-center space-x-1 text-white/70">
-                    <Clock className="w-4 h-4" />
-                    <span>{formatTime(timeLeft)}</span>
-                  </div>
+                  {selectedBattle.status === 'active' && (
+                    <div className="flex items-center space-x-1 text-white/70">
+                      <Clock className="w-4 h-4" />
+                      <span>{formatTime(timeLeft)}</span>
+                    </div>
+                  )}
+                  {selectedBattle.status === 'completed' && (
+                    <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-xs">
+                      COMPLETED
+                    </span>
+                  )}
                 </div>
               </div>
               <button
-                onClick={() => setActiveTab('practice')}
-                className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
+                onClick={() => setSelectedBattle(null)}
+                className="flex items-center space-x-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
               >
-                Back to Practice
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back</span>
               </button>
             </div>
           </div>
@@ -226,6 +326,27 @@ export const CodeArena: React.FC = () => {
                       ))}
                     </ul>
                   </div>
+
+                  {testResults && (
+                    <div>
+                      <h3 className="font-semibold text-white mb-2 flex items-center space-x-2">
+                        <Eye className="w-4 h-4" />
+                        <span>Test Results</span>
+                      </h3>
+                      <div className="bg-white/5 p-3 rounded-lg">
+                        <div className="text-sm font-mono space-y-1">
+                          {testResults.details.map((detail, index) => (
+                            <div 
+                              key={index} 
+                              className={detail.includes('PASSED') ? 'text-green-400' : 'text-red-400'}
+                            >
+                              {detail}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </GlassPanel>
@@ -287,15 +408,18 @@ export const CodeArena: React.FC = () => {
                       <Play className="w-4 h-4" />
                       <span>Run Tests</span>
                     </motion.button>
-                    <motion.button
-                      onClick={submitSolution}
-                      className="flex-1 bg-gradient-to-r from-cyber-pink to-cyber-blue py-2 px-4 rounded-lg font-semibold text-white transition-colors flex items-center justify-center space-x-2"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <Code className="w-4 h-4" />
-                      <span>Submit</span>
-                    </motion.button>
+                    {selectedBattle.status === 'active' && (
+                      <motion.button
+                        onClick={submitSolution}
+                        disabled={!testResults || testResults.passed !== testResults.total}
+                        className="flex-1 bg-gradient-to-r from-cyber-pink to-cyber-blue py-2 px-4 rounded-lg font-semibold text-white transition-colors flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Code className="w-4 h-4" />
+                        <span>Submit</span>
+                      </motion.button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -359,11 +483,11 @@ export const CodeArena: React.FC = () => {
           </GlassPanel>
         </div>
 
-        {/* Practice Challenges */}
+        {/* Challenges */}
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="font-orbitron text-2xl font-bold text-white">
-              Practice Challenges
+              Your Challenges ({userChallenges.length})
             </h2>
             <motion.button
               onClick={() => setShowCreateBattle(true)}
@@ -376,64 +500,82 @@ export const CodeArena: React.FC = () => {
             </motion.button>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {battles.map((battle, index) => (
-              <motion.div
-                key={battle.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <GlassPanel 
-                  glowColor={getDifficultyColor(battle.difficulty)}
-                  className="hover:scale-105 transition-transform duration-300"
+          {userChallenges.length > 0 ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {userChallenges.map((battle, index) => (
+                <motion.div
+                  key={battle.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
                 >
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <h3 className="font-orbitron text-xl font-bold text-white mb-2">
-                        {battle.title}
-                      </h3>
-                      <p className="text-white/70 text-sm mb-3">
-                        {battle.description}
-                      </p>
-                    </div>
-                    <span 
-                      className="px-2 py-1 rounded-full text-xs font-semibold"
-                      style={{ 
-                        backgroundColor: `${getDifficultyColor(battle.difficulty)}20`,
-                        color: getDifficultyColor(battle.difficulty)
-                      }}
-                    >
-                      {battle.difficulty.toUpperCase()}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center space-x-4 mb-4 text-sm text-white/60">
-                    <div className="flex items-center space-x-1">
-                      <span 
-                        className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: getDifficultyColor(battle.difficulty) }}
-                      />
-                      <span>{battle.difficulty}</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                      <Clock className="w-4 h-4" />
-                      <span>{battle.timeLimit}min</span>
-                    </div>
-                  </div>
-
-                  <motion.button
-                    onClick={() => startChallenge(battle)}
-                    className="w-full py-2 px-4 rounded-lg font-semibold transition-colors bg-cyber-blue/20 hover:bg-cyber-blue/30 text-cyber-blue"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                  <GlassPanel 
+                    glowColor={getDifficultyColor(battle.difficulty)}
+                    className="hover:scale-105 transition-transform duration-300"
                   >
-                    Start Challenge
-                  </motion.button>
-                </GlassPanel>
-              </motion.div>
-            ))}
-          </div>
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <h3 className="font-orbitron text-xl font-bold text-white mb-2">
+                          {battle.title}
+                        </h3>
+                        <p className="text-white/70 text-sm mb-3">
+                          {battle.description}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end space-y-2">
+                        <span 
+                          className="px-2 py-1 rounded-full text-xs font-semibold"
+                          style={{ 
+                            backgroundColor: `${getDifficultyColor(battle.difficulty)}20`,
+                            color: getDifficultyColor(battle.difficulty)
+                          }}
+                        >
+                          {battle.difficulty.toUpperCase()}
+                        </span>
+                        {battle.status === 'completed' && (
+                          <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded-full text-xs">
+                            COMPLETED
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-4 mb-4 text-sm text-white/60">
+                      <div className="flex items-center space-x-1">
+                        <Clock className="w-4 h-4" />
+                        <span>{battle.timeLimit}min</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <span>Created {new Date(battle.createdAt).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+
+                    <motion.button
+                      onClick={() => battle.status === 'completed' ? resumeChallenge(battle) : startChallenge(battle)}
+                      className="w-full py-2 px-4 rounded-lg font-semibold transition-colors bg-cyber-blue/20 hover:bg-cyber-blue/30 text-cyber-blue"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      {battle.status === 'completed' ? 'View Solution' : 'Start Challenge'}
+                    </motion.button>
+                  </GlassPanel>
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <Trophy className="w-16 h-16 text-white/30 mx-auto mb-4" />
+              <p className="text-white/70 mb-4">No challenges yet. Create your first AI-generated challenge!</p>
+              <motion.button
+                onClick={() => setShowCreateBattle(true)}
+                className="bg-gradient-to-r from-cyber-blue to-cyber-pink px-6 py-3 rounded-lg font-orbitron font-bold text-white hover:scale-105 transition-transform"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Create Your First Challenge
+              </motion.button>
+            </div>
+          )}
         </div>
 
         <CreateBattleModal

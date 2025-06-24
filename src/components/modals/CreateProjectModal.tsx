@@ -45,6 +45,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
     resolver: zodResolver(projectSchema),
     defaultValues: {
       isPrivate: false,
+      
       topics: '',
     },
   });
@@ -87,7 +88,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
             exit={{ opacity: 0, scale: 0.9, rotateX: 15 }}
             transition={{ type: "spring", duration: 0.5 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-4xl"
+            className="w-full max-w-5xl max-h-[90vh] overflow-y-auto"
           >
             <GlassPanel glowColor="#00ffff">
               <div className="flex items-center justify-between mb-6">

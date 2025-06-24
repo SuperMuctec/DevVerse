@@ -12,12 +12,15 @@ import { DevLogs } from './components/pages/DevLogs';
 import { CodeArena } from './components/pages/CodeArena';
 import { UserPanel } from './components/pages/UserPanel';
 import { UserSearch } from './components/pages/UserSearch';
+import { UserProfile } from './components/pages/UserProfile';
+import { Nebula } from './components/pages/Nebula';
 import { LoginPage } from './components/auth/LoginPage';
 import { RegisterPage } from './components/auth/RegisterPage';
 
 const AppContent: React.FC = () => {
   const [currentPage, setCurrentPage] = useState('galaxy');
   const [authPage, setAuthPage] = useState<'login' | 'register' | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
@@ -51,31 +54,43 @@ const AppContent: React.FC = () => {
     );
   }
 
+  // Handle user profile navigation
+  if (selectedUserId) {
+    return (
+      <div className="magnetic-cursor min-h-screen bg-space-dark text-white relative overflow-x-hidden">
+        <StarField />
+        <MagneticCursor />
+        <Navbar currentPage={currentPage} onPageChange={setCurrentPage} />
+        <main className="relative z-10">
+          <UserProfile 
+            userId={selectedUserId} 
+            onBack={() => setSelectedUserId(null)} 
+          />
+        </main>
+      </div>
+    );
+  }
+
   const renderPage = () => {
     switch (currentPage) {
       case 'galaxy':
-        return <GalaxyView />;
+        return <GalaxyView onNavigate={setCurrentPage} />;
       case 'builder':
         return <StackBuilder />;
       case 'showroom':
-        return <StackShowroom />;
+        return <StackShowroom onNavigateToUser={setSelectedUserId} />;
       case 'devlogs':
         return <DevLogs />;
       case 'arena':
         return <CodeArena />;
       case 'search':
-        return <UserSearch />;
+        return <UserSearch onNavigateToUser={setSelectedUserId} />;
       case 'nebula':
-        return <div className="min-h-screen pt-20 flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="font-orbitron text-4xl font-bold text-cyber-yellow mb-4">The Nebula</h1>
-            <p className="font-sora text-white/70">Achievement Constellation</p>
-          </div>
-        </div>;
+        return <Nebula />;
       case 'settings':
         return <UserPanel />;
       default:
-        return <GalaxyView />;
+        return <GalaxyView onNavigate={setCurrentPage} />;
     }
   };
 

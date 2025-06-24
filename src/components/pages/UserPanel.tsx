@@ -11,13 +11,11 @@ import {
   Save, 
   Star, 
   GitFork, 
-  Eye, 
   Calendar,
   MapPin,
   Link as LinkIcon,
   Settings,
   Code,
-  Trophy,
   Plus,
   ExternalLink
 } from 'lucide-react';
@@ -73,6 +71,24 @@ export const UserPanel: React.FC = () => {
   const onProfileSubmit = (data: ProfileFormData) => {
     updateUser(data);
     setIsEditing(false);
+    
+    // Award achievement for writing bio
+    if (data.bio && data.bio.trim() && user) {
+      const achievements = JSON.parse(localStorage.getItem(`achievements_${user.id}`) || '[]');
+      if (!achievements.some((a: any) => a.id === 'biography')) {
+        const newAchievement = {
+          id: 'biography',
+          name: 'Biography',
+          description: 'User writes their Bio in their profile page',
+          icon: 'edit',
+          unlockedAt: new Date()
+        };
+        achievements.push(newAchievement);
+        localStorage.setItem(`achievements_${user.id}`, JSON.stringify(achievements));
+        toast.success('Achievement unlocked: Biography! ✍️');
+      }
+    }
+    
     toast.success('Profile updated successfully!');
   };
 
@@ -88,6 +104,8 @@ export const UserPanel: React.FC = () => {
   };
 
   const handleCreateProject = (data: CreateProjectData) => {
+    if (!user) return;
+
     const newProject: Project = {
       id: Date.now().toString(),
       ...data,
@@ -95,11 +113,27 @@ export const UserPanel: React.FC = () => {
       forks: 0,
       createdAt: new Date(),
       updatedAt: new Date(),
-      owner: user?.username || '',
+      owner: user.username,
     };
 
-    const updatedProjects = [...(user?.projects || []), newProject];
+    const updatedProjects = [...(user.projects || []), newProject];
     updateUser({ projects: updatedProjects });
+
+    // Award achievement for first project
+    const achievements = JSON.parse(localStorage.getItem(`achievements_${user.id}`) || '[]');
+    if (!achievements.some((a: any) => a.id === 'creator')) {
+      const newAchievement = {
+        id: 'creator',
+        name: 'Creator',
+        description: 'User makes their first project from their user page',
+        icon: 'code',
+        unlockedAt: new Date()
+      };
+      achievements.push(newAchievement);
+      localStorage.setItem(`achievements_${user.id}`, JSON.stringify(achievements));
+      toast.success('Achievement unlocked: Creator! 💻');
+    }
+
     toast.success('Project created successfully!');
   };
 
@@ -162,16 +196,6 @@ export const UserPanel: React.FC = () => {
                   {user?.username}
                 </h2>
                 <p className="text-white/70 text-sm">{user?.email}</p>
-                <div className="flex items-center justify-center space-x-4 mt-3 text-sm text-white/60">
-                  <div className="flex items-center space-x-1">
-                    <Trophy className="w-4 h-4" />
-                    <span>Level {user?.level}</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <Star className="w-4 h-4" />
-                    <span>{user?.xp} XP</span>
-                  </div>
-                </div>
               </div>
 
               <nav className="space-y-2">

@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Heart, Eye, Star, Filter, Search, TrendingUp } from 'lucide-react';
+import { Search, Filter, TrendingUp, User } from 'lucide-react';
 import { GlassPanel } from '../ui/GlassPanel';
-import { mockPlanets } from '../../data/mockData';
 
-export const StackShowroom: React.FC = () => {
+interface StackShowroomProps {
+  onNavigateToUser: (userId: string) => void;
+}
+
+export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
-  const [sortBy, setSortBy] = useState('popular');
-  const [displayedPlanets, setDisplayedPlanets] = useState(6);
-  const [isLoading, setIsLoading] = useState(false);
+  const [sortBy, setSortBy] = useState('recent');
 
   const filters = [
     { id: 'all', label: 'All Planets' },
@@ -21,41 +22,56 @@ export const StackShowroom: React.FC = () => {
   ];
 
   const sortOptions = [
-    { id: 'popular', label: 'Most Popular' },
     { id: 'recent', label: 'Recently Added' },
-    { id: 'trending', label: 'Trending' },
-    { id: 'stars', label: 'Most Starred' },
+    { id: 'name', label: 'Planet Name' },
+    { id: 'owner', label: 'Owner Name' },
   ];
 
-  const featuredPlanets = mockPlanets.map(planet => ({
-    ...planet,
-    featured: true,
-    likes: Math.floor(Math.random() * 1000) + 100,
-    views: Math.floor(Math.random() * 5000) + 500,
-  }));
-
-  // Create more planets for demonstration
-  const allPlanets = [
-    ...featuredPlanets,
-    ...Array.from({ length: 20 }, (_, i) => ({
-      ...featuredPlanets[i % featuredPlanets.length],
-      id: `planet-${i + featuredPlanets.length}`,
-      name: `${featuredPlanets[i % featuredPlanets.length].name} ${i + 1}`,
-      owner: `Developer${i + 1}`,
-      likes: Math.floor(Math.random() * 500) + 50,
-      views: Math.floor(Math.random() * 2000) + 200,
-    }))
-  ];
-
-  const loadMorePlanets = async () => {
-    setIsLoading(true);
-    // Simulate loading delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setDisplayedPlanets(prev => Math.min(prev + 6, allPlanets.length));
-    setIsLoading(false);
+  // Get user-created planets from localStorage
+  const getUserPlanets = () => {
+    const users = JSON.parse(localStorage.getItem('devverse_users') || '[]');
+    return users.map((user: any) => ({
+      ...user.planet,
+      owner: user.username,
+      ownerId: user.id
+    })).filter((planet: any) => planet && planet.name);
   };
 
-  const hasMorePlanets = displayedPlanets < allPlanets.length;
+  const allPlanets = getUserPlanets();
+
+  // Filter and search planets
+  const filteredPlanets = allPlanets.filter((planet: any) => {
+    const matchesSearch = planet.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         planet.owner.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    if (selectedFilter === 'all') return matchesSearch;
+    
+    // Simple categorization based on tech stack
+    const hasReact = planet.stack.frameworks.some((f: string) => f.includes('React') || f.includes('Vue') || f.includes('Angular'));
+    const hasBackend = planet.stack.frameworks.some((f: string) => f.includes('Express') || f.includes('Django') || f.includes('Spring'));
+    const hasMobile = planet.stack.frameworks.some((f: string) => f.includes('React Native') || f.includes('Flutter'));
+    const hasAI = planet.stack.languages.some((l: string) => l.includes('Python')) && 
+                 planet.stack.frameworks.some((f: string) => f.includes('TensorFlow') || f.includes('PyTorch'));
+    
+    switch (selectedFilter) {
+      case 'frontend': return hasReact && matchesSearch;
+      case 'backend': return hasBackend && matchesSearch;
+      case 'fullstack': return hasReact && hasBackend && matchesSearch;
+      case 'mobile': return hasMobile && matchesSearch;
+      case 'ai': return hasAI && matchesSearch;
+      default: return matchesSearch;
+    }
+  });
+
+  // Sort planets
+  const sortedPlanets = [...filteredPlanets].sort((a: any, b: any) => {
+    switch (sortBy) {
+      case 'name': return a.name.localeCompare(b.name);
+      case 'owner': return a.owner.localeCompare(b.owner);
+      case 'recent': return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      default: return 0;
+    }
+  });
 
   return (
     <div className="min-h-screen pt-20 px-4">
@@ -70,7 +86,7 @@ export const StackShowroom: React.FC = () => {
             <span className="neon-text text-cyber-pink">Showroom</span>
           </h1>
           <p className="font-sora text-xl text-white/70">
-            Explore the galaxy's most impressive dev planets
+            Explore the galaxy's dev planets
           </p>
         </motion.div>
 
@@ -81,7 +97,7 @@ export const StackShowroom: React.FC = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-white/50" />
               <input
                 type="text"
-                placeholder="Search planets, technologies, or developers..."
+                placeholder="Search planets by name or owner..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-blue focus:ring-1 focus:ring-cyber-blue transition-all duration-300"
@@ -122,60 +138,53 @@ export const StackShowroom: React.FC = () => {
           </div>
         </div>
 
-        {/* Featured Section */}
-        <div className="mb-12">
-          <div className="flex items-center space-x-2 mb-6">
-            <TrendingUp className="w-6 h-6 text-cyber-yellow" />
-            <h2 className="font-orbitron text-2xl font-bold text-cyber-yellow">
-              Featured Planets
-            </h2>
-          </div>
+        {/* Planets Grid */}
+        <div>
+          <h2 className="font-orbitron text-2xl font-bold text-white mb-6">
+            All Planets ({sortedPlanets.length})
+          </h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredPlanets.slice(0, 3).map((planet, index) => (
-              <motion.div
-                key={planet.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <GlassPanel 
-                  glowColor={planet.color}
-                  className="hover:scale-105 transition-transform duration-300 cursor-pointer"
+          {sortedPlanets.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {sortedPlanets.map((planet: any, index: number) => (
+                <motion.div
+                  key={planet.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
                 >
-                  <div className="relative">
-                    <div className="absolute top-2 right-2 bg-cyber-yellow/20 px-2 py-1 rounded-full">
-                      <Star className="w-4 h-4 text-cyber-yellow" />
-                    </div>
-                    
+                  <GlassPanel 
+                    glowColor={planet.color}
+                    className="hover:scale-105 transition-transform duration-300 cursor-pointer"
+                  >
                     <div className="mb-4">
                       <div 
-                        className="w-full h-32 rounded-lg mb-4 flex items-center justify-center"
+                        className="w-full h-24 rounded-lg mb-3 flex items-center justify-center"
                         style={{ 
                           background: `radial-gradient(circle, ${planet.color}40, ${planet.color}10)`,
                           border: `1px solid ${planet.color}60`
                         }}
                       >
                         <div 
-                          className="w-16 h-16 rounded-full"
+                          className="w-12 h-12 rounded-full"
                           style={{ 
                             background: `radial-gradient(circle, ${planet.color}, ${planet.color}80)`,
-                            boxShadow: `0 0 20px ${planet.color}60`
+                            boxShadow: `0 0 15px ${planet.color}60`
                           }}
                         />
                       </div>
                       
-                      <h3 className="font-orbitron text-xl font-bold mb-2 neon-text">
+                      <h3 className="font-orbitron text-lg font-bold mb-1 neon-text">
                         {planet.name}
                       </h3>
-                      <p className="text-white/70 text-sm mb-3">
-                        by <span className="text-cyber-blue">@{planet.owner}</span>
+                      <p className="text-white/70 text-sm mb-2">
+                        by @{planet.owner}
                       </p>
                     </div>
 
-                    <div className="mb-4">
-                      <div className="flex flex-wrap gap-1 mb-3">
-                        {planet.stack.languages.slice(0, 3).map(lang => (
+                    <div className="mb-3">
+                      <div className="flex flex-wrap gap-1">
+                        {planet.stack.languages.slice(0, 2).map((lang: string) => (
                           <span
                             key={lang}
                             className="px-2 py-1 bg-cyber-blue/20 text-cyber-blue text-xs rounded-full"
@@ -183,26 +192,17 @@ export const StackShowroom: React.FC = () => {
                             {lang}
                           </span>
                         ))}
-                        {planet.stack.languages.length > 3 && (
+                        {planet.stack.languages.length > 2 && (
                           <span className="px-2 py-1 bg-white/10 text-white/70 text-xs rounded-full">
-                            +{planet.stack.languages.length - 3}
+                            +{planet.stack.languages.length - 2}
                           </span>
                         )}
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between text-sm text-white/60">
-                      <div className="flex items-center space-x-4">
-                        <div className="flex items-center space-x-1">
-                          <Heart className="w-4 h-4" />
-                          <span>{planet.likes}</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <Eye className="w-4 h-4" />
-                          <span>{planet.views}</span>
-                        </div>
-                      </div>
+                    <div className="flex items-center justify-end">
                       <motion.button
+                        onClick={() => onNavigateToUser(planet.ownerId)}
                         className="px-3 py-1 bg-gradient-to-r from-cyber-blue to-cyber-pink rounded-full text-xs font-semibold hover:scale-105 transition-transform"
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
@@ -210,113 +210,17 @@ export const StackShowroom: React.FC = () => {
                         Explore
                       </motion.button>
                     </div>
-                  </div>
-                </GlassPanel>
-              </motion.div>
-            ))}
-          </div>
+                  </GlassPanel>
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <User className="w-16 h-16 text-white/30 mx-auto mb-4" />
+              <p className="text-white/70">No planets found matching your criteria.</p>
+            </div>
+          )}
         </div>
-
-        {/* All Planets Grid */}
-        <div>
-          <h2 className="font-orbitron text-2xl font-bold text-white mb-6">
-            All Planets ({allPlanets.length})
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {allPlanets.slice(0, displayedPlanets).map((planet, index) => (
-              <motion.div
-                key={planet.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-              >
-                <GlassPanel 
-                  glowColor={planet.color}
-                  className="hover:scale-105 transition-transform duration-300 cursor-pointer"
-                >
-                  <div className="mb-4">
-                    <div 
-                      className="w-full h-24 rounded-lg mb-3 flex items-center justify-center"
-                      style={{ 
-                        background: `radial-gradient(circle, ${planet.color}40, ${planet.color}10)`,
-                        border: `1px solid ${planet.color}60`
-                      }}
-                    >
-                      <div 
-                        className="w-12 h-12 rounded-full"
-                        style={{ 
-                          background: `radial-gradient(circle, ${planet.color}, ${planet.color}80)`,
-                          boxShadow: `0 0 15px ${planet.color}60`
-                        }}
-                      />
-                    </div>
-                    
-                    <h3 className="font-orbitron text-lg font-bold mb-1 neon-text">
-                      {planet.name}
-                    </h3>
-                    <p className="text-white/70 text-sm mb-2">
-                      @{planet.owner}
-                    </p>
-                  </div>
-
-                  <div className="mb-3">
-                    <div className="flex flex-wrap gap-1">
-                      {planet.stack.languages.slice(0, 2).map(lang => (
-                        <span
-                          key={lang}
-                          className="px-2 py-1 bg-cyber-blue/20 text-cyber-blue text-xs rounded-full"
-                        >
-                          {lang}
-                        </span>
-                      ))}
-                      {planet.stack.languages.length > 2 && (
-                        <span className="px-2 py-1 bg-white/10 text-white/70 text-xs rounded-full">
-                          +{planet.stack.languages.length - 2}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between text-sm text-white/60">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex items-center space-x-1">
-                        <Heart className="w-3 h-3" />
-                        <span>{planet.likes}</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <Eye className="w-3 h-3" />
-                        <span>{planet.views}</span>
-                      </div>
-                    </div>
-                  </div>
-                </GlassPanel>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-
-        {/* Load More */}
-        {hasMorePlanets && (
-          <div className="mt-12 text-center">
-            <motion.button
-              onClick={loadMorePlanets}
-              disabled={isLoading}
-              className="interactive bg-gradient-to-r from-cyber-blue to-cyber-pink px-8 py-4 rounded-xl font-orbitron font-bold text-lg hover:scale-105 transition-transform duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              {isLoading ? (
-                <div className="flex items-center space-x-2">
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Loading More Planets...</span>
-                </div>
-              ) : (
-                `Load More Planets (${allPlanets.length - displayedPlanets} remaining)`
-              )}
-            </motion.button>
-          </div>
-        )}
       </div>
     </div>
   );

@@ -75,7 +75,7 @@ export const CreateDevLogModal: React.FC<CreateDevLogModalProps> = ({
             exit={{ opacity: 0, scale: 0.9, rotateZ: 5 }}
             transition={{ type: "spring", duration: 0.5 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-4xl"
+            className="w-full max-w-5xl max-h-[90vh] overflow-y-auto"
           >
             <GlassPanel glowColor="#ffff00">
               <div className="flex items-center justify-between mb-6">

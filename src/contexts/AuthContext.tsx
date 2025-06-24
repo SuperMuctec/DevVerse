@@ -71,6 +71,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       localStorage.setItem('devverse_user', JSON.stringify(userWithoutPassword));
+      
+      // Award achievement for logging in
+      const achievements = JSON.parse(localStorage.getItem(`achievements_${user.id}`) || '[]');
+      if (!achievements.some((a: any) => a.id === 'beginning')) {
+        const newAchievement = {
+          id: 'beginning',
+          name: 'The Beginning',
+          description: 'User makes an account and Logs in',
+          icon: 'user',
+          unlockedAt: new Date()
+        };
+        achievements.push(newAchievement);
+        localStorage.setItem(`achievements_${user.id}`, JSON.stringify(achievements));
+        toast.success('Achievement unlocked: The Beginning! 🎉');
+      }
+      
       toast.success('Welcome back to DevVerse³!');
       return true;
     } catch (error) {
@@ -101,11 +117,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email,
         password, // In production, hash with bcrypt
         avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
-        level: 1,
-        xp: 0,
         projects: [],
-        followers: 0,
-        following: 0,
         joinedAt: new Date(),
         planet: {
           id: Date.now().toString(),
@@ -140,7 +152,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       localStorage.setItem('devverse_user', JSON.stringify(userWithoutPassword));
+      
+      // Award achievement for registering
+      const achievements = [{
+        id: 'beginning',
+        name: 'The Beginning',
+        description: 'User makes an account and Logs in',
+        icon: 'user',
+        unlockedAt: new Date()
+      }];
+      localStorage.setItem(`achievements_${newUser.id}`, JSON.stringify(achievements));
+      
       toast.success('Welcome to DevVerse³! Your planet has been created!');
+      toast.success('Achievement unlocked: The Beginning! 🎉');
       return true;
     } catch (error) {
       toast.error('Registration failed');

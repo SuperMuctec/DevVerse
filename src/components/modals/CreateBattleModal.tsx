@@ -302,7 +302,7 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
             exit={{ opacity: 0, scale: 0.9, rotateY: 15 }}
             transition={{ type: "spring", duration: 0.5 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-6xl"
+            className="w-full max-w-7xl max-h-[90vh] overflow-y-auto"
           >
             <GlassPanel glowColor="#ff00ff">
               <div className="flex items-center justify-between mb-6">

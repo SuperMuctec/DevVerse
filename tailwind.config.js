@@ -48,6 +48,13 @@ export default {
       },
       backdropBlur: {
         xs: '2px',
+      },
+      backgroundSize: {
+        '200': '200% 100%',
+      },
+      backgroundPosition: {
+        'pos-0': '0% 0%',
+        'pos-100': '100% 0%',
       }
     },
   },

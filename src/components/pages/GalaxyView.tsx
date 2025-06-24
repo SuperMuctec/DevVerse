@@ -6,9 +6,20 @@ import { DevPlanet3D } from '../ui/DevPlanet3D';
 import { GlassPanel } from '../ui/GlassPanel';
 import { FloatingElements } from '../ui/FloatingElements';
 import { AnimatedBackground } from '../ui/AnimatedBackground';
-import { mockPlanets } from '../../data/mockData';
 
-export const GalaxyView: React.FC = () => {
+interface GalaxyViewProps {
+  onNavigate: (page: string) => void;
+}
+
+export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
+  // Get user-created planets from localStorage
+  const getUserPlanets = () => {
+    const users = JSON.parse(localStorage.getItem('devverse_users') || '[]');
+    return users.map((user: any) => user.planet).filter(Boolean);
+  };
+
+  const userPlanets = getUserPlanets();
+
   return (
     <div className="min-h-screen pt-20">
       <FloatingElements />
@@ -26,7 +37,7 @@ export const GalaxyView: React.FC = () => {
             <ambientLight intensity={0.2} />
             <pointLight position={[10, 10, 10]} intensity={1} />
             
-            {mockPlanets.map((planet) => (
+            {userPlanets.map((planet) => (
               <DevPlanet3D
                 key={planet.id}
                 planet={planet}
@@ -110,7 +121,8 @@ export const GalaxyView: React.FC = () => {
               </motion.p>
               
               <motion.button
-                className="interactive bg-gradient-to-r from-cyber-blue to-cyber-pink px-8 py-4 rounded-xl font-orbitron font-bold text-lg transition-all duration-300"
+                onClick={() => onNavigate('builder')}
+                className="interactive bg-gradient-to-r from-cyber-blue via-cyber-pink to-cyber-blue bg-size-200 bg-pos-0 hover:bg-pos-100 px-8 py-4 rounded-xl font-orbitron font-bold text-lg transition-all duration-500"
                 initial={{ opacity: 0, y: 20, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ delay: 1.2, duration: 0.8 }}
@@ -120,6 +132,10 @@ export const GalaxyView: React.FC = () => {
                   rotateX: 10
                 }}
                 whileTap={{ scale: 0.95 }}
+                style={{
+                  backgroundSize: '200% 100%',
+                  backgroundPosition: '0% 0%',
+                }}
               >
                 <motion.span
                   animate={{
@@ -166,7 +182,7 @@ export const GalaxyView: React.FC = () => {
                   }}
                   transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                 >
-                  1,337
+                  {userPlanets.length}
                 </motion.div>
                 <div className="text-white/70 font-sora">Active Planets</div>
               </motion.div>
@@ -196,7 +212,7 @@ export const GalaxyView: React.FC = () => {
                   }}
                   transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
                 >
-                  42,069
+                  {userPlanets.reduce((total, planet) => total + planet.stack.languages.length + planet.stack.frameworks.length, 0)}
                 </motion.div>
                 <div className="text-white/70 font-sora">Tech Stacks</div>
               </motion.div>
