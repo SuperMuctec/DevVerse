@@ -156,7 +156,7 @@ export const UserPanel: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen pt-20 px-4">
+    <div className="min-h-screen pt-44 px-4">
       <div className="max-w-6xl mx-auto py-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

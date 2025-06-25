@@ -21,7 +21,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
   const userPlanets = getUserPlanets();
 
   return (
-    <div className="min-h-screen pt-20">
+    <div className="min-h-screen pt-44">
       <FloatingElements />
       <AnimatedBackground />
       
@@ -122,7 +122,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
               
               <motion.button
                 onClick={() => onNavigate('builder')}
-                className="interactive bg-gradient-to-r from-cyber-blue via-cyber-pink to-cyber-blue bg-size-200 bg-pos-0 hover:bg-pos-100 px-8 py-4 rounded-xl font-orbitron font-bold text-lg transition-all duration-500"
+                className="interactive bg-gradient-to-r from-cyber-blue to-cyber-pink px-8 py-4 rounded-xl font-orbitron font-bold text-lg transition-all duration-500"
                 initial={{ opacity: 0, y: 20, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ delay: 1.2, duration: 0.8 }}
@@ -132,10 +132,6 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
                   rotateX: 10
                 }}
                 whileTap={{ scale: 0.95 }}
-                style={{
-                  backgroundSize: '200% 100%',
-                  backgroundPosition: '0% 0%',
-                }}
               >
                 <motion.span
                   animate={{

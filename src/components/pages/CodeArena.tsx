@@ -279,7 +279,7 @@ export const CodeArena: React.FC = () => {
 
   if (selectedBattle) {
     return (
-      <div className="min-h-screen pt-20 px-4">
+      <div className="min-h-screen pt-44 px-4">
         <div className="max-w-7xl mx-auto py-8">
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
@@ -472,7 +472,7 @@ export const CodeArena: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen pt-20 px-4">
+    <div className="min-h-screen pt-44 px-4">
       <div className="max-w-7xl mx-auto py-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

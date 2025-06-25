@@ -30,7 +30,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
 
   if (!user) {
     return (
-      <div className="min-h-screen pt-20 px-4">
+      <div className="min-h-screen pt-44 px-4">
         <div className="max-w-4xl mx-auto py-8">
           <div className="text-center">
             <h1 className="font-orbitron text-2xl font-bold text-white mb-4">User Not Found</h1>
@@ -60,7 +60,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
   };
 
   return (
-    <div className="min-h-screen pt-20 px-4">
+    <div className="min-h-screen pt-44 px-4">
       <div className="max-w-6xl mx-auto py-8">
         <motion.button
           onClick={onBack}
