@@ -2,15 +2,30 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Search, User, MapPin, Globe, Calendar, Star, GitFork, ExternalLink, Zap, Sparkles } from 'lucide-react';
 import { GlassPanel } from '../ui/GlassPanel';
-import { User as UserType, Project } from '../../types';
+import { supabase } from '../../lib/supabase';
+import { toast } from 'react-hot-toast';
 
 interface UserSearchProps {
   onNavigateToUser: (userId: string) => void;
 }
 
+interface SearchUser {
+  id: string;
+  username: string;
+  email: string;
+  avatar: string | null;
+  bio: string | null;
+  location: string | null;
+  website: string | null;
+  xp: number;
+  level: number;
+  created_at: string;
+  projects: any[];
+}
+
 export const UserSearch: React.FC<UserSearchProps> = ({ onNavigateToUser }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchResults, setSearchResults] = useState<UserType[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   // Calculate user level based on XP
@@ -31,23 +46,44 @@ export const UserSearch: React.FC<UserSearchProps> = ({ onNavigateToUser }) => {
   useEffect(() => {
     if (searchTerm.trim()) {
       setIsLoading(true);
-      // Simulate API call delay
-      const timer = setTimeout(() => {
-        // Get actual users from localStorage
-        const users = JSON.parse(localStorage.getItem('devverse_users') || '[]');
-        const results = users.filter((user: any) =>
-          user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          user.bio?.toLowerCase().includes(searchTerm.toLowerCase())
-        ).map((user: any) => {
-          // Remove password from user object
-          const { password, ...userWithoutPassword } = user;
-          return userWithoutPassword;
-        });
-        setSearchResults(results);
-        setIsLoading(false);
-      }, 300);
+      
+      const searchUsers = async () => {
+        try {
+          const { data: users, error } = await supabase
+            .from('users')
+            .select(`
+              id,
+              username,
+              email,
+              avatar,
+              bio,
+              location,
+              website,
+              xp,
+              level,
+              created_at,
+              projects (*)
+            `)
+            .or(`username.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,bio.ilike.%${searchTerm}%`)
+            .limit(20);
 
+          if (error) {
+            console.error('Search error:', error);
+            toast.error('Search failed');
+            setSearchResults([]);
+          } else {
+            setSearchResults(users || []);
+          }
+        } catch (error) {
+          console.error('Search error:', error);
+          toast.error('Search failed');
+          setSearchResults([]);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      const timer = setTimeout(searchUsers, 300);
       return () => clearTimeout(timer);
     } else {
       setSearchResults([]);
@@ -341,7 +377,7 @@ export const UserSearch: React.FC<UserSearchProps> = ({ onNavigateToUser }) => {
                             whileHover={{ scale: 1.1, color: '#ff00ff' }}
                           >
                             <Calendar className="w-4 h-4" />
-                            <span>Joined {new Date(user.joinedAt).toLocaleDateString()}</span>
+                            <span>Joined {new Date(user.created_at).toLocaleDateString()}</span>
                           </motion.div>
                         </div>
                       </div>

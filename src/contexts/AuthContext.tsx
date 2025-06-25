@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, AuthState } from '../types';
+import { supabase } from '../lib/supabase';
 import { toast } from 'react-hot-toast';
+import bcrypt from 'bcryptjs';
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<boolean>;
@@ -20,41 +22,6 @@ export const useAuth = () => {
   return context;
 };
 
-// Helper function to convert date strings back to Date objects
-const deserializeDates = (obj: any): any => {
-  if (obj === null || obj === undefined) return obj;
-  
-  if (typeof obj === 'string') {
-    // Check if string looks like a date
-    const dateRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
-    if (dateRegex.test(obj)) {
-      return new Date(obj);
-    }
-    return obj;
-  }
-  
-  if (Array.isArray(obj)) {
-    return obj.map(deserializeDates);
-  }
-  
-  if (typeof obj === 'object') {
-    const result: any = {};
-    for (const key in obj) {
-      if (obj.hasOwnProperty(key)) {
-        // Special handling for known date fields
-        if (['joinedAt', 'createdAt', 'updatedAt', 'unlockedAt'].includes(key)) {
-          result[key] = obj[key] ? new Date(obj[key]) : obj[key];
-        } else {
-          result[key] = deserializeDates(obj[key]);
-        }
-      }
-    }
-    return result;
-  }
-  
-  return obj;
-};
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
@@ -64,29 +31,113 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     // Check for existing session
-    const storedUser = localStorage.getItem('devverse_user');
-    if (storedUser) {
+    const checkSession = async () => {
       try {
-        const user = JSON.parse(storedUser);
-        // Deserialize date strings back to Date objects
-        const deserializedUser = deserializeDates(user);
-        setAuthState({
-          user: deserializedUser,
-          isAuthenticated: true,
-          isLoading: false,
-        });
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          // Fetch user data from our users table
+          const { data: userData, error } = await supabase
+            .from('users')
+            .select(`
+              *,
+              projects (*),
+              dev_planets (*),
+              achievements (*)
+            `)
+            .eq('id', session.user.id)
+            .single();
+
+          if (error) {
+            console.error('Error fetching user data:', error);
+            setAuthState(prev => ({ ...prev, isLoading: false }));
+            return;
+          }
+
+          if (userData) {
+            // Transform database data to match our User type
+            const user: User = {
+              id: userData.id,
+              username: userData.username,
+              email: userData.email,
+              avatar: userData.avatar,
+              bio: userData.bio,
+              location: userData.location,
+              website: userData.website,
+              xp: userData.xp,
+              level: userData.level,
+              projects: userData.projects || [],
+              followers: 0, // TODO: implement followers system
+              following: 0, // TODO: implement following system
+              joinedAt: new Date(userData.created_at),
+              planet: userData.dev_planets?.[0] ? {
+                id: userData.dev_planets[0].id,
+                name: userData.dev_planets[0].name,
+                owner: userData.username,
+                stack: {
+                  languages: userData.dev_planets[0].stack_languages || [],
+                  frameworks: userData.dev_planets[0].stack_frameworks || [],
+                  tools: userData.dev_planets[0].stack_tools || [],
+                  databases: userData.dev_planets[0].stack_databases || [],
+                },
+                position: [0, 0, 0], // Default position
+                color: userData.dev_planets[0].color,
+                size: userData.dev_planets[0].size,
+                rings: userData.dev_planets[0].rings,
+                achievements: userData.achievements || [],
+                likes: userData.dev_planets[0].likes,
+                views: userData.dev_planets[0].views,
+                createdAt: new Date(userData.dev_planets[0].created_at),
+              } : {
+                id: '',
+                name: `${userData.username}'s Planet`,
+                owner: userData.username,
+                stack: { languages: [], frameworks: [], tools: [], databases: [] },
+                position: [0, 0, 0],
+                color: '#00ffff',
+                size: 1.0,
+                rings: 1,
+                achievements: [],
+                likes: 0,
+                views: 0,
+                createdAt: new Date(),
+              }
+            };
+
+            setAuthState({
+              user,
+              isAuthenticated: true,
+              isLoading: false,
+            });
+          }
+        } else {
+          setAuthState(prev => ({ ...prev, isLoading: false }));
+        }
       } catch (error) {
-        localStorage.removeItem('devverse_user');
+        console.error('Session check error:', error);
         setAuthState(prev => ({ ...prev, isLoading: false }));
       }
-    } else {
-      setAuthState(prev => ({ ...prev, isLoading: false }));
-    }
+    };
+
+    checkSession();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setAuthState({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+        });
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const calculateLevel = (xp: number) => {
     let level = 1;
-    let requiredXp = 20; // 10 * 2^1
+    let requiredXp = 20;
     let totalXp = 0;
     
     while (totalXp + requiredXp <= xp) {
@@ -98,79 +149,95 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return level;
   };
 
-  const addXP = (amount: number) => {
+  const addXP = async (amount: number) => {
     if (authState.user) {
       const oldLevel = calculateLevel(authState.user.xp);
       const newXp = authState.user.xp + amount;
       const newLevel = calculateLevel(newXp);
       
-      const updatedUser = { ...authState.user, xp: newXp, level: newLevel };
-      setAuthState(prev => ({ ...prev, user: updatedUser }));
-      localStorage.setItem('devverse_user', JSON.stringify(updatedUser));
-      
-      // Update in users array
-      const users = JSON.parse(localStorage.getItem('devverse_users') || '[]');
-      const userIndex = users.findIndex((u: any) => u.id === updatedUser.id);
-      if (userIndex !== -1) {
-        users[userIndex] = { ...users[userIndex], xp: newXp, level: newLevel };
-        localStorage.setItem('devverse_users', JSON.stringify(users));
-      }
-      
-      toast.success(`+${amount} XP earned! 🌟`);
-      
-      if (newLevel > oldLevel) {
-        toast.success(`🎉 Level up! You're now level ${newLevel}!`, { duration: 6000 });
+      try {
+        // Update XP in database
+        const { error } = await supabase
+          .from('users')
+          .update({ xp: newXp, level: newLevel })
+          .eq('id', authState.user.id);
+
+        if (error) {
+          console.error('Error updating XP:', error);
+          return;
+        }
+
+        const updatedUser = { ...authState.user, xp: newXp, level: newLevel };
+        setAuthState(prev => ({ ...prev, user: updatedUser }));
+        
+        toast.success(`+${amount} XP earned! 🌟`);
+        
+        if (newLevel > oldLevel) {
+          toast.success(`🎉 Level up! You're now level ${newLevel}!`, { duration: 6000 });
+        }
+      } catch (error) {
+        console.error('Error adding XP:', error);
+        toast.error('Failed to update XP');
       }
     }
   };
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // Simulate API call
-      const users = JSON.parse(localStorage.getItem('devverse_users') || '[]');
-      const user = users.find((u: any) => u.email === email);
-      
-      if (!user) {
+      // First, get the user's password hash from our users table
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id, password_hash')
+        .eq('email', email)
+        .single();
+
+      if (userError || !userData) {
         toast.error('User not found');
         return false;
       }
 
-      // In production, use bcrypt to compare passwords
-      if (user.password !== password) {
+      // Verify password
+      const isValidPassword = await bcrypt.compare(password, userData.password_hash);
+      if (!isValidPassword) {
         toast.error('Invalid password');
         return false;
       }
 
-      const { password: _, ...userWithoutPassword } = user;
-      // Deserialize date strings back to Date objects
-      const deserializedUser = deserializeDates(userWithoutPassword);
-      
-      setAuthState({
-        user: deserializedUser,
-        isAuthenticated: true,
-        isLoading: false,
+      // Sign in with Supabase Auth using the user's ID
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password: userData.id, // Use user ID as password for Supabase Auth
       });
 
-      localStorage.setItem('devverse_user', JSON.stringify(deserializedUser));
-      
+      if (signInError) {
+        // If user doesn't exist in Supabase Auth, create them
+        const { error: signUpError } = await supabase.auth.signUp({
+          email,
+          password: userData.id,
+        });
+
+        if (signUpError) {
+          console.error('Auth error:', signUpError);
+          toast.error('Authentication failed');
+          return false;
+        }
+      }
+
       // Award achievement for logging in
-      const achievements = JSON.parse(localStorage.getItem(`achievements_${user.id}`) || '[]');
-      if (!achievements.some((a: any) => a.id === 'beginning')) {
-        const newAchievement = {
-          id: 'beginning',
+      await supabase
+        .from('achievements')
+        .upsert({
+          user_id: userData.id,
+          achievement_id: 'beginning',
           name: 'The Beginning',
           description: 'User makes an account and Logs in',
           icon: 'user',
-          unlockedAt: new Date()
-        };
-        achievements.push(newAchievement);
-        localStorage.setItem(`achievements_${user.id}`, JSON.stringify(achievements));
-        toast.success('Achievement unlocked: The Beginning! 🎉');
-      }
+        }, { onConflict: 'user_id,achievement_id' });
       
       toast.success('Welcome back to DevVerse³!');
       return true;
     } catch (error) {
+      console.error('Login error:', error);
       toast.error('Login failed');
       return false;
     }
@@ -178,105 +245,165 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = async (username: string, email: string, password: string): Promise<boolean> => {
     try {
-      const users = JSON.parse(localStorage.getItem('devverse_users') || '[]');
-      
-      // Check if email already exists
-      if (users.some((u: any) => u.email === email)) {
-        toast.error('Email already registered');
+      // Check if email or username already exists
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('id')
+        .or(`email.eq.${email},username.eq.${username}`)
+        .single();
+
+      if (existingUser) {
+        toast.error('Email or username already exists');
         return false;
       }
 
-      // Check if username already exists
-      if (users.some((u: any) => u.username === username)) {
-        toast.error('Username already taken');
+      // Hash password
+      const passwordHash = await bcrypt.hash(password, 10);
+
+      // Create user in our users table
+      const { data: newUser, error: userError } = await supabase
+        .from('users')
+        .insert({
+          username,
+          email,
+          password_hash: passwordHash,
+          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
+        })
+        .select()
+        .single();
+
+      if (userError || !newUser) {
+        console.error('User creation error:', userError);
+        toast.error('Registration failed');
         return false;
       }
 
-      const newUser = {
-        id: Date.now().toString(),
-        username,
+      // Create user in Supabase Auth
+      const { error: authError } = await supabase.auth.signUp({
         email,
-        password, // In production, hash with bcrypt
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
-        xp: 0,
-        level: 1,
-        projects: [],
-        joinedAt: new Date(),
-        planet: {
-          id: Date.now().toString(),
-          name: `${username}'s Planet`,
-          owner: username,
-          stack: {
-            languages: [],
-            frameworks: [],
-            tools: [],
-            databases: []
-          },
-          position: [Math.random() * 10 - 5, Math.random() * 10 - 5, Math.random() * 10 - 5],
-          color: '#00ffff',
-          size: 1.0,
-          rings: 1,
-          achievements: [],
-          likes: 0,
-          views: 0,
-          createdAt: new Date()
-        }
-      };
-
-      users.push(newUser);
-      localStorage.setItem('devverse_users', JSON.stringify(users));
-      
-      // Auto-login after registration
-      const { password: _, ...userWithoutPassword } = newUser;
-      setAuthState({
-        user: userWithoutPassword,
-        isAuthenticated: true,
-        isLoading: false,
+        password: newUser.id, // Use user ID as password for Supabase Auth
       });
 
-      localStorage.setItem('devverse_user', JSON.stringify(userWithoutPassword));
-      
+      if (authError) {
+        console.error('Auth creation error:', authError);
+        // Clean up user record if auth creation fails
+        await supabase.from('users').delete().eq('id', newUser.id);
+        toast.error('Registration failed');
+        return false;
+      }
+
+      // Create default planet
+      await supabase
+        .from('dev_planets')
+        .insert({
+          user_id: newUser.id,
+          name: `${username}'s Planet`,
+        });
+
       // Award achievement for registering
-      const achievements = [{
-        id: 'beginning',
-        name: 'The Beginning',
-        description: 'User makes an account and Logs in',
-        icon: 'user',
-        unlockedAt: new Date()
-      }];
-      localStorage.setItem(`achievements_${newUser.id}`, JSON.stringify(achievements));
+      await supabase
+        .from('achievements')
+        .insert({
+          user_id: newUser.id,
+          achievement_id: 'beginning',
+          name: 'The Beginning',
+          description: 'User makes an account and Logs in',
+          icon: 'user',
+        });
       
       toast.success('Welcome to DevVerse³! Your planet has been created!');
       toast.success('Achievement unlocked: The Beginning! 🎉');
       return true;
     } catch (error) {
+      console.error('Registration error:', error);
       toast.error('Registration failed');
       return false;
     }
   };
 
-  const logout = () => {
-    setAuthState({
-      user: null,
-      isAuthenticated: false,
-      isLoading: false,
-    });
-    localStorage.removeItem('devverse_user');
-    toast.success('Logged out successfully');
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+      setAuthState({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+      });
+      toast.success('Logged out successfully');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error('Logout failed');
+    }
   };
 
-  const updateUser = (updates: Partial<User>) => {
+  const updateUser = async (updates: Partial<User>) => {
     if (authState.user) {
-      const updatedUser = { ...authState.user, ...updates };
-      setAuthState(prev => ({ ...prev, user: updatedUser }));
-      localStorage.setItem('devverse_user', JSON.stringify(updatedUser));
-      
-      // Update in users array
-      const users = JSON.parse(localStorage.getItem('devverse_users') || '[]');
-      const userIndex = users.findIndex((u: any) => u.id === updatedUser.id);
-      if (userIndex !== -1) {
-        users[userIndex] = { ...users[userIndex], ...updates };
-        localStorage.setItem('devverse_users', JSON.stringify(users));
+      try {
+        // Update user in database
+        const { error } = await supabase
+          .from('users')
+          .update({
+            username: updates.username,
+            email: updates.email,
+            avatar: updates.avatar,
+            bio: updates.bio,
+            location: updates.location,
+            website: updates.website,
+          })
+          .eq('id', authState.user.id);
+
+        if (error) {
+          console.error('Error updating user:', error);
+          toast.error('Failed to update profile');
+          return;
+        }
+
+        // Update planet if provided
+        if (updates.planet) {
+          await supabase
+            .from('dev_planets')
+            .upsert({
+              user_id: authState.user.id,
+              name: updates.planet.name,
+              stack_languages: updates.planet.stack.languages,
+              stack_frameworks: updates.planet.stack.frameworks,
+              stack_tools: updates.planet.stack.tools,
+              stack_databases: updates.planet.stack.databases,
+              color: updates.planet.color,
+              size: updates.planet.size,
+              rings: updates.planet.rings,
+            }, { onConflict: 'user_id' });
+        }
+
+        // Update projects if provided
+        if (updates.projects) {
+          // This is a simplified approach - in a real app you'd handle individual project updates
+          for (const project of updates.projects) {
+            if (!project.id.includes('temp')) { // Only update existing projects
+              await supabase
+                .from('projects')
+                .upsert({
+                  id: project.id,
+                  user_id: authState.user.id,
+                  name: project.name,
+                  description: project.description,
+                  language: project.language,
+                  github_url: project.githubUrl,
+                  homepage: project.homepage,
+                  topics: project.topics,
+                  is_private: project.isPrivate,
+                  stars: project.stars,
+                  forks: project.forks,
+                });
+            }
+          }
+        }
+
+        const updatedUser = { ...authState.user, ...updates };
+        setAuthState(prev => ({ ...prev, user: updatedUser }));
+      } catch (error) {
+        console.error('Error updating user:', error);
+        toast.error('Failed to update profile');
       }
     }
   };
