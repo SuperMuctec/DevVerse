@@ -37,6 +37,7 @@ interface ProjectWithLanguages extends Project {
 export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
   const [projectsWithLanguages, setProjectsWithLanguages] = useState<ProjectWithLanguages[]>([]);
   const [expandedLanguages, setExpandedLanguages] = useState<{[key: string]: boolean}>({});
+  const [animationKey, setAnimationKey] = useState(0);
 
   // Get user data from localStorage
   const getUserData = (): UserType | null => {
@@ -96,6 +97,8 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
         );
         
         setProjectsWithLanguages(projectsWithLangs);
+        // Force re-animation when data loads
+        setAnimationKey(prev => prev + 1);
       };
 
       loadProjectLanguages();
@@ -196,7 +199,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
     }));
   };
 
-  // Animated Pie Chart Component
+  // Animated Pie Chart Component with improved animation
   const AnimatedPieChart: React.FC<{ 
     segments: Array<{
       language: string;
@@ -204,7 +207,8 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
       color: string;
     }>;
     size?: number;
-  }> = ({ segments, size = 48 }) => {
+    projectId: string;
+  }> = ({ segments, size = 48, projectId }) => {
     const radius = (size - 8) / 2;
     const circumference = 2 * Math.PI * radius;
     
@@ -232,7 +236,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
 
             return (
               <motion.circle
-                key={index}
+                key={`${projectId}-${segment.language}-${animationKey}`}
                 cx={size / 2}
                 cy={size / 2}
                 r={radius}
@@ -244,21 +248,50 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
                 strokeLinecap="round"
                 initial={{ 
                   strokeDasharray: `0 ${circumference}`,
-                  opacity: 0
+                  opacity: 0,
+                  scale: 0.8
                 }}
                 animate={{ 
                   strokeDasharray: strokeDasharray,
-                  opacity: 1
+                  opacity: 1,
+                  scale: 1
                 }}
                 transition={{ 
-                  duration: 1.5,
-                  delay: index * 0.3,
-                  ease: "easeInOut"
+                  duration: 2,
+                  delay: index * 0.4,
+                  ease: "easeInOut",
+                  type: "spring",
+                  stiffness: 100
+                }}
+                whileHover={{
+                  strokeWidth: 6,
+                  filter: `drop-shadow(0 0 8px ${segment.color})`
                 }}
               />
             );
           })}
         </svg>
+        
+        {/* Center indicator */}
+        <motion.div
+          className="absolute inset-0 flex items-center justify-center"
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 1, duration: 0.5 }}
+        >
+          <motion.div
+            className="w-2 h-2 bg-white/60 rounded-full"
+            animate={{
+              scale: [1, 1.5, 1],
+              opacity: [0.6, 1, 0.6]
+            }}
+            transition={{
+              duration: 2,
+              repeat: Infinity,
+              ease: "easeInOut"
+            }}
+          />
+        </motion.div>
       </div>
     );
   };
@@ -285,20 +318,33 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
     const hasMore = segments.length > 3;
 
     return (
-      <div className="flex items-start space-x-4">
+      <motion.div 
+        className="flex items-start space-x-4"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+      >
         {/* Animated Pie Chart */}
-        <AnimatedPieChart segments={segments} />
+        <AnimatedPieChart segments={segments} projectId={projectId} />
 
         {/* Language Legend */}
         <div className="flex-1">
           <div className="space-y-1">
-            {displayedLanguages.map((segment) => (
+            {displayedLanguages.map((segment, index) => (
               <motion.div 
-                key={segment.language} 
+                key={`${projectId}-${segment.language}`}
                 className="flex items-center justify-between"
-                initial={{ opacity: 0, x: -10 }}
+                initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3 }}
+                transition={{ 
+                  duration: 0.5,
+                  delay: 0.8 + index * 0.1
+                }}
+                whileHover={{ 
+                  scale: 1.05,
+                  x: 5,
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)'
+                }}
               >
                 <div className="flex items-center space-x-2">
                   <motion.div
@@ -306,15 +352,29 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
                     style={{ backgroundColor: segment.color }}
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    transition={{ duration: 0.3, delay: 0.1 }}
+                    transition={{ 
+                      duration: 0.3, 
+                      delay: 1 + index * 0.1,
+                      type: "spring",
+                      stiffness: 200
+                    }}
+                    whileHover={{
+                      scale: 1.3,
+                      boxShadow: `0 0 10px ${segment.color}`
+                    }}
                   />
                   <span className="text-sm text-white/80 font-medium">
                     {segment.language}
                   </span>
                 </div>
-                <span className="text-sm text-white/60 font-mono">
-                  {segment.percentage.toFixed(2)}%
-                </span>
+                <motion.span 
+                  className="text-sm text-white/60 font-mono"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 1.2 + index * 0.1 }}
+                >
+                  {segment.percentage.toFixed(1)}%
+                </motion.span>
               </motion.div>
             ))}
           </div>
@@ -323,24 +383,32 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
             <motion.button
               onClick={() => toggleExpandedLanguages(projectId)}
               className="flex items-center space-x-1 mt-2 text-xs text-cyber-blue hover:text-cyber-pink transition-colors"
-              whileHover={{ scale: 1.05 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1.5 }}
+              whileHover={{ 
+                scale: 1.05,
+                x: 3
+              }}
               whileTap={{ scale: 0.95 }}
             >
-              {isExpanded ? (
-                <>
+              <motion.div
+                animate={{ rotateZ: isExpanded ? 180 : 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                {isExpanded ? (
                   <ChevronUp className="w-3 h-3" />
-                  <span>Show less</span>
-                </>
-              ) : (
-                <>
+                ) : (
                   <ChevronDown className="w-3 h-3" />
-                  <span>+{segments.length - 3} more</span>
-                </>
-              )}
+                )}
+              </motion.div>
+              <span>
+                {isExpanded ? 'Show less' : `+${segments.length - 3} more`}
+              </span>
             </motion.button>
           )}
         </div>
-      </div>
+      </motion.div>
     );
   };
 
@@ -637,7 +705,12 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
                       </div>
 
                       {/* GitHub Language Chart */}
-                      <div className="mb-4 p-4 bg-white/5 rounded-lg border border-white/10">
+                      <motion.div 
+                        className="mb-4 p-4 bg-white/5 rounded-lg border border-white/10"
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.3 + index * 0.1, duration: 0.5 }}
+                      >
                         {project.languagesLoading ? (
                           <div className="flex items-center space-x-2 text-white/50">
                             <Loader className="w-4 h-4 animate-spin" />
@@ -645,10 +718,15 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
                           </div>
                         ) : project.languages ? (
                           <div>
-                            <h4 className="text-sm font-semibold text-white/80 mb-3 flex items-center space-x-2">
+                            <motion.h4 
+                              className="text-sm font-semibold text-white/80 mb-3 flex items-center space-x-2"
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: 0.5 + index * 0.1 }}
+                            >
                               <Code className="w-4 h-4" />
                               <span>Language Distribution</span>
-                            </h4>
+                            </motion.h4>
                             {createLanguageChart(project.languages, project.id)}
                           </div>
                         ) : (
@@ -657,7 +735,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
                             <span>Language data unavailable</span>
                           </div>
                         )}
-                      </div>
+                      </motion.div>
 
                       <div className="flex flex-wrap gap-2">
                         {project.topics.map((topic, topicIndex) => (
