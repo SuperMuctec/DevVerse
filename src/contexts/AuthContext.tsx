@@ -251,12 +251,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = async (username: string, email: string, password: string): Promise<boolean> => {
     try {
-      // Check if email or username already exists
+      // Check if email or username already exists in our users table
       const { data: existingUser } = await supabase
         .from('users')
         .select('id')
         .or(`email.eq.${email},username.eq.${username}`)
-        .maybeSingle(); // Changed from .single() to .maybeSingle()
+        .maybeSingle();
 
       if (existingUser) {
         toast.error('Email or username already exists');
@@ -272,8 +272,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         password: 'temp-password', // Temporary password for auth
       });
 
-      if (authError || !authData.user) {
+      if (authError) {
+        // Handle specific case where user already exists in Supabase Auth
+        if (authError.message && authError.message.includes('User already registered')) {
+          toast.error('An account with this email already exists');
+          return false;
+        }
+        
         console.error('Auth creation error:', authError);
+        toast.error('Registration failed');
+        return false;
+      }
+
+      if (!authData.user) {
         toast.error('Registration failed');
         return false;
       }
