@@ -9,7 +9,8 @@ import {
   Star, 
   GitFork, 
   ExternalLink,
-  ArrowLeft
+  ArrowLeft,
+  Zap
 } from 'lucide-react';
 import { GlassPanel } from '../ui/GlassPanel';
 import { User as UserType } from '../../types';
@@ -27,6 +28,21 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
   };
 
   const user = getUserData();
+
+  // Calculate user level based on XP
+  const calculateLevel = (xp: number) => {
+    let level = 1;
+    let requiredXp = 20; // 10 * 2^1
+    let totalXp = 0;
+    
+    while (totalXp + requiredXp <= xp) {
+      totalXp += requiredXp;
+      level++;
+      requiredXp = 10 * Math.pow(2, level);
+    }
+    
+    return { level, currentLevelXp: xp - totalXp, requiredXp };
+  };
 
   if (!user) {
     return (
@@ -46,6 +62,10 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
       </div>
     );
   }
+
+  const userXp = user.xp || 0;
+  const { level, currentLevelXp, requiredXp } = calculateLevel(userXp);
+  const progressPercentage = (currentLevelXp / requiredXp) * 100;
 
   const getLanguageColor = (language: string) => {
     const colors: { [key: string]: string } = {
@@ -87,6 +107,27 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
                   {user.username}
                 </h2>
                 <p className="text-white/70 text-sm mb-4">{user.email}</p>
+                
+                {/* XP and Level Display */}
+                <div className="p-3 bg-gradient-to-r from-cyber-blue/20 to-cyber-pink/20 rounded-lg border border-cyber-blue/30">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center space-x-1">
+                      <Zap className="w-4 h-4 text-cyber-blue" />
+                      <span className="text-cyber-blue font-semibold text-sm">Level {level}</span>
+                    </div>
+                    <span className="text-white/70 text-xs">{userXp} XP</span>
+                  </div>
+                  <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-cyber-blue to-cyber-pink transition-all duration-500"
+                      style={{ width: `${progressPercentage}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-xs text-white/60 mt-1">
+                    <span>{currentLevelXp}</span>
+                    <span>{requiredXp}</span>
+                  </div>
+                </div>
               </div>
 
               {user.bio && (

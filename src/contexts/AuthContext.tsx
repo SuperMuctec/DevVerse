@@ -7,6 +7,7 @@ interface AuthContextType extends AuthState {
   register: (username: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
+  addXP: (amount: number) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -45,6 +46,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setAuthState(prev => ({ ...prev, isLoading: false }));
     }
   }, []);
+
+  const calculateLevel = (xp: number) => {
+    let level = 1;
+    let requiredXp = 20; // 10 * 2^1
+    let totalXp = 0;
+    
+    while (totalXp + requiredXp <= xp) {
+      totalXp += requiredXp;
+      level++;
+      requiredXp = 10 * Math.pow(2, level);
+    }
+    
+    return level;
+  };
+
+  const addXP = (amount: number) => {
+    if (authState.user) {
+      const oldLevel = calculateLevel(authState.user.xp);
+      const newXp = authState.user.xp + amount;
+      const newLevel = calculateLevel(newXp);
+      
+      const updatedUser = { ...authState.user, xp: newXp, level: newLevel };
+      setAuthState(prev => ({ ...prev, user: updatedUser }));
+      localStorage.setItem('devverse_user', JSON.stringify(updatedUser));
+      
+      // Update in users array
+      const users = JSON.parse(localStorage.getItem('devverse_users') || '[]');
+      const userIndex = users.findIndex((u: any) => u.id === updatedUser.id);
+      if (userIndex !== -1) {
+        users[userIndex] = { ...users[userIndex], xp: newXp, level: newLevel };
+        localStorage.setItem('devverse_users', JSON.stringify(users));
+      }
+      
+      toast.success(`+${amount} XP earned! 🌟`);
+      
+      if (newLevel > oldLevel) {
+        toast.success(`🎉 Level up! You're now level ${newLevel}!`, { duration: 6000 });
+      }
+    }
+  };
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
@@ -117,6 +158,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email,
         password, // In production, hash with bcrypt
         avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
+        xp: 0,
+        level: 1,
         projects: [],
         joinedAt: new Date(),
         planet: {
@@ -206,6 +249,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         register,
         logout,
         updateUser,
+        addXP,
       }}
     >
       {children}

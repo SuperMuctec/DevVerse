@@ -51,7 +51,7 @@ export const UserPanel: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [showCreateProject, setShowCreateProject] = useState(false);
   const [showProfilePicture, setShowProfilePicture] = useState(false);
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, addXP } = useAuth();
 
   const profileForm = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -67,6 +67,25 @@ export const UserPanel: React.FC = () => {
   const passwordForm = useForm<PasswordFormData>({
     resolver: zodResolver(passwordSchema),
   });
+
+  // Calculate user level based on XP
+  const calculateLevel = (xp: number) => {
+    let level = 1;
+    let requiredXp = 20; // 10 * 2^1
+    let totalXp = 0;
+    
+    while (totalXp + requiredXp <= xp) {
+      totalXp += requiredXp;
+      level++;
+      requiredXp = 10 * Math.pow(2, level);
+    }
+    
+    return { level, currentLevelXp: xp - totalXp, requiredXp };
+  };
+
+  const userXp = user?.xp || 0;
+  const { level, currentLevelXp, requiredXp } = calculateLevel(userXp);
+  const progressPercentage = (currentLevelXp / requiredXp) * 100;
 
   const onProfileSubmit = (data: ProfileFormData) => {
     updateUser(data);
@@ -118,6 +137,10 @@ export const UserPanel: React.FC = () => {
 
     const updatedProjects = [...(user.projects || []), newProject];
     updateUser({ projects: updatedProjects });
+
+    // Award random XP (100-1000) for creating a project
+    const randomXP = Math.floor(Math.random() * 901) + 100; // 100-1000 XP
+    addXP(randomXP);
 
     // Award achievement for first project
     const achievements = JSON.parse(localStorage.getItem(`achievements_${user.id}`) || '[]');
@@ -196,6 +219,27 @@ export const UserPanel: React.FC = () => {
                   {user?.username}
                 </h2>
                 <p className="text-white/70 text-sm">{user?.email}</p>
+                
+                {/* XP and Level Display */}
+                <div className="mt-4 p-3 bg-gradient-to-r from-cyber-blue/20 to-cyber-pink/20 rounded-lg border border-cyber-blue/30">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-cyber-blue font-semibold text-sm">Level {level}</span>
+                    <span className="text-white/70 text-xs">{userXp} XP</span>
+                  </div>
+                  <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-cyber-blue to-cyber-pink transition-all duration-500"
+                      style={{ width: `${progressPercentage}%` }}
+                    />
+                  </div>
+                  <div className="flex justify-between text-xs text-white/60 mt-1">
+                    <span>{currentLevelXp}</span>
+                    <span>{requiredXp}</span>
+                  </div>
+                  <p className="text-xs text-white/50 mt-1 text-center">
+                    {requiredXp - currentLevelXp} XP to next level
+                  </p>
+                </div>
               </div>
 
               <nav className="space-y-2">
