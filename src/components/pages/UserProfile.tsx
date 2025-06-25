@@ -192,7 +192,10 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
   };
 
   // Toggle expanded languages for a project
-  const toggleExpandedLanguages = (projectId: string) => {
+  const toggleExpandedLanguages = (projectId: string, event: React.MouseEvent) => {
+    // Prevent the click from bubbling up to the project card
+    event.stopPropagation();
+    
     setExpandedLanguages(prev => ({
       ...prev,
       [projectId]: !prev[projectId]
@@ -323,6 +326,8 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
+        // Prevent clicks in this area from bubbling up to the project card
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Animated Pie Chart */}
         <AnimatedPieChart segments={segments} projectId={projectId} />
@@ -381,7 +386,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
           
           {hasMore && (
             <motion.button
-              onClick={() => toggleExpandedLanguages(projectId)}
+              onClick={(e) => toggleExpandedLanguages(projectId, e)}
               className="flex items-center space-x-1 mt-2 text-xs text-cyber-blue hover:text-cyber-pink transition-colors"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
