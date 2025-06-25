@@ -189,7 +189,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('users')
         .select('id, password_hash')
         .eq('email', email)
-        .maybeSingle(); // Changed from .single() to .maybeSingle()
+        .maybeSingle();
 
       if (userError) {
         console.error('Database error:', userError);
@@ -209,24 +209,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
-      // Sign in with Supabase Auth using the user's ID
+      // Sign in with Supabase Auth using the user's email and a consistent password
+      const authPassword = `devverse_${userData.id}`;
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
-        password: userData.id, // Use user ID as password for Supabase Auth
+        password: authPassword,
       });
 
       if (signInError) {
-        // If user doesn't exist in Supabase Auth, create them
-        const { error: signUpError } = await supabase.auth.signUp({
-          email,
-          password: userData.id,
-        });
-
-        if (signUpError) {
-          console.error('Auth error:', signUpError);
-          toast.error('Authentication failed');
-          return false;
-        }
+        console.error('Auth sign in error:', signInError);
+        toast.error('Authentication failed');
+        return false;
       }
 
       // Award achievement for logging in
@@ -263,13 +256,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
-      // Hash password
+      // Hash password for our database
       const passwordHash = await bcrypt.hash(password, 10);
 
-      // First create user in Supabase Auth to get proper authentication
+      // Generate a temporary user ID for the auth password
+      const tempUserId = crypto.randomUUID();
+      const authPassword = `devverse_${tempUserId}`;
+
+      // First create user in Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
-        password: 'temp-password', // Temporary password for auth
+        password: authPassword,
       });
 
       if (authError) {
@@ -310,9 +307,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
-      // Update the auth user's password to use their ID
+      // Update the auth user's password to use the actual user ID
+      const finalAuthPassword = `devverse_${newUser.id}`;
       const { error: updateError } = await supabase.auth.updateUser({
-        password: newUser.id,
+        password: finalAuthPassword,
       });
 
       if (updateError) {
