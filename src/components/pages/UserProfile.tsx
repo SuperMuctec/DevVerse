@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { 
   User, 
@@ -11,34 +11,17 @@ import {
   ExternalLink,
   ArrowLeft,
   Zap,
-  Sparkles,
-  Code,
-  Loader,
-  ChevronDown,
-  ChevronUp
+  Code
 } from 'lucide-react';
 import { GlassPanel } from '../ui/GlassPanel';
-import { User as UserType, Project } from '../../types';
+import { User as UserType } from '../../types';
 
 interface UserProfileProps {
   userId: string;
   onBack: () => void;
 }
 
-interface GitHubLanguages {
-  [key: string]: number;
-}
-
-interface ProjectWithLanguages extends Project {
-  languages?: GitHubLanguages;
-  languagesLoading?: boolean;
-}
-
 export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
-  const [projectsWithLanguages, setProjectsWithLanguages] = useState<ProjectWithLanguages[]>([]);
-  const [expandedLanguages, setExpandedLanguages] = useState<{[key: string]: boolean}>({});
-  const [animationKey, setAnimationKey] = useState(0);
-
   // Get user data from localStorage
   const getUserData = (): UserType | null => {
     const users = JSON.parse(localStorage.getItem('devverse_users') || '[]');
@@ -46,100 +29,6 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
   };
 
   const user = getUserData();
-
-  // Mock GitHub languages for demonstration (since API might be rate limited)
-  const getMockLanguages = (projectName: string): GitHubLanguages => {
-    const mockData = [
-      { TypeScript: 45, JavaScript: 30, CSS: 15, HTML: 10 },
-      { Python: 60, JavaScript: 25, HTML: 10, CSS: 5 },
-      { Java: 70, XML: 15, Kotlin: 10, Gradle: 5 },
-      { JavaScript: 50, TypeScript: 30, CSS: 12, HTML: 8 },
-      { Python: 80, Jupyter: 15, Shell: 5 },
-      { Go: 85, Dockerfile: 10, Shell: 5 },
-      { Rust: 90, TOML: 8, Shell: 2 },
-      { C: 75, CMake: 15, Assembly: 10 },
-      { Swift: 85, Objective: 15 },
-      { PHP: 60, JavaScript: 20, CSS: 12, HTML: 8 }
-    ];
-    
-    // Use project name hash to consistently pick mock data
-    const hash = projectName.split('').reduce((a, b) => {
-      a = ((a << 5) - a) + b.charCodeAt(0);
-      return a & a;
-    }, 0);
-    
-    return mockData[Math.abs(hash) % mockData.length];
-  };
-
-  // Fetch GitHub languages for a repository
-  const fetchGitHubLanguages = async (githubUrl: string, projectName: string): Promise<GitHubLanguages | null> => {
-    try {
-      // Extract owner and repo from GitHub URL
-      const match = githubUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
-      if (!match) return getMockLanguages(projectName);
-
-      const [, owner, repo] = match;
-      const cleanRepo = repo.replace(/\.git$/, ''); // Remove .git suffix if present
-
-      const response = await fetch(`https://api.github.com/repos/${owner}/${cleanRepo}/languages`);
-      
-      if (!response.ok) {
-        console.warn(`Failed to fetch languages for ${owner}/${cleanRepo}:`, response.status);
-        // Return mock data if API fails
-        return getMockLanguages(projectName);
-      }
-
-      const languages = await response.json();
-      
-      // If no languages returned, use mock data
-      if (!languages || Object.keys(languages).length === 0) {
-        return getMockLanguages(projectName);
-      }
-      
-      return languages;
-    } catch (error) {
-      console.error('Error fetching GitHub languages:', error);
-      // Return mock data on error
-      return getMockLanguages(projectName);
-    }
-  };
-
-  // Load projects with language data
-  useEffect(() => {
-    if (user?.projects) {
-      const loadProjectLanguages = async () => {
-        const projectsWithLangs = await Promise.all(
-          user.projects.map(async (project) => {
-            const projectWithLang: ProjectWithLanguages = { 
-              ...project, 
-              languagesLoading: true 
-            };
-            
-            try {
-              const languages = await fetchGitHubLanguages(project.githubUrl, project.name);
-              projectWithLang.languages = languages || undefined;
-            } catch (error) {
-              console.error(`Error loading languages for ${project.name}:`, error);
-              // Use mock data as fallback
-              projectWithLang.languages = getMockLanguages(project.name);
-            } finally {
-              projectWithLang.languagesLoading = false;
-            }
-            
-            return projectWithLang;
-          })
-        );
-        
-        setProjectsWithLanguages(projectsWithLangs);
-        // Force re-animation when data loads
-        setAnimationKey(prev => prev + 1);
-      };
-
-      loadProjectLanguages();
-    } else {
-      setProjectsWithLanguages([]);
-    }
-  }, [user?.projects]);
 
   // Calculate user level based on XP
   const calculateLevel = (xp: number) => {
@@ -158,38 +47,18 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
 
   if (!user) {
     return (
-      <div className="min-h-screen pt-20 sm:pt-44 px-4">
+      <div className="min-h-screen pt-44 px-4">
         <div className="max-w-4xl mx-auto py-8">
-          <motion.div 
-            className="text-center"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6 }}
-          >
-            <motion.h1 
-              className="font-orbitron text-xl sm:text-2xl font-bold text-white mb-4"
-              animate={{
-                textShadow: [
-                  '0 0 10px #ff0000',
-                  '0 0 20px #ff0000, 0 0 30px #ff0000',
-                  '0 0 10px #ff0000'
-                ]
-              }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            >
-              User Not Found
-            </motion.h1>
+          <div className="text-center">
+            <h1 className="font-orbitron text-2xl font-bold text-white mb-4">User Not Found</h1>
             <motion.button
               onClick={onBack}
               className="text-cyber-blue hover:text-cyber-pink transition-colors"
-              whileHover={{ 
-                scale: 1.05,
-                rotateY: 10
-              }}
+              whileHover={{ scale: 1.05 }}
             >
               ← Back
             </motion.button>
-          </motion.div>
+          </div>
         </div>
       </div>
     );
@@ -207,398 +76,77 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
       Java: '#ed8b00',
       'C++': '#00599c',
       Go: '#00add8',
-      HTML: '#e34c26',
-      CSS: '#1572b6',
-      Rust: '#dea584',
-      PHP: '#777bb4',
-      Ruby: '#cc342d',
-      Swift: '#fa7343',
-      Kotlin: '#7f52ff',
-      Dart: '#0175c2',
-      Shell: '#89e051',
-      C: '#555555',
-      'C#': '#239120',
-      Jupyter: '#da5b0b',
-      Vue: '#4fc08d',
-      Svelte: '#ff3e00',
-      XML: '#0060ac',
-      Gradle: '#02303a',
-      TOML: '#9c4221',
-      CMake: '#064f8c',
-      Assembly: '#6e4c13',
-      Objective: '#438eff',
-      Dockerfile: '#384d54',
     };
     return colors[language] || '#ffffff';
   };
 
-  // Toggle expanded languages for a project
-  const toggleExpandedLanguages = (projectId: string, event: React.MouseEvent) => {
-    // Prevent the click from bubbling up to the project card
-    event.stopPropagation();
-    
-    setExpandedLanguages(prev => ({
-      ...prev,
-      [projectId]: !prev[projectId]
-    }));
-  };
-
-  // Enhanced Animated Pie Chart Component
-  const AnimatedPieChart: React.FC<{ 
-    segments: Array<{
-      language: string;
-      percentage: number;
-      color: string;
-    }>;
-    size?: number;
-    projectId: string;
-  }> = ({ segments, size = 100, projectId }) => {
-    const radius = (size - 16) / 2;
-    const circumference = 2 * Math.PI * radius;
-    
-    let cumulativePercentage = 0;
-
-    return (
-      <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
-        <svg width={size} height={size} className="transform -rotate-90">
-          {/* Background circle */}
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            fill="none"
-            stroke="rgba(255,255,255,0.1)"
-            strokeWidth="8"
-          />
-          
-          {/* Animated segments */}
-          {segments.map((segment, index) => {
-            const strokeDasharray = `${(segment.percentage / 100) * circumference} ${circumference}`;
-            const strokeDashoffset = -((cumulativePercentage / 100) * circumference);
-            
-            cumulativePercentage += segment.percentage;
-
-            return (
-              <motion.circle
-                key={`${projectId}-${segment.language}-${animationKey}-${index}`}
-                cx={size / 2}
-                cy={size / 2}
-                r={radius}
-                fill="none"
-                stroke={segment.color}
-                strokeWidth="8"
-                strokeDasharray={strokeDasharray}
-                strokeDashoffset={strokeDashoffset}
-                strokeLinecap="round"
-                initial={{ 
-                  strokeDasharray: `0 ${circumference}`,
-                  opacity: 0,
-                  scale: 0.3
-                }}
-                animate={{ 
-                  strokeDasharray: strokeDasharray,
-                  opacity: 1,
-                  scale: 1
-                }}
-                transition={{ 
-                  duration: 2,
-                  delay: index * 0.3,
-                  ease: "easeOut",
-                  type: "spring",
-                  stiffness: 80
-                }}
-                whileHover={{
-                  strokeWidth: 12,
-                  filter: `drop-shadow(0 0 15px ${segment.color})`,
-                  scale: 1.05
-                }}
-              />
-            );
-          })}
-        </svg>
-        
-        {/* Center indicator */}
-        <motion.div
-          className="absolute inset-0 flex items-center justify-center"
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 1, duration: 0.8 }}
-        >
-          <motion.div
-            className="text-center bg-black/50 rounded-full w-12 h-12 flex flex-col items-center justify-center"
-            animate={{
-              scale: [1, 1.1, 1],
-            }}
-            transition={{
-              duration: 3,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          >
-            <div className="text-xs font-bold text-white">
-              {segments.length}
-            </div>
-            <div className="text-xs text-white/60">
-              langs
-            </div>
-          </motion.div>
-        </motion.div>
-      </div>
-    );
-  };
-
-  // Create pie chart for languages
-  const createLanguageChart = (languages: GitHubLanguages, projectId: string) => {
-    const total = Object.values(languages).reduce((sum, bytes) => sum + bytes, 0);
-    if (total === 0) return null;
-
-    const sortedLanguages = Object.entries(languages)
-      .sort(([, a], [, b]) => b - a);
-
-    const segments = sortedLanguages.map(([lang, bytes]) => {
-      const percentage = (bytes / total) * 100;
-      return {
-        language: lang,
-        percentage: percentage,
-        color: getLanguageColor(lang)
-      };
-    });
-
-    const isExpanded = expandedLanguages[projectId];
-    const displayedLanguages = isExpanded ? segments : segments.slice(0, 3);
-    const hasMore = segments.length > 3;
-
-    return (
-      <motion.div 
-        className="flex items-start space-x-6"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-        // Prevent clicks in this area from bubbling up to the project card
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Animated Pie Chart */}
-        <AnimatedPieChart segments={segments} projectId={projectId} />
-
-        {/* Language Legend */}
-        <div className="flex-1 min-w-0">
-          <div className="space-y-2">
-            {displayedLanguages.map((segment, index) => (
-              <motion.div 
-                key={`${projectId}-${segment.language}`}
-                className="flex items-center justify-between p-2 rounded-lg hover:bg-white/5 transition-colors"
-                initial={{ opacity: 0, x: -30 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ 
-                  duration: 0.6,
-                  delay: 1 + index * 0.15
-                }}
-                whileHover={{ 
-                  scale: 1.02,
-                  x: 5,
-                  backgroundColor: 'rgba(255, 255, 255, 0.08)'
-                }}
-              >
-                <div className="flex items-center space-x-3">
-                  <motion.div
-                    className="w-4 h-4 rounded-full border-2 border-white/20"
-                    style={{ backgroundColor: segment.color }}
-                    initial={{ scale: 0, rotate: -180 }}
-                    animate={{ scale: 1, rotate: 0 }}
-                    transition={{ 
-                      duration: 0.5, 
-                      delay: 1.2 + index * 0.15,
-                      type: "spring",
-                      stiffness: 200
-                    }}
-                    whileHover={{
-                      scale: 1.4,
-                      boxShadow: `0 0 15px ${segment.color}`,
-                      rotate: 360
-                    }}
-                  />
-                  <span className="text-sm text-white/90 font-medium">
-                    {segment.language}
-                  </span>
-                </div>
-                <motion.span 
-                  className="text-sm text-white/70 font-mono font-bold"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 1.4 + index * 0.15 }}
-                  style={{ color: segment.color }}
-                >
-                  {segment.percentage.toFixed(1)}%
-                </motion.span>
-              </motion.div>
-            ))}
-          </div>
-          
-          {hasMore && (
-            <motion.button
-              onClick={(e) => toggleExpandedLanguages(projectId, e)}
-              className="flex items-center space-x-2 mt-3 text-sm text-cyber-blue hover:text-cyber-pink transition-colors p-2 rounded-lg hover:bg-white/5"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 2 }}
-              whileHover={{ 
-                scale: 1.05,
-                x: 5
-              }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <motion.div
-                animate={{ rotateZ: isExpanded ? 180 : 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                {isExpanded ? (
-                  <ChevronUp className="w-4 h-4" />
-                ) : (
-                  <ChevronDown className="w-4 h-4" />
-                )}
-              </motion.div>
-              <span>
-                {isExpanded ? 'Show less' : `+${segments.length - 3} more languages`}
-              </span>
-            </motion.button>
-          )}
-        </div>
-      </motion.div>
-    );
-  };
-
   return (
-    <div className="min-h-screen pt-20 sm:pt-44 px-4">
+    <div className="min-h-screen pt-44 px-4">
       <div className="max-w-6xl mx-auto py-8">
         <motion.button
           onClick={onBack}
           className="mb-6 flex items-center space-x-2 text-cyber-blue hover:text-cyber-pink transition-colors"
-          whileHover={{ 
-            scale: 1.05, 
-            x: -5,
-            rotateY: 10
-          }}
+          whileHover={{ scale: 1.05, x: -5 }}
           whileTap={{ scale: 0.95 }}
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back</span>
         </motion.button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* User Profile */}
-          <motion.div 
-            className="lg:col-span-1"
-            initial={{ opacity: 0, x: -50, rotateY: -15 }}
-            animate={{ opacity: 1, x: 0, rotateY: 0 }}
-            transition={{ duration: 0.8, type: "spring" }}
-          >
+          <div className="lg:col-span-1">
             <GlassPanel glowColor="#00ffff">
-              <motion.div 
-                className="text-center mb-6"
-                whileHover={{ scale: 1.02, rotateY: 5 }}
-              >
+              <div className="text-center mb-6">
                 <motion.img
                   src={user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`}
                   alt={user.username}
-                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-full mx-auto mb-4 border-2 border-cyber-blue"
-                  whileHover={{ 
-                    scale: 1.1, 
-                    rotate: 360,
-                    borderColor: '#ff00ff'
-                  }}
-                  transition={{ duration: 0.6 }}
+                  className="w-24 h-24 rounded-full mx-auto mb-4 border-2 border-cyber-blue"
+                  whileHover={{ scale: 1.1, rotate: 5 }}
                 />
-                <motion.h2 
-                  className="font-orbitron text-xl sm:text-2xl font-bold text-white mb-1"
-                  animate={{
-                    textShadow: [
-                      '0 0 10px #00ffff',
-                      '0 0 20px #00ffff, 0 0 30px #00ffff',
-                      '0 0 10px #00ffff'
-                    ]
-                  }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                >
+                <h2 className="font-orbitron text-2xl font-bold text-white mb-1">
                   {user.username}
-                </motion.h2>
+                </h2>
                 <p className="text-white/70 text-sm mb-4">{user.email}</p>
                 
                 {/* XP and Level Display */}
-                <motion.div 
-                  className="p-3 bg-gradient-to-r from-cyber-blue/20 to-cyber-pink/20 rounded-lg border border-cyber-blue/30"
-                  whileHover={{ scale: 1.02, rotateX: 5 }}
-                >
+                <div className="p-3 bg-gradient-to-r from-cyber-blue/20 to-cyber-pink/20 rounded-lg border border-cyber-blue/30">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center space-x-1">
-                      <motion.div
-                        animate={{ 
-                          rotateZ: [0, 360],
-                          scale: [1, 1.2, 1]
-                        }}
-                        transition={{ 
-                          rotateZ: { duration: 4, repeat: Infinity, ease: "linear" },
-                          scale: { duration: 2, repeat: Infinity, ease: "easeInOut" }
-                        }}
-                      >
-                        <Zap className="w-4 h-4 text-cyber-blue" />
-                      </motion.div>
+                      <Zap className="w-4 h-4 text-cyber-blue" />
                       <span className="text-cyber-blue font-semibold text-sm">Level {level}</span>
                     </div>
                     <span className="text-white/70 text-xs">{userXp} XP</span>
                   </div>
                   <div className="w-full h-2 bg-white/20 rounded-full overflow-hidden">
-                    <motion.div 
-                      className="h-full bg-gradient-to-r from-cyber-blue to-cyber-pink"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${progressPercentage}%` }}
-                      transition={{ delay: 0.5, duration: 1.5, ease: "easeOut" }}
+                    <div 
+                      className="h-full bg-gradient-to-r from-cyber-blue to-cyber-pink transition-all duration-500"
+                      style={{ width: `${progressPercentage}%` }}
                     />
                   </div>
                   <div className="flex justify-between text-xs text-white/60 mt-1">
                     <span>{currentLevelXp}</span>
                     <span>{requiredXp}</span>
                   </div>
-                </motion.div>
-              </motion.div>
+                </div>
+              </div>
 
               {user.bio && (
-                <motion.div 
-                  className="mb-6"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3, duration: 0.6 }}
-                >
+                <div className="mb-6">
                   <h3 className="font-semibold text-white mb-2">Bio</h3>
-                  <motion.p 
-                    className="text-white/80 text-sm leading-relaxed"
-                    initial={{ opacity: 0.8 }}
-                    whileHover={{ opacity: 1 }}
-                  >
-                    {user.bio}
-                  </motion.p>
-                </motion.div>
+                  <p className="text-white/80 text-sm leading-relaxed">{user.bio}</p>
+                </div>
               )}
 
-              <motion.div 
-                className="space-y-3 text-sm"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5, duration: 0.6 }}
-              >
+              <div className="space-y-3 text-sm">
                 {user.location && (
-                  <motion.div 
-                    className="flex items-center space-x-2 text-white/70"
-                    whileHover={{ scale: 1.05, color: '#00ff00' }}
-                  >
+                  <div className="flex items-center space-x-2 text-white/70">
                     <MapPin className="w-4 h-4" />
                     <span>{user.location}</span>
-                  </motion.div>
+                  </div>
                 )}
                 {user.website && (
-                  <motion.div 
-                    className="flex items-center space-x-2 text-white/70"
-                    whileHover={{ scale: 1.05, color: '#00ffff' }}
-                  >
+                  <div className="flex items-center space-x-2 text-white/70">
                     <Globe className="w-4 h-4" />
                     <a
                       href={user.website}
@@ -608,237 +156,109 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
                     >
                       {user.website}
                     </a>
-                  </motion.div>
+                  </div>
                 )}
-                <motion.div 
-                  className="flex items-center space-x-2 text-white/70"
-                  whileHover={{ scale: 1.05, color: '#ff00ff' }}
-                >
+                <div className="flex items-center space-x-2 text-white/70">
                   <Calendar className="w-4 h-4" />
                   <span>Joined {new Date(user.joinedAt).toLocaleDateString()}</span>
-                </motion.div>
-              </motion.div>
+                </div>
+              </div>
             </GlassPanel>
-          </motion.div>
+          </div>
 
-          {/* User Projects */}
-          <motion.div 
-            className="lg:col-span-2"
-            initial={{ opacity: 0, x: 50, rotateY: 15 }}
-            animate={{ opacity: 1, x: 0, rotateY: 0 }}
-            transition={{ duration: 0.8, type: "spring", delay: 0.2 }}
-          >
-            <GlassPanel glowColor="#ff00ff">
+          {/* User Projects - Exact copy from Control Deck */}
+          <div className="lg:col-span-2">
+            <GlassPanel glowColor="#00ff00">
               <div className="flex items-center justify-between mb-6">
-                <motion.h2 
-                  className="font-orbitron text-xl sm:text-2xl font-bold text-white"
-                  animate={{
-                    textShadow: [
-                      '0 0 10px #ff00ff',
-                      '0 0 20px #ff00ff, 0 0 30px #ff00ff',
-                      '0 0 10px #ff00ff'
-                    ]
-                  }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                >
-                  Projects ({projectsWithLanguages.length})
-                </motion.h2>
-                <motion.div
-                  animate={{ 
-                    rotateZ: [0, 360],
-                    scale: [1, 1.2, 1]
-                  }}
-                  transition={{ 
-                    rotateZ: { duration: 6, repeat: Infinity, ease: "linear" },
-                    scale: { duration: 2, repeat: Infinity, ease: "easeInOut" }
-                  }}
-                >
-                  <Sparkles className="w-5 h-5 text-cyber-pink" />
-                </motion.div>
+                <h2 className="font-orbitron text-2xl font-bold text-white">
+                  Projects ({user.projects?.length || 0})
+                </h2>
               </div>
 
-              <div className="space-y-6">
-                {projectsWithLanguages.length > 0 ? (
-                  projectsWithLanguages.map((project, index) => (
+              <div className="space-y-4">
+                {user.projects && user.projects.length > 0 ? (
+                  user.projects.map((project, index) => (
                     <motion.div
                       key={project.id}
-                      initial={{ opacity: 0, y: 30, rotateX: -15 }}
-                      animate={{ opacity: 1, y: 0, rotateX: 0 }}
-                      transition={{ 
-                        delay: index * 0.15,
-                        duration: 0.8,
-                        type: "spring"
-                      }}
-                      className="bg-white/5 border border-white/10 rounded-lg p-4 sm:p-6 hover:bg-white/10 transition-colors group cursor-pointer"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="bg-white/5 border border-white/10 rounded-lg p-6 hover:bg-white/10 transition-colors group"
                       onClick={() => window.open(project.githubUrl, '_blank')}
-                      whileHover={{ 
-                        scale: 1.02,
-                        rotateY: 3,
-                        rotateX: 2
-                      }}
                     >
-                      <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-start justify-between mb-3">
                         <div className="flex-1">
                           <div className="flex items-center space-x-3 mb-2">
                             <motion.h3 
-                              className="font-orbitron text-base sm:text-lg font-bold text-white group-hover:text-cyber-blue transition-colors"
+                              className="font-orbitron text-lg font-bold text-white group-hover:text-cyber-green transition-colors cursor-pointer"
                               whileHover={{ scale: 1.02 }}
                             >
                               {project.name}
                             </motion.h3>
-                            <motion.div
-                              className="p-1 text-white/50 hover:text-cyber-blue transition-colors"
-                              whileHover={{ 
-                                scale: 1.2, 
-                                rotate: 15,
-                                color: '#00ffff'
-                              }}
+                            <motion.button
+                              className="p-1 text-white/50 hover:text-cyber-green transition-colors"
+                              whileHover={{ scale: 1.2, rotate: 15 }}
                               whileTap={{ scale: 0.9 }}
                             >
                               <ExternalLink className="w-4 h-4" />
-                            </motion.div>
+                            </motion.button>
                             {project.isPrivate && (
-                              <motion.span 
-                                className="px-2 py-1 bg-white/20 text-white/70 text-xs rounded-full"
-                                animate={{ 
-                                  boxShadow: [
-                                    '0 0 5px rgba(255, 255, 255, 0.3)',
-                                    '0 0 15px rgba(255, 255, 255, 0.5)',
-                                    '0 0 5px rgba(255, 255, 255, 0.3)'
-                                  ]
-                                }}
-                                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                              >
+                              <span className="px-2 py-1 bg-white/20 text-white/70 text-xs rounded-full">
                                 Private
-                              </motion.span>
+                              </span>
                             )}
                           </div>
-                          <motion.p 
-                            className="text-white/70 text-sm mb-4"
-                            initial={{ opacity: 0.7 }}
-                            whileHover={{ opacity: 1 }}
-                          >
+                          <p className="text-white/70 text-sm mb-3">
                             {project.description}
-                          </motion.p>
+                          </p>
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4 text-sm text-white/60">
-                          <motion.div 
-                            className="flex items-center space-x-1"
-                            whileHover={{ scale: 1.1, color: getLanguageColor(project.language) }}
-                          >
+                          <div className="flex items-center space-x-1">
                             <div
                               className="w-3 h-3 rounded-full"
                               style={{ backgroundColor: getLanguageColor(project.language) }}
                             />
                             <span>{project.language}</span>
-                          </motion.div>
-                          <motion.div 
-                            className="flex items-center space-x-1"
-                            whileHover={{ scale: 1.1, color: '#ffff00' }}
-                          >
+                          </div>
+                          <div className="flex items-center space-x-1">
                             <Star className="w-4 h-4" />
                             <span>{project.stars}</span>
-                          </motion.div>
-                          <motion.div 
-                            className="flex items-center space-x-1"
-                            whileHover={{ scale: 1.1, color: '#00ff00' }}
-                          >
+                          </div>
+                          <div className="flex items-center space-x-1">
                             <GitFork className="w-4 h-4" />
                             <span>{project.forks}</span>
-                          </motion.div>
-                          <motion.div 
-                            className="flex items-center space-x-1"
-                            whileHover={{ scale: 1.1, color: '#ff00ff' }}
-                          >
+                          </div>
+                          <div className="flex items-center space-x-1">
                             <Calendar className="w-4 h-4" />
                             <span>Updated {new Date(project.updatedAt).toLocaleDateString()}</span>
-                          </motion.div>
+                          </div>
                         </div>
                       </div>
 
-                      {/* GitHub Language Chart */}
-                      <motion.div 
-                        className="mb-4 p-4 bg-white/5 rounded-lg border border-white/10"
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.4 + index * 0.15, duration: 0.6 }}
-                      >
-                        {project.languagesLoading ? (
-                          <div className="flex items-center space-x-3 text-white/50">
-                            <Loader className="w-5 h-5 animate-spin" />
-                            <span className="text-sm">Loading language data...</span>
-                          </div>
-                        ) : project.languages ? (
-                          <div>
-                            <motion.h4 
-                              className="text-sm font-semibold text-white/80 mb-4 flex items-center space-x-2"
-                              initial={{ opacity: 0, x: -10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: 0.6 + index * 0.15 }}
-                            >
-                              <Code className="w-4 h-4" />
-                              <span>Language Distribution</span>
-                            </motion.h4>
-                            {createLanguageChart(project.languages, project.id)}
-                          </div>
-                        ) : (
-                          <div className="text-sm text-white/50 flex items-center space-x-2">
-                            <Code className="w-4 h-4" />
-                            <span>Language data unavailable</span>
-                          </div>
-                        )}
-                      </motion.div>
-
-                      <div className="flex flex-wrap gap-2">
-                        {project.topics.map((topic, topicIndex) => (
-                          <motion.span
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {project.topics.map((topic) => (
+                          <span
                             key={topic}
                             className="px-2 py-1 bg-cyber-blue/20 text-cyber-blue text-xs rounded-full"
-                            initial={{ opacity: 0, scale: 0 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            transition={{ 
-                              delay: 0.3 + topicIndex * 0.05,
-                              duration: 0.4
-                            }}
-                            whileHover={{ 
-                              scale: 1.1,
-                              boxShadow: '0 0 10px rgba(0, 255, 255, 0.5)'
-                            }}
                           >
                             {topic}
-                          </motion.span>
+                          </span>
                         ))}
                       </div>
                     </motion.div>
                   ))
                 ) : (
-                  <motion.div 
-                    className="text-center py-12"
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.6 }}
-                  >
-                    <motion.div
-                      animate={{ 
-                        rotateY: [0, 360],
-                        scale: [1, 1.1, 1]
-                      }}
-                      transition={{ 
-                        rotateY: { duration: 4, repeat: Infinity, ease: "linear" },
-                        scale: { duration: 2, repeat: Infinity, ease: "easeInOut" }
-                      }}
-                    >
-                      <User className="w-12 h-12 sm:w-16 sm:h-16 text-white/30 mx-auto mb-4" />
-                    </motion.div>
+                  <div className="text-center py-12">
+                    <Code className="w-16 h-16 text-white/30 mx-auto mb-4" />
                     <p className="text-white/70">No projects found for this user.</p>
-                  </motion.div>
+                  </div>
                 )}
               </div>
             </GlassPanel>
-          </motion.div>
+          </div>
         </div>
       </div>
     </div>
