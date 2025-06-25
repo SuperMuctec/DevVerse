@@ -323,23 +323,23 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
     switch (currentPage) {
       case 1:
         return (
-          <div className="space-y-4">
-            <div className="mb-4 p-3 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-lg border border-purple-500/30">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center space-x-2">
-                  <Sparkles className="w-4 h-4 text-purple-400" />
-                  <h3 className="font-orbitron text-sm font-bold text-purple-400">
+          <div className="space-y-3">
+            <div className="mb-3 p-2 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-lg border border-purple-500/30">
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center space-x-1">
+                  <Sparkles className="w-3 h-3 text-purple-400" />
+                  <h3 className="font-orbitron text-xs font-bold text-purple-400">
                     AI Challenge Generator
                   </h3>
                 </div>
                 <motion.button
                   onClick={generateChallenge}
                   disabled={isGenerating}
-                  className="flex items-center space-x-2 bg-gradient-to-r from-purple-500 to-pink-500 px-3 py-1 rounded-lg font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                  className="flex items-center space-x-1 bg-gradient-to-r from-purple-500 to-pink-500 px-2 py-1 rounded-lg font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed text-xs"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <Sparkles className="w-3 h-3" />
+                  <Sparkles className="w-2 h-2" />
                   <span>{isGenerating ? 'Generating...' : 'Generate'}</span>
                 </motion.button>
               </div>
@@ -349,12 +349,12 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">
+              <label className="block text-xs font-medium text-white/80 mb-1">
                 Challenge Title
               </label>
               <input
                 {...register('title')}
-                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300 text-sm"
+                className="w-full px-2 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300 text-xs"
                 placeholder="Two Sum Challenge"
               />
               {errors.title && (
@@ -363,13 +363,13 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">
+              <label className="block text-xs font-medium text-white/80 mb-1">
                 Challenge Description
               </label>
               <textarea
                 {...register('description')}
-                rows={3}
-                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300 resize-none text-sm"
+                rows={2}
+                className="w-full px-2 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300 resize-none text-xs"
                 placeholder="Describe the coding challenge..."
               />
               {errors.description && (
@@ -377,16 +377,16 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
+                <label className="block text-xs font-medium text-white/80 mb-1">
                   Difficulty
                 </label>
-                <div className="space-y-2">
+                <div className="space-y-1">
                   {['easy', 'medium', 'hard'].map((diff) => (
                     <motion.label
                       key={diff}
-                      className={`flex items-center space-x-3 px-3 py-2 rounded-lg cursor-pointer transition-all duration-300 ${
+                      className={`flex items-center space-x-2 px-2 py-1 rounded-lg cursor-pointer transition-all duration-300 ${
                         difficulty === diff
                           ? 'border-2'
                           : 'bg-white/5 hover:bg-white/10'
@@ -404,9 +404,9 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
                         value={diff}
                         className="hidden"
                       />
-                      <Zap className="w-4 h-4" style={{ color: getDifficultyColor(diff) }} />
+                      <Zap className="w-3 h-3" style={{ color: getDifficultyColor(diff) }} />
                       <div className="flex-1">
-                        <span className="capitalize font-semibold text-sm" style={{ color: getDifficultyColor(diff) }}>
+                        <span className="capitalize font-semibold text-xs" style={{ color: getDifficultyColor(diff) }}>
                           {diff}
                         </span>
                         <div className="text-xs text-white/60">
@@ -422,17 +422,17 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-white/80 mb-2">
+                <label className="block text-xs font-medium text-white/80 mb-1">
                   Time Limit (minutes)
                 </label>
                 <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/50" />
+                  <Clock className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3 h-3 text-white/50" />
                   <input
                     {...register('timeLimit', { valueAsNumber: true })}
                     type="number"
                     min="5"
                     max="180"
-                    className="w-full pl-10 pr-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300 text-sm"
+                    className="w-full pl-8 pr-2 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300 text-xs"
                     placeholder="30"
                   />
                 </div>
@@ -446,14 +446,14 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
 
       case 2:
         return (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">
+              <label className="block text-xs font-medium text-white/80 mb-1">
                 Problem Title
               </label>
               <input
                 {...register('problemTitle')}
-                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300 text-sm"
+                className="w-full px-2 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300 text-xs"
                 placeholder="Two Sum"
               />
               {errors.problemTitle && (
@@ -462,13 +462,13 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-white/80 mb-2">
+              <label className="block text-xs font-medium text-white/80 mb-1">
                 Problem Description
               </label>
               <textarea
                 {...register('problemDescription')}
-                rows={6}
-                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300 resize-none text-sm"
+                rows={4}
+                className="w-full px-2 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300 resize-none text-xs"
                 placeholder="Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target..."
               />
               {errors.problemDescription && (
@@ -480,29 +480,29 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
 
       case 3:
         return (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <label className="block text-sm font-medium text-white/80">
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-xs font-medium text-white/80">
                   Examples
                 </label>
                 <motion.button
                   type="button"
                   onClick={() => appendExample({ input: '', output: '', explanation: '' })}
-                  className="flex items-center space-x-1 px-3 py-1 bg-cyber-blue/20 text-cyber-blue rounded-lg hover:bg-cyber-blue/30 transition-colors text-xs"
+                  className="flex items-center space-x-1 px-2 py-1 bg-cyber-blue/20 text-cyber-blue rounded-lg hover:bg-cyber-blue/30 transition-colors text-xs"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <Plus className="w-3 h-3" />
-                  <span>Add Example</span>
+                  <Plus className="w-2 h-2" />
+                  <span>Add</span>
                 </motion.button>
               </div>
               
-              <div className="space-y-3 max-h-64 overflow-y-auto">
+              <div className="space-y-2 max-h-48 overflow-y-auto">
                 {exampleFields.map((field, index) => (
-                  <div key={field.id} className="bg-white/5 p-3 rounded-lg border border-white/10">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-semibold text-white text-sm">Example {index + 1}</h4>
+                  <div key={field.id} className="bg-white/5 p-2 rounded-lg border border-white/10">
+                    <div className="flex items-center justify-between mb-1">
+                      <h4 className="font-semibold text-white text-xs">Example {index + 1}</h4>
                       {exampleFields.length > 1 && (
                         <motion.button
                           type="button"
@@ -511,12 +511,12 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
                           whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.9 }}
                         >
-                          <Trash2 className="w-3 h-3" />
+                          <Trash2 className="w-2 h-2" />
                         </motion.button>
                       )}
                     </div>
                     
-                    <div className="space-y-2">
+                    <div className="space-y-1">
                       <div>
                         <label className="block text-xs text-white/60 mb-1">Input</label>
                         <input
@@ -551,41 +551,41 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
 
       case 4:
         return (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <label className="block text-sm font-medium text-white/80">
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-xs font-medium text-white/80">
                   Constraints
                 </label>
                 <motion.button
                   type="button"
                   onClick={() => appendConstraint('')}
-                  className="flex items-center space-x-1 px-3 py-1 bg-cyber-yellow/20 text-cyber-yellow rounded-lg hover:bg-cyber-yellow/30 transition-colors text-xs"
+                  className="flex items-center space-x-1 px-2 py-1 bg-cyber-yellow/20 text-cyber-yellow rounded-lg hover:bg-cyber-yellow/30 transition-colors text-xs"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <Plus className="w-3 h-3" />
-                  <span>Add Constraint</span>
+                  <Plus className="w-2 h-2" />
+                  <span>Add</span>
                 </motion.button>
               </div>
               
-              <div className="space-y-2 max-h-64 overflow-y-auto">
+              <div className="space-y-1 max-h-48 overflow-y-auto">
                 {constraintFields.map((field, index) => (
                   <div key={field.id} className="flex items-center space-x-2">
                     <input
                       {...register(`constraints.${index}`)}
-                      className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-yellow focus:ring-1 focus:ring-cyber-yellow transition-all duration-300 text-sm"
+                      className="flex-1 px-2 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-yellow focus:ring-1 focus:ring-cyber-yellow transition-all duration-300 text-xs"
                       placeholder="2 <= nums.length <= 10^4"
                     />
                     {constraintFields.length > 1 && (
                       <motion.button
                         type="button"
                         onClick={() => removeConstraint(index)}
-                        className="p-2 text-red-400 hover:bg-red-400/20 rounded"
+                        className="p-1 text-red-400 hover:bg-red-400/20 rounded"
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3 h-3" />
                       </motion.button>
                     )}
                   </div>
@@ -616,12 +616,12 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
             exit={{ opacity: 0, scale: 0.9, rotateY: 15 }}
             transition={{ type: "spring", duration: 0.5 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-2xl h-fit"
+            className="w-full max-w-lg h-fit"
           >
             <GlassPanel glowColor="#ff00ff">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-3">
                 <div>
-                  <h2 className="font-orbitron text-lg font-bold text-cyber-pink">
+                  <h2 className="font-orbitron text-sm font-bold text-cyber-pink">
                     Create AI Challenge
                   </h2>
                   <p className="text-xs text-white/60">
@@ -634,16 +634,16 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
                 </div>
                 <motion.button
                   onClick={handleClose}
-                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                  className="p-1 hover:bg-white/10 rounded-lg transition-colors"
                   whileHover={{ scale: 1.1, rotate: 90 }}
                   whileTap={{ scale: 0.9 }}
                 >
-                  <X className="w-4 h-4 text-white/70" />
+                  <X className="w-3 h-3 text-white/70" />
                 </motion.button>
               </div>
 
               {/* Progress Bar */}
-              <div className="mb-6">
+              <div className="mb-4">
                 <div className="flex space-x-1">
                   {[1, 2, 3, 4].map((step) => (
                     <div
@@ -669,16 +669,16 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
                   </motion.div>
                 </AnimatePresence>
 
-                <div className="flex justify-between mt-6 pt-4 border-t border-white/10">
+                <div className="flex justify-between mt-4 pt-3 border-t border-white/10">
                   <motion.button
                     type="button"
                     onClick={prevPage}
                     disabled={currentPage === 1}
-                    className="flex items-center space-x-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    className="flex items-center space-x-1 px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs"
                     whileHover={{ scale: currentPage === 1 ? 1 : 1.02 }}
                     whileTap={{ scale: currentPage === 1 ? 1 : 0.98 }}
                   >
-                    <ArrowLeft className="w-4 h-4" />
+                    <ArrowLeft className="w-3 h-3" />
                     <span>Previous</span>
                   </motion.button>
 
@@ -686,18 +686,18 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
                     <motion.button
                       type="button"
                       onClick={nextPage}
-                      className="flex items-center space-x-2 bg-gradient-to-r from-cyber-pink to-cyber-blue px-4 py-2 rounded-lg font-orbitron font-bold text-white transition-all duration-300 text-sm"
+                      className="flex items-center space-x-1 bg-gradient-to-r from-cyber-pink to-cyber-blue px-3 py-2 rounded-lg font-orbitron font-bold text-white transition-all duration-300 text-xs"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
                       <span>Next</span>
-                      <ArrowRight className="w-4 h-4" />
+                      <ArrowRight className="w-3 h-3" />
                     </motion.button>
                   ) : (
                     <motion.button
                       type="submit"
                       disabled={isLoading}
-                      className="flex items-center space-x-2 bg-gradient-to-r from-cyber-pink to-cyber-blue px-4 py-2 rounded-lg font-orbitron font-bold text-white transition-all duration-300 disabled:opacity-50 text-sm"
+                      className="flex items-center space-x-1 bg-gradient-to-r from-cyber-pink to-cyber-blue px-3 py-2 rounded-lg font-orbitron font-bold text-white transition-all duration-300 disabled:opacity-50 text-xs"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
