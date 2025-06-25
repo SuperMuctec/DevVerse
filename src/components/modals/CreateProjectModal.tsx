@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { X, Github, Globe, Tag, Lock, Unlock } from 'lucide-react';
+import { X, Github, Globe, Tag, Lock, Unlock, ArrowLeft, ArrowRight } from 'lucide-react';
 import { GlassPanel } from '../ui/GlassPanel';
 import { CreateProjectData } from '../../types';
 
@@ -33,6 +33,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
   onClose,
   onSubmit,
 }) => {
+  const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
 
   const {
@@ -41,6 +42,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
     formState: { errors },
     reset,
     watch,
+    trigger,
   } = useForm<ProjectFormData>({
     resolver: zodResolver(projectSchema),
     defaultValues: {
@@ -60,6 +62,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
       };
       await onSubmit(projectData);
       reset();
+      setCurrentPage(1);
       onClose();
     } finally {
       setIsLoading(false);
@@ -71,6 +74,213 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
     'PHP', 'Ruby', 'Swift', 'Kotlin', 'Dart', 'Scala', 'R', 'MATLAB'
   ];
 
+  const nextPage = async () => {
+    let fieldsToValidate: (keyof ProjectFormData)[] = [];
+    
+    switch (currentPage) {
+      case 1:
+        fieldsToValidate = ['name', 'description', 'language'];
+        break;
+      case 2:
+        fieldsToValidate = ['githubUrl'];
+        break;
+    }
+
+    const isValid = await trigger(fieldsToValidate);
+    if (isValid) {
+      setCurrentPage(prev => prev + 1);
+    }
+  };
+
+  const prevPage = () => {
+    setCurrentPage(prev => prev - 1);
+  };
+
+  const handleClose = () => {
+    setCurrentPage(1);
+    reset();
+    onClose();
+  };
+
+  const renderPage = () => {
+    switch (currentPage) {
+      case 1:
+        return (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">
+                Project Name
+              </label>
+              <input
+                {...register('name')}
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-blue focus:ring-1 focus:ring-cyber-blue transition-all duration-300 text-sm"
+                placeholder="My Awesome Project"
+              />
+              {errors.name && (
+                <p className="mt-1 text-xs text-red-400">{errors.name.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">
+                Description
+              </label>
+              <textarea
+                {...register('description')}
+                rows={4}
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-blue focus:ring-1 focus:ring-cyber-blue transition-all duration-300 resize-none text-sm"
+                placeholder="A brief description of your project..."
+              />
+              {errors.description && (
+                <p className="mt-1 text-xs text-red-400">{errors.description.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">
+                Primary Language
+              </label>
+              <select
+                {...register('language')}
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-cyber-blue focus:ring-1 focus:ring-cyber-blue transition-all duration-300 text-sm"
+              >
+                <option value="" className="bg-space-dark">Select Language</option>
+                {languages.map(lang => (
+                  <option key={lang} value={lang} className="bg-space-dark">
+                    {lang}
+                  </option>
+                ))}
+              </select>
+              {errors.language && (
+                <p className="mt-1 text-xs text-red-400">{errors.language.message}</p>
+              )}
+            </div>
+          </div>
+        );
+
+      case 2:
+        return (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">
+                GitHub Repository URL
+              </label>
+              <div className="relative">
+                <Github className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/50" />
+                <input
+                  {...register('githubUrl')}
+                  className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-blue focus:ring-1 focus:ring-cyber-blue transition-all duration-300 text-sm"
+                  placeholder="https://github.com/username/repository"
+                />
+              </div>
+              {errors.githubUrl && (
+                <p className="mt-1 text-xs text-red-400">{errors.githubUrl.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">
+                Homepage URL (Optional)
+              </label>
+              <div className="relative">
+                <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/50" />
+                <input
+                  {...register('homepage')}
+                  className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-blue focus:ring-1 focus:ring-cyber-blue transition-all duration-300 text-sm"
+                  placeholder="https://your-project-demo.com"
+                />
+              </div>
+              {errors.homepage && (
+                <p className="mt-1 text-xs text-red-400">{errors.homepage.message}</p>
+              )}
+            </div>
+
+            <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+              <h3 className="font-semibold text-blue-400 mb-2 text-sm">📋 Repository Requirements</h3>
+              <ul className="text-xs text-white/70 space-y-1">
+                <li>• Make sure your repository is accessible</li>
+                <li>• Include a README.md with project description</li>
+                <li>• Add proper documentation for setup instructions</li>
+                <li>• Consider adding screenshots or demo links</li>
+              </ul>
+            </div>
+          </div>
+        );
+
+      case 3:
+        return (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">
+                Topics (comma-separated)
+              </label>
+              <div className="relative">
+                <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/50" />
+                <input
+                  {...register('topics')}
+                  className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-blue focus:ring-1 focus:ring-cyber-blue transition-all duration-300 text-sm"
+                  placeholder="react, typescript, web-development, api"
+                />
+              </div>
+              <p className="mt-1 text-xs text-white/60">
+                Add relevant topics to help others discover your project
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">
+                Visibility
+              </label>
+              <div className="flex items-center space-x-3">
+                <motion.button
+                  type="button"
+                  onClick={() => {
+                    const checkbox = document.getElementById('isPrivate') as HTMLInputElement;
+                    checkbox.click();
+                  }}
+                  className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-300 text-sm border-2 ${
+                    isPrivate 
+                      ? 'bg-red-500/20 text-red-400 border-red-500/50' 
+                      : 'bg-green-500/20 text-green-400 border-green-500/50'
+                  }`}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  {isPrivate ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                  <div>
+                    <span className="font-semibold">{isPrivate ? 'Private' : 'Public'}</span>
+                    <p className="text-xs opacity-80">
+                      {isPrivate 
+                        ? 'Only you can see this project' 
+                        : 'Anyone can discover this project'
+                      }
+                    </p>
+                  </div>
+                </motion.button>
+                <input
+                  {...register('isPrivate')}
+                  type="checkbox"
+                  id="isPrivate"
+                  className="hidden"
+                />
+              </div>
+            </div>
+
+            <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+              <h3 className="font-semibold text-green-400 mb-2 text-sm">🚀 Ready to Showcase!</h3>
+              <p className="text-xs text-white/70">
+                Your project will be added to your profile and visible in the DevVerse³ community. 
+                Other developers can explore your work and get inspired!
+              </p>
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -79,7 +289,7 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-start justify-center p-4 pt-52"
-          onClick={onClose}
+          onClick={handleClose}
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.9, rotateX: -15 }}
@@ -87,15 +297,23 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
             exit={{ opacity: 0, scale: 0.9, rotateX: 15 }}
             transition={{ type: "spring", duration: 0.5 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-6xl h-fit"
+            className="w-full max-w-2xl h-fit"
           >
             <GlassPanel glowColor="#00ffff">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="font-orbitron text-lg font-bold text-cyber-blue">
-                  Create New Project
-                </h2>
+                <div>
+                  <h2 className="font-orbitron text-lg font-bold text-cyber-blue">
+                    Create New Project
+                  </h2>
+                  <p className="text-xs text-white/60">
+                    Step {currentPage} of 3: {
+                      currentPage === 1 ? 'Basic Information' :
+                      currentPage === 2 ? 'Repository Links' : 'Topics & Settings'
+                    }
+                  </p>
+                </div>
                 <motion.button
-                  onClick={onClose}
+                  onClick={handleClose}
                   className="p-2 hover:bg-white/10 rounded-lg transition-colors"
                   whileHover={{ scale: 1.1, rotate: 90 }}
                   whileTap={{ scale: 0.9 }}
@@ -104,151 +322,68 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({
                 </motion.button>
               </div>
 
-              <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-medium text-white/80 mb-1">
-                      Project Name
-                    </label>
-                    <input
-                      {...register('name')}
-                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-blue focus:ring-1 focus:ring-cyber-blue transition-all duration-300 text-sm"
-                      placeholder="My Awesome Project"
+              {/* Progress Bar */}
+              <div className="mb-6">
+                <div className="flex space-x-1">
+                  {[1, 2, 3].map((step) => (
+                    <div
+                      key={step}
+                      className={`flex-1 h-1 rounded-full transition-all duration-300 ${
+                        step <= currentPage ? 'bg-cyber-blue' : 'bg-white/20'
+                      }`}
                     />
-                    {errors.name && (
-                      <p className="mt-1 text-xs text-red-400">{errors.name.message}</p>
-                    )}
-                  </div>
+                  ))}
+                </div>
+              </div>
 
-                  <div>
-                    <label className="block text-xs font-medium text-white/80 mb-1">
-                      Primary Language
-                    </label>
-                    <select
-                      {...register('language')}
-                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-cyber-blue focus:ring-1 focus:ring-cyber-blue transition-all duration-300 text-sm"
+              <form onSubmit={handleSubmit(handleFormSubmit)}>
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentPage}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {renderPage()}
+                  </motion.div>
+                </AnimatePresence>
+
+                <div className="flex justify-between mt-6 pt-4 border-t border-white/10">
+                  <motion.button
+                    type="button"
+                    onClick={prevPage}
+                    disabled={currentPage === 1}
+                    className="flex items-center space-x-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    whileHover={{ scale: currentPage === 1 ? 1 : 1.02 }}
+                    whileTap={{ scale: currentPage === 1 ? 1 : 0.98 }}
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Previous</span>
+                  </motion.button>
+
+                  {currentPage < 3 ? (
+                    <motion.button
+                      type="button"
+                      onClick={nextPage}
+                      className="flex items-center space-x-2 bg-gradient-to-r from-cyber-blue to-cyber-pink px-4 py-2 rounded-lg font-orbitron font-bold text-white transition-all duration-300 text-sm"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
                     >
-                      <option value="" className="bg-space-dark">Select Language</option>
-                      {languages.map(lang => (
-                        <option key={lang} value={lang} className="bg-space-dark">
-                          {lang}
-                        </option>
-                      ))}
-                    </select>
-                    {errors.language && (
-                      <p className="mt-1 text-xs text-red-400">{errors.language.message}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-white/80 mb-1">
-                    Description
-                  </label>
-                  <textarea
-                    {...register('description')}
-                    rows={2}
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-blue focus:ring-1 focus:ring-cyber-blue transition-all duration-300 resize-none text-sm"
-                    placeholder="Describe your project..."
-                  />
-                  {errors.description && (
-                    <p className="mt-1 text-xs text-red-400">{errors.description.message}</p>
+                      <span>Next</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </motion.button>
+                  ) : (
+                    <motion.button
+                      type="submit"
+                      disabled={isLoading}
+                      className="flex items-center space-x-2 bg-gradient-to-r from-cyber-blue to-cyber-pink px-4 py-2 rounded-lg font-orbitron font-bold text-white transition-all duration-300 disabled:opacity-50 text-sm"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <span>{isLoading ? 'Creating...' : 'Create Project'}</span>
+                    </motion.button>
                   )}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-white/80 mb-1">
-                    GitHub Repository URL
-                  </label>
-                  <div className="relative">
-                    <Github className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/50" />
-                    <input
-                      {...register('githubUrl')}
-                      className="w-full pl-8 pr-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-blue focus:ring-1 focus:ring-cyber-blue transition-all duration-300 text-sm"
-                      placeholder="https://github.com/username/repository"
-                    />
-                  </div>
-                  {errors.githubUrl && (
-                    <p className="mt-1 text-xs text-red-400">{errors.githubUrl.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-white/80 mb-1">
-                    Homepage URL (Optional)
-                  </label>
-                  <div className="relative">
-                    <Globe className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/50" />
-                    <input
-                      {...register('homepage')}
-                      className="w-full pl-8 pr-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-blue focus:ring-1 focus:ring-cyber-blue transition-all duration-300 text-sm"
-                      placeholder="https://your-project-demo.com"
-                    />
-                  </div>
-                  {errors.homepage && (
-                    <p className="mt-1 text-xs text-red-400">{errors.homepage.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-white/80 mb-1">
-                    Topics (comma-separated)
-                  </label>
-                  <div className="relative">
-                    <Tag className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/50" />
-                    <input
-                      {...register('topics')}
-                      className="w-full pl-8 pr-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-blue focus:ring-1 focus:ring-cyber-blue transition-all duration-300 text-sm"
-                      placeholder="react, typescript, web-development"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <motion.button
-                    type="button"
-                    onClick={() => {
-                      const checkbox = document.getElementById('isPrivate') as HTMLInputElement;
-                      checkbox.click();
-                    }}
-                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-300 text-sm ${
-                      isPrivate 
-                        ? 'bg-red-500/20 text-red-400 border border-red-500/50' 
-                        : 'bg-green-500/20 text-green-400 border border-green-500/50'
-                    }`}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    {isPrivate ? <Lock className="w-3 h-3" /> : <Unlock className="w-3 h-3" />}
-                    <span>{isPrivate ? 'Private' : 'Public'}</span>
-                  </motion.button>
-                  <input
-                    {...register('isPrivate')}
-                    type="checkbox"
-                    id="isPrivate"
-                    className="hidden"
-                  />
-                </div>
-
-                <div className="flex space-x-3 pt-3">
-                  <motion.button
-                    type="button"
-                    onClick={onClose}
-                    className="flex-1 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg font-semibold transition-colors text-sm"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    Cancel
-                  </motion.button>
-                  <motion.button
-                    type="submit"
-                    disabled={isLoading}
-                    className="flex-1 bg-gradient-to-r from-cyber-blue to-cyber-pink px-4 py-2 rounded-lg font-orbitron font-bold text-white transition-all duration-300 disabled:opacity-50 text-sm"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    {isLoading ? 'Creating...' : 'Create Project'}
-                  </motion.button>
                 </div>
               </form>
             </GlassPanel>

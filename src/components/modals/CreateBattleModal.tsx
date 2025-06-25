@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { X, Plus, Trash2, Zap, Clock, Sparkles } from 'lucide-react';
+import { X, Plus, Trash2, Zap, Clock, Sparkles, ArrowLeft, ArrowRight } from 'lucide-react';
 import { GlassPanel } from '../ui/GlassPanel';
 import { CreateBattleData } from '../../types';
 import { toast } from 'react-hot-toast';
@@ -193,6 +193,7 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
   onClose,
   onSubmit,
 }) => {
+  const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -204,6 +205,7 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
     control,
     watch,
     setValue,
+    trigger,
   } = useForm<BattleFormData>({
     resolver: zodResolver(battleSchema),
     defaultValues: {
@@ -241,6 +243,7 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
     try {
       await onSubmit(data);
       reset();
+      setCurrentPage(1);
       onClose();
     } finally {
       setIsLoading(false);
@@ -250,7 +253,6 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
   const generateChallenge = async () => {
     setIsGenerating(true);
     try {
-      // Simulate AI generation delay
       await new Promise(resolve => setTimeout(resolve, 1500));
       
       const challenge = generateAIChallenge(difficulty);
@@ -286,6 +288,318 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
     }
   };
 
+  const nextPage = async () => {
+    let fieldsToValidate: (keyof BattleFormData)[] = [];
+    
+    switch (currentPage) {
+      case 1:
+        fieldsToValidate = ['title', 'description', 'difficulty', 'timeLimit'];
+        break;
+      case 2:
+        fieldsToValidate = ['problemTitle', 'problemDescription'];
+        break;
+      case 3:
+        fieldsToValidate = ['examples'];
+        break;
+    }
+
+    const isValid = await trigger(fieldsToValidate);
+    if (isValid) {
+      setCurrentPage(prev => prev + 1);
+    }
+  };
+
+  const prevPage = () => {
+    setCurrentPage(prev => prev - 1);
+  };
+
+  const handleClose = () => {
+    setCurrentPage(1);
+    reset();
+    onClose();
+  };
+
+  const renderPage = () => {
+    switch (currentPage) {
+      case 1:
+        return (
+          <div className="space-y-4">
+            <div className="mb-4 p-3 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-lg border border-purple-500/30">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center space-x-2">
+                  <Sparkles className="w-4 h-4 text-purple-400" />
+                  <h3 className="font-orbitron text-sm font-bold text-purple-400">
+                    AI Challenge Generator
+                  </h3>
+                </div>
+                <motion.button
+                  onClick={generateChallenge}
+                  disabled={isGenerating}
+                  className="flex items-center space-x-2 bg-gradient-to-r from-purple-500 to-pink-500 px-3 py-1 rounded-lg font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Sparkles className="w-3 h-3" />
+                  <span>{isGenerating ? 'Generating...' : 'Generate'}</span>
+                </motion.button>
+              </div>
+              <p className="text-white/70 text-xs">
+                Let AI create a coding challenge based on your selected difficulty level.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">
+                Challenge Title
+              </label>
+              <input
+                {...register('title')}
+                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300 text-sm"
+                placeholder="Two Sum Challenge"
+              />
+              {errors.title && (
+                <p className="mt-1 text-xs text-red-400">{errors.title.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">
+                Challenge Description
+              </label>
+              <textarea
+                {...register('description')}
+                rows={3}
+                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300 resize-none text-sm"
+                placeholder="Describe the coding challenge..."
+              />
+              {errors.description && (
+                <p className="mt-1 text-xs text-red-400">{errors.description.message}</p>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">
+                  Difficulty
+                </label>
+                <div className="space-y-2">
+                  {['easy', 'medium', 'hard'].map((diff) => (
+                    <motion.label
+                      key={diff}
+                      className={`flex items-center space-x-3 px-3 py-2 rounded-lg cursor-pointer transition-all duration-300 ${
+                        difficulty === diff
+                          ? 'border-2'
+                          : 'bg-white/5 hover:bg-white/10'
+                      }`}
+                      style={{
+                        borderColor: difficulty === diff ? getDifficultyColor(diff) : 'transparent',
+                        backgroundColor: difficulty === diff ? `${getDifficultyColor(diff)}20` : undefined,
+                      }}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <input
+                        {...register('difficulty')}
+                        type="radio"
+                        value={diff}
+                        className="hidden"
+                      />
+                      <Zap className="w-4 h-4" style={{ color: getDifficultyColor(diff) }} />
+                      <div className="flex-1">
+                        <span className="capitalize font-semibold text-sm" style={{ color: getDifficultyColor(diff) }}>
+                          {diff}
+                        </span>
+                        <div className="text-xs text-white/60">
+                          {getTimeRange(diff)}
+                        </div>
+                      </div>
+                    </motion.label>
+                  ))}
+                </div>
+                {errors.difficulty && (
+                  <p className="mt-1 text-xs text-red-400">{errors.difficulty.message}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-white/80 mb-2">
+                  Time Limit (minutes)
+                </label>
+                <div className="relative">
+                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/50" />
+                  <input
+                    {...register('timeLimit', { valueAsNumber: true })}
+                    type="number"
+                    min="5"
+                    max="180"
+                    className="w-full pl-10 pr-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300 text-sm"
+                    placeholder="30"
+                  />
+                </div>
+                {errors.timeLimit && (
+                  <p className="mt-1 text-xs text-red-400">{errors.timeLimit.message}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 2:
+        return (
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">
+                Problem Title
+              </label>
+              <input
+                {...register('problemTitle')}
+                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300 text-sm"
+                placeholder="Two Sum"
+              />
+              {errors.problemTitle && (
+                <p className="mt-1 text-xs text-red-400">{errors.problemTitle.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white/80 mb-2">
+                Problem Description
+              </label>
+              <textarea
+                {...register('problemDescription')}
+                rows={6}
+                className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300 resize-none text-sm"
+                placeholder="Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target..."
+              />
+              {errors.problemDescription && (
+                <p className="mt-1 text-xs text-red-400">{errors.problemDescription.message}</p>
+              )}
+            </div>
+          </div>
+        );
+
+      case 3:
+        return (
+          <div className="space-y-4">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-sm font-medium text-white/80">
+                  Examples
+                </label>
+                <motion.button
+                  type="button"
+                  onClick={() => appendExample({ input: '', output: '', explanation: '' })}
+                  className="flex items-center space-x-1 px-3 py-1 bg-cyber-blue/20 text-cyber-blue rounded-lg hover:bg-cyber-blue/30 transition-colors text-xs"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>Add Example</span>
+                </motion.button>
+              </div>
+              
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {exampleFields.map((field, index) => (
+                  <div key={field.id} className="bg-white/5 p-3 rounded-lg border border-white/10">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-semibold text-white text-sm">Example {index + 1}</h4>
+                      {exampleFields.length > 1 && (
+                        <motion.button
+                          type="button"
+                          onClick={() => removeExample(index)}
+                          className="p-1 text-red-400 hover:bg-red-400/20 rounded"
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </motion.button>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div>
+                        <label className="block text-xs text-white/60 mb-1">Input</label>
+                        <input
+                          {...register(`examples.${index}.input`)}
+                          className="w-full px-2 py-1 bg-white/10 border border-white/20 rounded text-white placeholder-white/50 focus:outline-none focus:border-cyber-blue text-xs"
+                          placeholder="nums = [2,7,11,15], target = 9"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-white/60 mb-1">Output</label>
+                        <input
+                          {...register(`examples.${index}.output`)}
+                          className="w-full px-2 py-1 bg-white/10 border border-white/20 rounded text-white placeholder-white/50 focus:outline-none focus:border-cyber-blue text-xs"
+                          placeholder="[0,1]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-white/60 mb-1">Explanation (Optional)</label>
+                        <input
+                          {...register(`examples.${index}.explanation`)}
+                          className="w-full px-2 py-1 bg-white/10 border border-white/20 rounded text-white placeholder-white/50 focus:outline-none focus:border-cyber-blue text-xs"
+                          placeholder="Because nums[0] + nums[1] == 9, we return [0, 1]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 4:
+        return (
+          <div className="space-y-4">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-sm font-medium text-white/80">
+                  Constraints
+                </label>
+                <motion.button
+                  type="button"
+                  onClick={() => appendConstraint('')}
+                  className="flex items-center space-x-1 px-3 py-1 bg-cyber-yellow/20 text-cyber-yellow rounded-lg hover:bg-cyber-yellow/30 transition-colors text-xs"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>Add Constraint</span>
+                </motion.button>
+              </div>
+              
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {constraintFields.map((field, index) => (
+                  <div key={field.id} className="flex items-center space-x-2">
+                    <input
+                      {...register(`constraints.${index}`)}
+                      className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-yellow focus:ring-1 focus:ring-cyber-yellow transition-all duration-300 text-sm"
+                      placeholder="2 <= nums.length <= 10^4"
+                    />
+                    {constraintFields.length > 1 && (
+                      <motion.button
+                        type="button"
+                        onClick={() => removeConstraint(index)}
+                        className="p-2 text-red-400 hover:bg-red-400/20 rounded"
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </motion.button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -294,7 +608,7 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-start justify-center p-4 pt-52"
-          onClick={onClose}
+          onClick={handleClose}
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.9, rotateY: -15 }}
@@ -302,15 +616,24 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
             exit={{ opacity: 0, scale: 0.9, rotateY: 15 }}
             transition={{ type: "spring", duration: 0.5 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-7xl h-fit"
+            className="w-full max-w-2xl h-fit"
           >
             <GlassPanel glowColor="#ff00ff">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="font-orbitron text-lg font-bold text-cyber-pink">
-                  Create AI Challenge
-                </h2>
+                <div>
+                  <h2 className="font-orbitron text-lg font-bold text-cyber-pink">
+                    Create AI Challenge
+                  </h2>
+                  <p className="text-xs text-white/60">
+                    Step {currentPage} of 4: {
+                      currentPage === 1 ? 'Basic Information' :
+                      currentPage === 2 ? 'Problem Details' :
+                      currentPage === 3 ? 'Examples' : 'Constraints'
+                    }
+                  </p>
+                </div>
                 <motion.button
-                  onClick={onClose}
+                  onClick={handleClose}
                   className="p-2 hover:bg-white/10 rounded-lg transition-colors"
                   whileHover={{ scale: 1.1, rotate: 90 }}
                   whileTap={{ scale: 0.9 }}
@@ -319,283 +642,68 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
                 </motion.button>
               </div>
 
-              {/* AI Challenge Generator */}
-              <div className="mb-4 p-3 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-lg border border-purple-500/30">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center space-x-2">
-                    <Sparkles className="w-4 h-4 text-purple-400" />
-                    <h3 className="font-orbitron text-base font-bold text-purple-400">
-                      AI Challenge Generator
-                    </h3>
-                  </div>
-                  <motion.button
-                    onClick={generateChallenge}
-                    disabled={isGenerating}
-                    className="flex items-center space-x-2 bg-gradient-to-r from-purple-500 to-pink-500 px-3 py-1 rounded-lg font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <Sparkles className="w-3 h-3" />
-                    <span>{isGenerating ? 'Generating...' : 'Generate Challenge'}</span>
-                  </motion.button>
+              {/* Progress Bar */}
+              <div className="mb-6">
+                <div className="flex space-x-1">
+                  {[1, 2, 3, 4].map((step) => (
+                    <div
+                      key={step}
+                      className={`flex-1 h-1 rounded-full transition-all duration-300 ${
+                        step <= currentPage ? 'bg-cyber-pink' : 'bg-white/20'
+                      }`}
+                    />
+                  ))}
                 </div>
-                <p className="text-white/70 text-xs">
-                  Let AI create a coding challenge based on your selected difficulty level. 
-                  Time limit will be automatically set: {getTimeRange(difficulty)}
-                </p>
               </div>
 
-              <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-medium text-white/80 mb-1">
-                      Challenge Title
-                    </label>
-                    <input
-                      {...register('title')}
-                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300 text-sm"
-                      placeholder="Two Sum Challenge"
-                    />
-                    {errors.title && (
-                      <p className="mt-1 text-xs text-red-400">{errors.title.message}</p>
-                    )}
-                  </div>
+              <form onSubmit={handleSubmit(handleFormSubmit)}>
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentPage}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {renderPage()}
+                  </motion.div>
+                </AnimatePresence>
 
-                  <div>
-                    <label className="block text-xs font-medium text-white/80 mb-1">
-                      Time Limit (minutes)
-                    </label>
-                    <div className="relative">
-                      <Clock className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/50" />
-                      <input
-                        {...register('timeLimit', { valueAsNumber: true })}
-                        type="number"
-                        min="5"
-                        max="180"
-                        className="w-full pl-8 pr-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300 text-sm"
-                        placeholder="30"
-                      />
-                    </div>
-                    {errors.timeLimit && (
-                      <p className="mt-1 text-xs text-red-400">{errors.timeLimit.message}</p>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-white/80 mb-1">
-                    Challenge Description
-                  </label>
-                  <textarea
-                    {...register('description')}
-                    rows={2}
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300 resize-none text-sm"
-                    placeholder="Describe the coding challenge..."
-                  />
-                  {errors.description && (
-                    <p className="mt-1 text-xs text-red-400">{errors.description.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-white/80 mb-1">
-                    Difficulty
-                  </label>
-                  <div className="flex space-x-3">
-                    {['easy', 'medium', 'hard'].map((diff) => (
-                      <motion.label
-                        key={diff}
-                        className={`flex items-center space-x-2 px-3 py-2 rounded-lg cursor-pointer transition-all duration-300 ${
-                          difficulty === diff
-                            ? 'border-2'
-                            : 'bg-white/5 hover:bg-white/10'
-                        }`}
-                        style={{
-                          borderColor: difficulty === diff ? getDifficultyColor(diff) : 'transparent',
-                          backgroundColor: difficulty === diff ? `${getDifficultyColor(diff)}20` : undefined,
-                        }}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        <input
-                          {...register('difficulty')}
-                          type="radio"
-                          value={diff}
-                          className="hidden"
-                        />
-                        <Zap className="w-3 h-3" style={{ color: getDifficultyColor(diff) }} />
-                        <div>
-                          <span className="capitalize font-semibold text-sm" style={{ color: getDifficultyColor(diff) }}>
-                            {diff}
-                          </span>
-                          <div className="text-xs text-white/60">
-                            {getTimeRange(diff)}
-                          </div>
-                        </div>
-                      </motion.label>
-                    ))}
-                  </div>
-                  {errors.difficulty && (
-                    <p className="mt-1 text-xs text-red-400">{errors.difficulty.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-white/80 mb-1">
-                    Problem Title
-                  </label>
-                  <input
-                    {...register('problemTitle')}
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300 text-sm"
-                    placeholder="Two Sum"
-                  />
-                  {errors.problemTitle && (
-                    <p className="mt-1 text-xs text-red-400">{errors.problemTitle.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-white/80 mb-1">
-                    Problem Description
-                  </label>
-                  <textarea
-                    {...register('problemDescription')}
-                    rows={3}
-                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300 resize-none text-sm"
-                    placeholder="Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target..."
-                  />
-                  {errors.problemDescription && (
-                    <p className="mt-1 text-xs text-red-400">{errors.problemDescription.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <label className="block text-xs font-medium text-white/80">
-                      Examples
-                    </label>
-                    <motion.button
-                      type="button"
-                      onClick={() => appendExample({ input: '', output: '', explanation: '' })}
-                      className="flex items-center space-x-1 px-2 py-1 bg-cyber-blue/20 text-cyber-blue rounded-lg hover:bg-cyber-blue/30 transition-colors text-xs"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <Plus className="w-3 h-3" />
-                      <span>Add Example</span>
-                    </motion.button>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    {exampleFields.map((field, index) => (
-                      <div key={field.id} className="bg-white/5 p-3 rounded-lg border border-white/10">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-semibold text-white text-sm">Example {index + 1}</h4>
-                          {exampleFields.length > 1 && (
-                            <motion.button
-                              type="button"
-                              onClick={() => removeExample(index)}
-                              className="p-1 text-red-400 hover:bg-red-400/20 rounded"
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </motion.button>
-                          )}
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-xs text-white/60 mb-1">Input</label>
-                            <input
-                              {...register(`examples.${index}.input`)}
-                              className="w-full px-2 py-1 bg-white/10 border border-white/20 rounded text-white placeholder-white/50 focus:outline-none focus:border-cyber-blue text-xs"
-                              placeholder="nums = [2,7,11,15], target = 9"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs text-white/60 mb-1">Output</label>
-                            <input
-                              {...register(`examples.${index}.output`)}
-                              className="w-full px-2 py-1 bg-white/10 border border-white/20 rounded text-white placeholder-white/50 focus:outline-none focus:border-cyber-blue text-xs"
-                              placeholder="[0,1]"
-                            />
-                          </div>
-                        </div>
-                        
-                        <div className="mt-2">
-                          <label className="block text-xs text-white/60 mb-1">Explanation (Optional)</label>
-                          <input
-                            {...register(`examples.${index}.explanation`)}
-                            className="w-full px-2 py-1 bg-white/10 border border-white/20 rounded text-white placeholder-white/50 focus:outline-none focus:border-cyber-blue text-xs"
-                            placeholder="Because nums[0] + nums[1] == 9, we return [0, 1]"
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <label className="block text-xs font-medium text-white/80">
-                      Constraints
-                    </label>
-                    <motion.button
-                      type="button"
-                      onClick={() => appendConstraint('')}
-                      className="flex items-center space-x-1 px-2 py-1 bg-cyber-yellow/20 text-cyber-yellow rounded-lg hover:bg-cyber-yellow/30 transition-colors text-xs"
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <Plus className="w-3 h-3" />
-                      <span>Add Constraint</span>
-                    </motion.button>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    {constraintFields.map((field, index) => (
-                      <div key={field.id} className="flex items-center space-x-2">
-                        <input
-                          {...register(`constraints.${index}`)}
-                          className="flex-1 px-2 py-1 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-yellow focus:ring-1 focus:ring-cyber-yellow transition-all duration-300 text-xs"
-                          placeholder="2 <= nums.length <= 10^4"
-                        />
-                        {constraintFields.length > 1 && (
-                          <motion.button
-                            type="button"
-                            onClick={() => removeConstraint(index)}
-                            className="p-1 text-red-400 hover:bg-red-400/20 rounded"
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </motion.button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex space-x-3 pt-3">
+                <div className="flex justify-between mt-6 pt-4 border-t border-white/10">
                   <motion.button
                     type="button"
-                    onClick={onClose}
-                    className="flex-1 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg font-semibold transition-colors text-sm"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                    onClick={prevPage}
+                    disabled={currentPage === 1}
+                    className="flex items-center space-x-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    whileHover={{ scale: currentPage === 1 ? 1 : 1.02 }}
+                    whileTap={{ scale: currentPage === 1 ? 1 : 0.98 }}
                   >
-                    Cancel
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Previous</span>
                   </motion.button>
-                  <motion.button
-                    type="submit"
-                    disabled={isLoading}
-                    className="flex-1 bg-gradient-to-r from-cyber-pink to-cyber-blue px-4 py-2 rounded-lg font-orbitron font-bold text-white transition-all duration-300 disabled:opacity-50 text-sm"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    {isLoading ? 'Creating Challenge...' : 'Create Challenge'}
-                  </motion.button>
+
+                  {currentPage < 4 ? (
+                    <motion.button
+                      type="button"
+                      onClick={nextPage}
+                      className="flex items-center space-x-2 bg-gradient-to-r from-cyber-pink to-cyber-blue px-4 py-2 rounded-lg font-orbitron font-bold text-white transition-all duration-300 text-sm"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <span>Next</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </motion.button>
+                  ) : (
+                    <motion.button
+                      type="submit"
+                      disabled={isLoading}
+                      className="flex items-center space-x-2 bg-gradient-to-r from-cyber-pink to-cyber-blue px-4 py-2 rounded-lg font-orbitron font-bold text-white transition-all duration-300 disabled:opacity-50 text-sm"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <span>{isLoading ? 'Creating...' : 'Create Challenge'}</span>
+                    </motion.button>
+                  )}
                 </div>
               </form>
             </GlassPanel>
