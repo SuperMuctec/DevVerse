@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, User, MapPin, Globe, Calendar, Star, GitFork, ExternalLink, Zap } from 'lucide-react';
+import { Search, User, MapPin, Globe, Calendar, Star, GitFork, ExternalLink, Zap, Sparkles } from 'lucide-react';
 import { GlassPanel } from '../ui/GlassPanel';
 import { User as UserType, Project } from '../../types';
 
@@ -61,58 +61,151 @@ export const UserSearch: React.FC<UserSearchProps> = ({ onNavigateToUser }) => {
   };
 
   return (
-    <div className="min-h-screen pt-44 px-4">
+    <div className="min-h-screen pt-20 sm:pt-44 px-4">
       <div className="max-w-4xl mx-auto py-8">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
+          initial={{ opacity: 0, y: 30, rotateX: -20 }}
+          animate={{ opacity: 1, y: 0, rotateX: 0 }}
+          transition={{ duration: 0.8, type: "spring" }}
+          className="text-center mb-8 sm:mb-12"
         >
-          <h1 className="font-orbitron text-5xl font-bold mb-4">
-            <span className="neon-text text-cyber-blue">User</span>{' '}
-            <span className="neon-text text-cyber-pink">Search</span>
-          </h1>
-          <p className="font-sora text-xl text-white/70">
+          <motion.h1 
+            className="font-orbitron text-3xl sm:text-5xl font-bold mb-4"
+            animate={{
+              textShadow: [
+                '0 0 20px #00ffff',
+                '0 0 30px #ff00ff, 0 0 40px #ff00ff',
+                '0 0 20px #00ffff'
+              ]
+            }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <motion.span 
+              className="neon-text text-cyber-blue inline-block"
+              animate={{ 
+                rotateY: [0, 10, -10, 0],
+                scale: [1, 1.05, 1]
+              }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            >
+              User
+            </motion.span>{' '}
+            <motion.span 
+              className="neon-text text-cyber-pink inline-block"
+              animate={{ 
+                rotateY: [0, -10, 10, 0],
+                scale: [1, 1.05, 1]
+              }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+            >
+              Search
+            </motion.span>
+          </motion.h1>
+          <motion.p 
+            className="font-sora text-lg sm:text-xl text-white/70"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.6 }}
+          >
             Discover developers across the galaxy
-          </p>
+          </motion.p>
         </motion.div>
 
         {/* Search Bar */}
-        <div className="mb-8">
+        <motion.div 
+          className="mb-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4, duration: 0.6 }}
+        >
           <GlassPanel glowColor="#00ffff">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-6 h-6 text-white/50" />
+            <motion.div 
+              className="relative"
+              whileHover={{ scale: 1.01 }}
+            >
+              <motion.div
+                animate={{ 
+                  rotateZ: [0, 360],
+                  scale: [1, 1.1, 1]
+                }}
+                transition={{ 
+                  rotateZ: { duration: 8, repeat: Infinity, ease: "linear" },
+                  scale: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+                }}
+              >
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 sm:w-6 sm:h-6 text-white/50" />
+              </motion.div>
               <input
                 type="text"
                 placeholder="Search developers by username, email, or bio..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 bg-transparent text-white placeholder-white/50 focus:outline-none text-lg"
+                className="w-full pl-12 sm:pl-14 pr-4 py-3 sm:py-4 bg-transparent text-white placeholder-white/50 focus:outline-none text-base sm:text-lg"
               />
-            </div>
+              <motion.div
+                className="absolute right-4 top-1/2 transform -translate-y-1/2"
+                animate={{ 
+                  opacity: [0.5, 1, 0.5],
+                  scale: [1, 1.2, 1]
+                }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-cyber-blue" />
+              </motion.div>
+            </motion.div>
           </GlassPanel>
-        </div>
+        </motion.div>
 
         {/* Search Results */}
         {isLoading && (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 border-4 border-cyber-blue border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <motion.div 
+            className="text-center py-12"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6 }}
+          >
+            <motion.div 
+              className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-cyber-blue border-t-transparent rounded-full mx-auto mb-4"
+              animate={{ rotateZ: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            />
             <p className="text-white/70">Searching the galaxy...</p>
-          </div>
+          </motion.div>
         )}
 
         {!isLoading && searchTerm && searchResults.length === 0 && (
-          <div className="text-center py-12">
-            <User className="w-16 h-16 text-white/30 mx-auto mb-4" />
+          <motion.div 
+            className="text-center py-12"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6 }}
+          >
+            <motion.div
+              animate={{ 
+                rotateY: [0, 360],
+                scale: [1, 1.1, 1]
+              }}
+              transition={{ 
+                rotateY: { duration: 4, repeat: Infinity, ease: "linear" },
+                scale: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+              }}
+            >
+              <User className="w-12 h-12 sm:w-16 sm:h-16 text-white/30 mx-auto mb-4" />
+            </motion.div>
             <p className="text-white/70">No developers found matching your search.</p>
-          </div>
+          </motion.div>
         )}
 
         {!isLoading && searchResults.length > 0 && (
           <div className="space-y-6">
-            <h2 className="font-orbitron text-2xl font-bold text-white mb-6">
+            <motion.h2 
+              className="font-orbitron text-xl sm:text-2xl font-bold text-white mb-6"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.6, duration: 0.6 }}
+            >
               Search Results ({searchResults.length})
-            </h2>
+            </motion.h2>
             
             {searchResults.map((user, index) => {
               const userXp = user.xp || 0;
@@ -122,9 +215,13 @@ export const UserSearch: React.FC<UserSearchProps> = ({ onNavigateToUser }) => {
               return (
                 <motion.div
                   key={user.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
+                  initial={{ opacity: 0, x: -30, rotateY: -10 }}
+                  animate={{ opacity: 1, x: 0, rotateY: 0 }}
+                  transition={{ 
+                    delay: index * 0.1,
+                    duration: 0.6,
+                    type: "spring"
+                  }}
                   onClick={() => handleUserClick(user.id)}
                   className="cursor-pointer"
                 >
@@ -132,24 +229,59 @@ export const UserSearch: React.FC<UserSearchProps> = ({ onNavigateToUser }) => {
                     glowColor="#ff00ff"
                     className="hover:scale-[1.02] transition-transform duration-300"
                   >
-                    <div className="flex items-start space-x-4">
+                    <motion.div
+                      whileHover={{ 
+                        rotateY: 5,
+                        rotateX: 3
+                      }}
+                      className="flex items-start space-x-3 sm:space-x-4"
+                    >
                       <motion.img
                         src={user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`}
                         alt={user.username}
-                        className="w-16 h-16 rounded-full border-2 border-cyber-pink"
-                        whileHover={{ scale: 1.1, rotate: 5 }}
+                        className="w-12 h-12 sm:w-16 sm:h-16 rounded-full border-2 border-cyber-pink"
+                        whileHover={{ 
+                          scale: 1.1,
+                          rotateZ: 360,
+                          borderColor: '#00ffff'
+                        }}
+                        transition={{ duration: 0.6 }}
                       />
                       
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <div className="flex items-center space-x-3 mb-2">
-                          <h3 className="font-orbitron text-xl font-bold text-white">
+                          <motion.h3 
+                            className="font-orbitron text-lg sm:text-xl font-bold text-white"
+                            whileHover={{ scale: 1.02 }}
+                          >
                             {user.username}
-                          </h3>
+                          </motion.h3>
                           <div className="flex items-center space-x-2">
-                            <div className="flex items-center space-x-1 bg-gradient-to-r from-cyber-blue/20 to-cyber-pink/20 px-2 py-1 rounded-full border border-cyber-blue/30">
-                              <Zap className="w-3 h-3 text-cyber-blue" />
+                            <motion.div 
+                              className="flex items-center space-x-1 bg-gradient-to-r from-cyber-blue/20 to-cyber-pink/20 px-2 py-1 rounded-full border border-cyber-blue/30"
+                              animate={{ 
+                                boxShadow: [
+                                  '0 0 10px rgba(0, 255, 255, 0.3)',
+                                  '0 0 20px rgba(255, 0, 255, 0.5)',
+                                  '0 0 10px rgba(0, 255, 255, 0.3)'
+                                ]
+                              }}
+                              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                            >
+                              <motion.div
+                                animate={{ 
+                                  rotateZ: [0, 360],
+                                  scale: [1, 1.2, 1]
+                                }}
+                                transition={{ 
+                                  rotateZ: { duration: 4, repeat: Infinity, ease: "linear" },
+                                  scale: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+                                }}
+                              >
+                                <Zap className="w-3 h-3 text-cyber-blue" />
+                              </motion.div>
                               <span className="text-cyber-blue font-semibold text-xs">Level {level}</span>
-                            </div>
+                            </motion.div>
                             <span className="text-white/60 text-xs">{userXp} XP</span>
                           </div>
                         </div>
@@ -157,43 +289,63 @@ export const UserSearch: React.FC<UserSearchProps> = ({ onNavigateToUser }) => {
                         <p className="text-white/70 text-sm mb-3">{user.email}</p>
                         
                         {/* XP Progress Bar */}
-                        <div className="mb-3">
-                          <div className="w-32 h-1 bg-white/20 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-gradient-to-r from-cyber-blue to-cyber-pink transition-all duration-500"
-                              style={{ width: `${progressPercentage}%` }}
+                        <motion.div 
+                          className="mb-3"
+                          initial={{ opacity: 0, scale: 0.9 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ delay: 0.2, duration: 0.4 }}
+                        >
+                          <div className="w-24 sm:w-32 h-1 bg-white/20 rounded-full overflow-hidden">
+                            <motion.div 
+                              className="h-full bg-gradient-to-r from-cyber-blue to-cyber-pink"
+                              initial={{ width: 0 }}
+                              animate={{ width: `${progressPercentage}%` }}
+                              transition={{ delay: 0.5, duration: 1, ease: "easeOut" }}
                             />
                           </div>
                           <div className="flex justify-between text-xs text-white/60 mt-1">
                             <span>{currentLevelXp}</span>
                             <span>{requiredXp}</span>
                           </div>
-                        </div>
+                        </motion.div>
                         
                         {user.bio && (
-                          <p className="text-white/80 text-sm mb-3 line-clamp-2">
+                          <motion.p 
+                            className="text-white/80 text-sm mb-3 line-clamp-2"
+                            initial={{ opacity: 0.8 }}
+                            whileHover={{ opacity: 1 }}
+                          >
                             {user.bio}
-                          </p>
+                          </motion.p>
                         )}
                         
-                        <div className="flex items-center space-x-6 text-sm text-white/60">
-                          <div className="flex items-center space-x-1">
+                        <div className="flex items-center space-x-4 sm:space-x-6 text-sm text-white/60">
+                          <motion.div 
+                            className="flex items-center space-x-1"
+                            whileHover={{ scale: 1.1, color: '#ffff00' }}
+                          >
                             <Star className="w-4 h-4" />
                             <span>{user.projects?.length || 0} projects</span>
-                          </div>
+                          </motion.div>
                           {user.location && (
-                            <div className="flex items-center space-x-1">
+                            <motion.div 
+                              className="flex items-center space-x-1"
+                              whileHover={{ scale: 1.1, color: '#00ff00' }}
+                            >
                               <MapPin className="w-4 h-4" />
                               <span>{user.location}</span>
-                            </div>
+                            </motion.div>
                           )}
-                          <div className="flex items-center space-x-1">
+                          <motion.div 
+                            className="flex items-center space-x-1"
+                            whileHover={{ scale: 1.1, color: '#ff00ff' }}
+                          >
                             <Calendar className="w-4 h-4" />
                             <span>Joined {new Date(user.joinedAt).toLocaleDateString()}</span>
-                          </div>
+                          </motion.div>
                         </div>
                       </div>
-                    </div>
+                    </motion.div>
                   </GlassPanel>
                 </motion.div>
               );
@@ -202,10 +354,26 @@ export const UserSearch: React.FC<UserSearchProps> = ({ onNavigateToUser }) => {
         )}
 
         {!searchTerm && (
-          <div className="text-center py-12">
-            <Search className="w-16 h-16 text-white/30 mx-auto mb-4" />
+          <motion.div 
+            className="text-center py-12"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6 }}
+          >
+            <motion.div
+              animate={{ 
+                rotateY: [0, 360],
+                scale: [1, 1.1, 1]
+              }}
+              transition={{ 
+                rotateY: { duration: 4, repeat: Infinity, ease: "linear" },
+                scale: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+              }}
+            >
+              <Search className="w-12 h-12 sm:w-16 sm:h-16 text-white/30 mx-auto mb-4" />
+            </motion.div>
             <p className="text-white/70">Start typing to search for developers...</p>
-          </div>
+          </motion.div>
         )}
       </div>
     </div>

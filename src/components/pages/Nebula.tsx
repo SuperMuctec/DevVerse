@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Star, Award, Crown, Zap, FileText, User, Code, Edit, ArrowLeft } from 'lucide-react';
+import { Trophy, Star, Award, Crown, Zap, FileText, User, Code, Edit, ArrowLeft, Sparkles, Target } from 'lucide-react';
 import { GlassPanel } from '../ui/GlassPanel';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -56,7 +56,11 @@ const AchievementDetail: React.FC<AchievementDetailProps> = ({ achievement, onBa
         <motion.button
           onClick={onBack}
           className="mb-6 flex items-center space-x-2 text-cyber-blue hover:text-cyber-pink transition-colors"
-          whileHover={{ scale: 1.05, x: -5 }}
+          whileHover={{ 
+            scale: 1.05, 
+            x: -5,
+            rotateY: 10
+          }}
           whileTap={{ scale: 0.95 }}
         >
           <ArrowLeft className="w-4 h-4" />
@@ -64,88 +68,190 @@ const AchievementDetail: React.FC<AchievementDetailProps> = ({ achievement, onBa
         </motion.button>
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 30, rotateX: -20 }}
+          animate={{ opacity: 1, y: 0, rotateX: 0 }}
+          transition={{ duration: 0.8, type: "spring" }}
           className="space-y-8"
         >
           <GlassPanel glowColor={isUnlocked ? achievement.rarity === 'epic' ? '#ff00ff' : '#00ffff' : '#666666'}>
-            <div className="text-center mb-8">
+            <motion.div 
+              className="text-center mb-8"
+              whileHover={{ scale: 1.02, rotateY: 5 }}
+            >
               <div className="relative inline-block mb-6">
-                <img
+                <motion.img
                   src={achievement.image}
                   alt={achievement.name}
-                  className={`w-32 h-32 object-cover rounded-full border-4 ${
+                  className={`w-24 h-24 sm:w-32 sm:h-32 object-cover rounded-full border-4 ${
                     !isUnlocked ? 'grayscale' : ''
                   }`}
                   style={{
                     borderColor: isUnlocked ? achievement.rarity === 'epic' ? '#ff00ff' : '#00ffff' : '#666666'
                   }}
+                  animate={isUnlocked ? {
+                    rotateZ: [0, 360],
+                    scale: [1, 1.1, 1],
+                    boxShadow: [
+                      `0 0 20px ${achievement.rarity === 'epic' ? '#ff00ff' : '#00ffff'}40`,
+                      `0 0 40px ${achievement.rarity === 'epic' ? '#ff00ff' : '#00ffff'}60`,
+                      `0 0 20px ${achievement.rarity === 'epic' ? '#ff00ff' : '#00ffff'}40`
+                    ]
+                  } : {}}
+                  transition={{ 
+                    rotateZ: { duration: 8, repeat: Infinity, ease: "linear" },
+                    scale: { duration: 2, repeat: Infinity, ease: "easeInOut" },
+                    boxShadow: { duration: 3, repeat: Infinity, ease: "easeInOut" }
+                  }}
                 />
                 {!isUnlocked && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
-                    <div className="text-white/70 text-4xl">🔒</div>
-                  </div>
+                  <motion.div 
+                    className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full"
+                    animate={{ 
+                      opacity: [0.5, 0.8, 0.5]
+                    }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  >
+                    <div className="text-white/70 text-2xl sm:text-4xl">🔒</div>
+                  </motion.div>
                 )}
               </div>
               
-              <h1 className="font-orbitron text-4xl font-bold text-white mb-2">
+              <motion.h1 
+                className="font-orbitron text-2xl sm:text-4xl font-bold text-white mb-2"
+                animate={isUnlocked ? {
+                  textShadow: [
+                    `0 0 10px ${achievement.rarity === 'epic' ? '#ff00ff' : '#00ffff'}`,
+                    `0 0 20px ${achievement.rarity === 'epic' ? '#ff00ff' : '#00ffff'}, 0 0 30px ${achievement.rarity === 'epic' ? '#ff00ff' : '#00ffff'}`,
+                    `0 0 10px ${achievement.rarity === 'epic' ? '#ff00ff' : '#00ffff'}`
+                  ]
+                } : {}}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              >
                 {achievement.name}
-              </h1>
+              </motion.h1>
               
               <div className="flex items-center justify-center space-x-4 mb-4">
-                <span 
+                <motion.span 
                   className="px-4 py-2 rounded-full text-sm font-semibold uppercase"
                   style={{ 
                     backgroundColor: `${achievement.rarity === 'epic' ? '#ff00ff' : '#00ffff'}20`,
                     color: achievement.rarity === 'epic' ? '#ff00ff' : '#00ffff'
                   }}
+                  animate={{ 
+                    boxShadow: [
+                      `0 0 10px ${achievement.rarity === 'epic' ? '#ff00ff' : '#00ffff'}40`,
+                      `0 0 20px ${achievement.rarity === 'epic' ? '#ff00ff' : '#00ffff'}60`,
+                      `0 0 10px ${achievement.rarity === 'epic' ? '#ff00ff' : '#00ffff'}40`
+                    ]
+                  }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                 >
                   {achievement.rarity}
-                </span>
+                </motion.span>
                 
                 {isUnlocked && unlockedDate && (
-                  <div className="flex items-center space-x-2 text-sm text-white/70">
+                  <motion.div 
+                    className="flex items-center space-x-2 text-sm text-white/70"
+                    whileHover={{ scale: 1.05, color: '#ffffff' }}
+                  >
                     <Trophy className="w-4 h-4" />
                     <span>Unlocked on {unlockedDate}</span>
-                  </div>
+                  </motion.div>
                 )}
               </div>
               
-              <p className="text-white/80 text-lg">
+              <p className="text-white/80 text-base sm:text-lg">
                 {achievement.description}
               </p>
-            </div>
+            </motion.div>
           </GlassPanel>
 
-          <GlassPanel glowColor="#ffff00">
-            <h2 className="font-orbitron text-2xl font-bold text-cyber-yellow mb-4">
-              Achievement Story
-            </h2>
-            <p className="text-white/80 leading-relaxed text-lg">
-              {getAchievementStory(achievement.id)}
-            </p>
-          </GlassPanel>
+          <motion.div
+            initial={{ opacity: 0, x: -30, rotateY: -10 }}
+            animate={{ opacity: 1, x: 0, rotateY: 0 }}
+            transition={{ delay: 0.2, duration: 0.6 }}
+          >
+            <GlassPanel glowColor="#ffff00">
+              <motion.h2 
+                className="font-orbitron text-xl sm:text-2xl font-bold text-cyber-yellow mb-4"
+                animate={{
+                  textShadow: [
+                    '0 0 10px #ffff00',
+                    '0 0 20px #ffff00, 0 0 30px #ffff00',
+                    '0 0 10px #ffff00'
+                  ]
+                }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              >
+                Achievement Story
+              </motion.h2>
+              <motion.p 
+                className="text-white/80 leading-relaxed text-base sm:text-lg"
+                initial={{ opacity: 0.8 }}
+                whileHover={{ opacity: 1 }}
+              >
+                {getAchievementStory(achievement.id)}
+              </motion.p>
+            </GlassPanel>
+          </motion.div>
 
-          <GlassPanel glowColor="#00ff00">
-            <h2 className="font-orbitron text-2xl font-bold text-cyber-green mb-4">
-              How to Obtain
-            </h2>
-            <p className="text-white/80 leading-relaxed">
-              {getHowToObtain(achievement.id)}
-            </p>
-            
-            {!isUnlocked && (
-              <div className="mt-4 p-4 bg-yellow-500/20 border border-yellow-500/50 rounded-lg">
-                <div className="flex items-center space-x-2 text-yellow-400">
-                  <Star className="w-5 h-5" />
-                  <span className="font-semibold">Achievement Locked</span>
-                </div>
-                <p className="text-yellow-300/80 text-sm mt-1">
-                  Complete the action above to unlock this achievement and add it to your collection!
-                </p>
-              </div>
-            )}
-          </GlassPanel>
+          <motion.div
+            initial={{ opacity: 0, x: 30, rotateY: 10 }}
+            animate={{ opacity: 1, x: 0, rotateY: 0 }}
+            transition={{ delay: 0.4, duration: 0.6 }}
+          >
+            <GlassPanel glowColor="#00ff00">
+              <motion.h2 
+                className="font-orbitron text-xl sm:text-2xl font-bold text-cyber-green mb-4"
+                animate={{
+                  textShadow: [
+                    '0 0 10px #00ff00',
+                    '0 0 20px #00ff00, 0 0 30px #00ff00',
+                    '0 0 10px #00ff00'
+                  ]
+                }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              >
+                How to Obtain
+              </motion.h2>
+              <motion.p 
+                className="text-white/80 leading-relaxed"
+                initial={{ opacity: 0.8 }}
+                whileHover={{ opacity: 1 }}
+              >
+                {getHowToObtain(achievement.id)}
+              </motion.p>
+              
+              {!isUnlocked && (
+                <motion.div 
+                  className="mt-4 p-4 bg-yellow-500/20 border border-yellow-500/50 rounded-lg"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.6, duration: 0.4 }}
+                  whileHover={{ scale: 1.02, rotateX: 5 }}
+                >
+                  <div className="flex items-center space-x-2 text-yellow-400">
+                    <motion.div
+                      animate={{ 
+                        rotateZ: [0, 360],
+                        scale: [1, 1.2, 1]
+                      }}
+                      transition={{ 
+                        rotateZ: { duration: 4, repeat: Infinity, ease: "linear" },
+                        scale: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+                      }}
+                    >
+                      <Star className="w-5 h-5" />
+                    </motion.div>
+                    <span className="font-semibold">Achievement Locked</span>
+                  </div>
+                  <p className="text-yellow-300/80 text-sm mt-1">
+                    Complete the action above to unlock this achievement and add it to your collection!
+                  </p>
+                </motion.div>
+              )}
+            </GlassPanel>
+          </motion.div>
         </motion.div>
       </div>
     </div>
@@ -259,54 +365,110 @@ export const Nebula: React.FC = () => {
     <div className="min-h-screen pt-20 px-4">
       <div className="max-w-7xl mx-auto py-8">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
+          initial={{ opacity: 0, y: 30, rotateX: -20 }}
+          animate={{ opacity: 1, y: 0, rotateX: 0 }}
+          transition={{ duration: 0.8, type: "spring" }}
+          className="text-center mb-8 sm:mb-12"
         >
-          <h1 className="font-orbitron text-5xl font-bold mb-4">
-            <span className="neon-text text-cyber-blue">The</span>{' '}
-            <span className="neon-text text-cyber-pink">Nebula</span>
-          </h1>
-          <p className="font-sora text-xl text-white/70">
+          <motion.h1 
+            className="font-orbitron text-3xl sm:text-5xl font-bold mb-4"
+            animate={{
+              textShadow: [
+                '0 0 20px #00ffff',
+                '0 0 30px #ff00ff, 0 0 40px #ff00ff',
+                '0 0 20px #00ffff'
+              ]
+            }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <motion.span 
+              className="neon-text text-cyber-blue inline-block"
+              animate={{ 
+                rotateY: [0, 10, -10, 0],
+                scale: [1, 1.05, 1]
+              }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            >
+              The
+            </motion.span>{' '}
+            <motion.span 
+              className="neon-text text-cyber-pink inline-block"
+              animate={{ 
+                rotateY: [0, -10, 10, 0],
+                scale: [1, 1.05, 1]
+              }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+            >
+              Nebula
+            </motion.span>
+          </motion.h1>
+          <motion.p 
+            className="font-sora text-lg sm:text-xl text-white/70"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.6 }}
+          >
             Achievement Constellation
-          </p>
+          </motion.p>
         </motion.div>
 
         {/* Achievement Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          <GlassPanel glowColor="#00ffff">
-            <div className="text-center">
-              <Trophy className="w-8 h-8 text-cyber-blue mx-auto mb-2" />
-              <div className="text-2xl font-orbitron font-bold text-cyber-blue">
-                {userAchievements.length}
-              </div>
-              <div className="text-white/70 text-sm">Achievements Unlocked</div>
-            </div>
-          </GlassPanel>
-          
-          <GlassPanel glowColor="#ff00ff">
-            <div className="text-center">
-              <Star className="w-8 h-8 text-cyber-pink mx-auto mb-2" />
-              <div className="text-2xl font-orbitron font-bold text-cyber-pink">
-                {Math.round((userAchievements.length / allAchievements.length) * 100)}%
-              </div>
-              <div className="text-white/70 text-sm">Completion Rate</div>
-            </div>
-          </GlassPanel>
-          
-          <GlassPanel glowColor="#ffff00">
-            <div className="text-center">
-              <Award className="w-8 h-8 text-cyber-yellow mx-auto mb-2" />
-              <div className="text-2xl font-orbitron font-bold text-cyber-yellow">
-                {allAchievements.length - userAchievements.length}
-              </div>
-              <div className="text-white/70 text-sm">Remaining</div>
-            </div>
-          </GlassPanel>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-12">
+          {[
+            { icon: Trophy, value: userAchievements.length, label: 'Achievements Unlocked', color: '#00ffff' },
+            { icon: Star, value: Math.round((userAchievements.length / allAchievements.length) * 100), label: 'Completion Rate', color: '#ff00ff', suffix: '%' },
+            { icon: Award, value: allAchievements.length - userAchievements.length, label: 'Remaining', color: '#ffff00' }
+          ].map((stat, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 30, rotateX: -20 }}
+              animate={{ opacity: 1, y: 0, rotateX: 0 }}
+              transition={{ delay: index * 0.1, duration: 0.6 }}
+            >
+              <GlassPanel glowColor={stat.color}>
+                <motion.div 
+                  className="text-center"
+                  whileHover={{ 
+                    scale: 1.05,
+                    rotateY: 5,
+                    rotateX: 5
+                  }}
+                >
+                  <motion.div
+                    animate={{ 
+                      rotateZ: [0, 360],
+                      scale: [1, 1.2, 1]
+                    }}
+                    transition={{ 
+                      rotateZ: { duration: 8, repeat: Infinity, ease: "linear" },
+                      scale: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+                    }}
+                  >
+                    <stat.icon className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2" style={{ color: stat.color }} />
+                  </motion.div>
+                  <motion.div 
+                    className="text-xl sm:text-2xl font-orbitron font-bold"
+                    style={{ color: stat.color }}
+                    animate={{
+                      textShadow: [
+                        `0 0 10px ${stat.color}`,
+                        `0 0 20px ${stat.color}, 0 0 30px ${stat.color}`,
+                        `0 0 10px ${stat.color}`
+                      ]
+                    }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  >
+                    {stat.value}{stat.suffix || ''}
+                  </motion.div>
+                  <div className="text-white/70 text-sm">{stat.label}</div>
+                </motion.div>
+              </GlassPanel>
+            </motion.div>
+          ))}
         </div>
 
         {/* Achievements Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {allAchievements.map((achievement, index) => {
             const unlocked = isUnlocked(achievement.id);
             const unlockedDate = getUnlockedDate(achievement.id);
@@ -314,9 +476,13 @@ export const Nebula: React.FC = () => {
             return (
               <motion.div
                 key={achievement.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
+                initial={{ opacity: 0, y: 30, rotateX: -20, scale: 0.8 }}
+                animate={{ opacity: 1, y: 0, rotateX: 0, scale: 1 }}
+                transition={{ 
+                  delay: index * 0.1,
+                  duration: 0.6,
+                  type: "spring"
+                }}
                 onClick={() => setSelectedAchievement(achievement)}
                 className="cursor-pointer"
               >
@@ -326,61 +492,100 @@ export const Nebula: React.FC = () => {
                     !unlocked ? 'opacity-50' : ''
                   }`}
                 >
-                  <div className="relative">
+                  <motion.div 
+                    className="relative"
+                    whileHover={{ 
+                      rotateY: 10,
+                      rotateX: 5
+                    }}
+                  >
                     {/* Achievement Image */}
                     <div className="relative mb-4">
-                      <img
+                      <motion.img
                         src={achievement.image}
                         alt={achievement.name}
-                        className={`w-full h-32 object-cover rounded-lg ${
+                        className={`w-full h-24 sm:h-32 object-cover rounded-lg ${
                           !unlocked ? 'grayscale' : ''
                         }`}
+                        animate={unlocked ? {
+                          scale: [1, 1.05, 1]
+                        } : {}}
+                        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                       />
-                      <div 
+                      <motion.div 
                         className="absolute inset-0 rounded-lg"
                         style={{
                           background: unlocked 
                             ? `linear-gradient(45deg, ${getRarityGlow(achievement.rarity)}, transparent)`
                             : 'linear-gradient(45deg, rgba(0,0,0,0.5), transparent)'
                         }}
+                        animate={unlocked ? {
+                          opacity: [0.3, 0.6, 0.3]
+                        } : {}}
+                        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                       />
                       
                       {/* Achievement Icon */}
                       <div className="absolute top-2 right-2">
-                        <div 
-                          className="w-10 h-10 rounded-full flex items-center justify-center"
+                        <motion.div 
+                          className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center"
                           style={{
                             backgroundColor: unlocked ? getRarityColor(achievement.rarity) : '#666666',
                             boxShadow: unlocked ? `0 0 15px ${getRarityGlow(achievement.rarity)}` : 'none'
                           }}
+                          animate={unlocked ? {
+                            rotateZ: [0, 360],
+                            scale: [1, 1.2, 1]
+                          } : {}}
+                          transition={{ 
+                            rotateZ: { duration: 4, repeat: Infinity, ease: "linear" },
+                            scale: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+                          }}
                         >
-                          <achievement.icon className="w-5 h-5 text-black" />
-                        </div>
+                          <achievement.icon className="w-4 h-4 sm:w-5 sm:h-5 text-black" />
+                        </motion.div>
                       </div>
 
                       {/* Locked Overlay */}
                       {!unlocked && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg">
-                          <div className="text-white/70 text-4xl">🔒</div>
-                        </div>
+                        <motion.div 
+                          className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-lg"
+                          animate={{ 
+                            opacity: [0.5, 0.8, 0.5]
+                          }}
+                          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                        >
+                          <div className="text-white/70 text-2xl sm:text-4xl">🔒</div>
+                        </motion.div>
                       )}
                     </div>
 
                     {/* Achievement Info */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <h3 className="font-orbitron text-lg font-bold text-white">
+                        <motion.h3 
+                          className="font-orbitron text-base sm:text-lg font-bold text-white"
+                          whileHover={{ scale: 1.02 }}
+                        >
                           {achievement.name}
-                        </h3>
-                        <span 
+                        </motion.h3>
+                        <motion.span 
                           className="px-2 py-1 rounded-full text-xs font-semibold uppercase"
                           style={{ 
                             backgroundColor: `${getRarityColor(achievement.rarity)}20`,
                             color: getRarityColor(achievement.rarity)
                           }}
+                          animate={{ 
+                            boxShadow: [
+                              `0 0 5px ${getRarityColor(achievement.rarity)}40`,
+                              `0 0 15px ${getRarityColor(achievement.rarity)}60`,
+                              `0 0 5px ${getRarityColor(achievement.rarity)}40`
+                            ]
+                          }}
+                          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                         >
                           {achievement.rarity}
-                        </span>
+                        </motion.span>
                       </div>
                       
                       <p className="text-white/70 text-sm">
@@ -388,10 +593,13 @@ export const Nebula: React.FC = () => {
                       </p>
 
                       {unlocked && unlockedDate && (
-                        <div className="flex items-center space-x-2 text-xs text-white/50">
+                        <motion.div 
+                          className="flex items-center space-x-2 text-xs text-white/50"
+                          whileHover={{ scale: 1.05, color: '#ffffff' }}
+                        >
                           <Trophy className="w-3 h-3" />
                           <span>Unlocked on {unlockedDate}</span>
-                        </div>
+                        </motion.div>
                       )}
 
                       {!unlocked && (
@@ -400,7 +608,7 @@ export const Nebula: React.FC = () => {
                         </div>
                       )}
                     </div>
-                  </div>
+                  </motion.div>
                 </GlassPanel>
               </motion.div>
             );
@@ -408,13 +616,29 @@ export const Nebula: React.FC = () => {
         </div>
 
         {userAchievements.length === 0 && (
-          <div className="text-center py-12">
-            <Trophy className="w-16 h-16 text-white/30 mx-auto mb-4" />
+          <motion.div 
+            className="text-center py-12"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6 }}
+          >
+            <motion.div
+              animate={{ 
+                rotateY: [0, 360],
+                scale: [1, 1.1, 1]
+              }}
+              transition={{ 
+                rotateY: { duration: 4, repeat: Infinity, ease: "linear" },
+                scale: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+              }}
+            >
+              <Trophy className="w-12 h-12 sm:w-16 sm:h-16 text-white/30 mx-auto mb-4" />
+            </motion.div>
             <p className="text-white/70 mb-4">No achievements unlocked yet.</p>
             <p className="text-white/50 text-sm">
               Start your journey by creating your first planet or completing a challenge!
             </p>
-          </div>
+          </motion.div>
         )}
       </div>
     </div>
