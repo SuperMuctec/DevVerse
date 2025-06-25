@@ -135,7 +135,10 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
               
               <motion.button
                 onClick={() => onNavigate('builder')}
-                className="interactive bg-gradient-to-r from-cyber-blue to-cyber-pink px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-orbitron font-bold text-base sm:text-lg transition-all duration-500"
+                className="interactive px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-orbitron font-bold text-base sm:text-lg transition-all duration-500 text-white"
+                style={{
+                  background: 'linear-gradient(45deg, #00ffff, #ff00ff)'
+                }}
                 initial={{ opacity: 0, y: 20, scale: 0.9, rotateX: -20 }}
                 animate={{ opacity: 1, y: 0, scale: 1, rotateX: 0 }}
                 transition={{ delay: 1.2, duration: 0.8 }}
@@ -143,13 +146,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
                   scale: 1.05,
                   rotateY: 10,
                   rotateX: 10,
-                  boxShadow: '0 0 40px rgba(0, 255, 255, 0.6)',
-                  background: [
-                    'linear-gradient(45deg, #00ffff, #ff00ff)',
-                    'linear-gradient(45deg, #ff00ff, #ffff00)',
-                    'linear-gradient(45deg, #ffff00, #00ffff)',
-                    'linear-gradient(45deg, #00ffff, #ff00ff)'
-                  ]
+                  boxShadow: '0 0 40px rgba(0, 255, 255, 0.6)'
                 }}
                 whileTap={{ 
                   scale: 0.95,
@@ -157,19 +154,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
                   rotateX: -5
                 }}
               >
-                <motion.span
-                  animate={{
-                    backgroundImage: [
-                      'linear-gradient(45deg, #00ffff, #ff00ff)',
-                      'linear-gradient(45deg, #ff00ff, #ffff00)',
-                      'linear-gradient(45deg, #ffff00, #00ffff)',
-                      'linear-gradient(45deg, #00ffff, #ff00ff)'
-                    ]
-                  }}
-                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                >
-                  Launch Your Planet
-                </motion.span>
+                Launch Your Planet
               </motion.button>
             </motion.div>
           </div>
