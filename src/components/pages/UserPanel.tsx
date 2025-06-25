@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,7 +17,8 @@ import {
   Settings,
   Code,
   Plus,
-  ExternalLink
+  ExternalLink,
+  Loader
 } from 'lucide-react';
 import { GlassPanel } from '../ui/GlassPanel';
 import { useAuth } from '../../contexts/AuthContext';
@@ -46,11 +47,21 @@ const passwordSchema = z.object({
 type ProfileFormData = z.infer<typeof profileSchema>;
 type PasswordFormData = z.infer<typeof passwordSchema>;
 
+interface GitHubLanguages {
+  [key: string]: number;
+}
+
+interface ProjectWithLanguages extends Project {
+  languages?: GitHubLanguages;
+  languagesLoading?: boolean;
+}
+
 export const UserPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'profile' | 'projects' | 'security'>('profile');
   const [isEditing, setIsEditing] = useState(false);
   const [showCreateProject, setShowCreateProject] = useState(false);
   const [showProfilePicture, setShowProfilePicture] = useState(false);
+  const [projectsWithLanguages, setProjectsWithLanguages] = useState<ProjectWithLanguages[]>([]);
   const { user, updateUser, addXP } = useAuth();
 
   const profileForm = useForm<ProfileFormData>({
@@ -67,6 +78,64 @@ export const UserPanel: React.FC = () => {
   const passwordForm = useForm<PasswordFormData>({
     resolver: zodResolver(passwordSchema),
   });
+
+  // Fetch GitHub languages for a repository
+  const fetchGitHubLanguages = async (githubUrl: string): Promise<GitHubLanguages | null> => {
+    try {
+      // Extract owner and repo from GitHub URL
+      const match = githubUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+      if (!match) return null;
+
+      const [, owner, repo] = match;
+      const cleanRepo = repo.replace(/\.git$/, ''); // Remove .git suffix if present
+
+      const response = await fetch(`https://api.github.com/repos/${owner}/${cleanRepo}/languages`);
+      
+      if (!response.ok) {
+        console.warn(`Failed to fetch languages for ${owner}/${cleanRepo}:`, response.status);
+        return null;
+      }
+
+      const languages = await response.json();
+      return languages;
+    } catch (error) {
+      console.error('Error fetching GitHub languages:', error);
+      return null;
+    }
+  };
+
+  // Load projects with language data
+  useEffect(() => {
+    if (user?.projects) {
+      const loadProjectLanguages = async () => {
+        const projectsWithLangs = await Promise.all(
+          user.projects.map(async (project) => {
+            const projectWithLang: ProjectWithLanguages = { 
+              ...project, 
+              languagesLoading: true 
+            };
+            
+            try {
+              const languages = await fetchGitHubLanguages(project.githubUrl);
+              projectWithLang.languages = languages || undefined;
+            } catch (error) {
+              console.error(`Error loading languages for ${project.name}:`, error);
+            } finally {
+              projectWithLang.languagesLoading = false;
+            }
+            
+            return projectWithLang;
+          })
+        );
+        
+        setProjectsWithLanguages(projectsWithLangs);
+      };
+
+      loadProjectLanguages();
+    } else {
+      setProjectsWithLanguages([]);
+    }
+  }, [user?.projects]);
 
   // Calculate user level based on XP
   const calculateLevel = (xp: number) => {
@@ -168,8 +237,107 @@ export const UserPanel: React.FC = () => {
       Java: '#ed8b00',
       'C++': '#00599c',
       React: '#61dafb',
+      HTML: '#e34c26',
+      CSS: '#1572b6',
+      Go: '#00add8',
+      Rust: '#dea584',
+      PHP: '#777bb4',
+      Ruby: '#cc342d',
+      Swift: '#fa7343',
+      Kotlin: '#7f52ff',
+      Dart: '#0175c2',
+      Shell: '#89e051',
+      C: '#555555',
+      'C#': '#239120',
+      Jupyter: '#da5b0b',
+      Vue: '#4fc08d',
+      Svelte: '#ff3e00',
     };
     return colors[language] || '#ffffff';
+  };
+
+  // Create pie chart for languages
+  const createLanguageChart = (languages: GitHubLanguages) => {
+    const total = Object.values(languages).reduce((sum, bytes) => sum + bytes, 0);
+    if (total === 0) return null;
+
+    const sortedLanguages = Object.entries(languages)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5); // Show top 5 languages
+
+    let cumulativePercentage = 0;
+    const segments = sortedLanguages.map(([lang, bytes]) => {
+      const percentage = (bytes / total) * 100;
+      const startAngle = cumulativePercentage * 3.6; // Convert to degrees
+      const endAngle = (cumulativePercentage + percentage) * 3.6;
+      cumulativePercentage += percentage;
+
+      return {
+        language: lang,
+        percentage: percentage,
+        startAngle,
+        endAngle,
+        color: getLanguageColor(lang)
+      };
+    });
+
+    return (
+      <div className="flex items-center space-x-3">
+        {/* Pie Chart */}
+        <div className="relative w-12 h-12">
+          <svg width="48" height="48" className="transform -rotate-90">
+            <circle
+              cx="24"
+              cy="24"
+              r="20"
+              fill="none"
+              stroke="rgba(255,255,255,0.1)"
+              strokeWidth="4"
+            />
+            {segments.map((segment, index) => {
+              const circumference = 2 * Math.PI * 20;
+              const strokeDasharray = `${(segment.percentage / 100) * circumference} ${circumference}`;
+              const strokeDashoffset = -((segment.startAngle / 360) * circumference);
+
+              return (
+                <circle
+                  key={index}
+                  cx="24"
+                  cy="24"
+                  r="20"
+                  fill="none"
+                  stroke={segment.color}
+                  strokeWidth="4"
+                  strokeDasharray={strokeDasharray}
+                  strokeDashoffset={strokeDashoffset}
+                  className="transition-all duration-300"
+                />
+              );
+            })}
+          </svg>
+        </div>
+
+        {/* Language Legend */}
+        <div className="flex flex-wrap gap-1">
+          {segments.slice(0, 3).map((segment) => (
+            <div key={segment.language} className="flex items-center space-x-1">
+              <div
+                className="w-2 h-2 rounded-full"
+                style={{ backgroundColor: segment.color }}
+              />
+              <span className="text-xs text-white/70">
+                {segment.language} {segment.percentage.toFixed(0)}%
+              </span>
+            </div>
+          ))}
+          {segments.length > 3 && (
+            <span className="text-xs text-white/50">
+              +{segments.length - 3} more
+            </span>
+          )}
+        </div>
+      </div>
+    );
   };
 
   const tabs = [
@@ -397,7 +565,7 @@ export const UserPanel: React.FC = () => {
               <GlassPanel glowColor="#00ff00">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="font-orbitron text-2xl font-bold text-white">
-                    Your Projects ({user?.projects?.length || 0})
+                    Your Projects ({projectsWithLanguages.length})
                   </h2>
                   <motion.button
                     onClick={() => setShowCreateProject(true)}
@@ -411,7 +579,7 @@ export const UserPanel: React.FC = () => {
                 </div>
 
                 <div className="space-y-4">
-                  {user?.projects?.map((project, index) => (
+                  {projectsWithLanguages.map((project, index) => (
                     <motion.div
                       key={project.id}
                       initial={{ opacity: 0, y: 20 }}
@@ -449,7 +617,7 @@ export const UserPanel: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center space-x-4 text-sm text-white/60">
                           <div className="flex items-center space-x-1">
                             <div
@@ -473,7 +641,26 @@ export const UserPanel: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap gap-2 mt-3">
+                      {/* GitHub Language Chart */}
+                      <div className="mb-3">
+                        {project.languagesLoading ? (
+                          <div className="flex items-center space-x-2 text-white/50">
+                            <Loader className="w-4 h-4 animate-spin" />
+                            <span className="text-sm">Loading language data...</span>
+                          </div>
+                        ) : project.languages ? (
+                          <div>
+                            <h4 className="text-sm font-semibold text-white/80 mb-2">Language Distribution</h4>
+                            {createLanguageChart(project.languages)}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-white/50">
+                            Language data unavailable
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
                         {project.topics.map((topic) => (
                           <span
                             key={topic}
