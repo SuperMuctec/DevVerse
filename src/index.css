@@ -22,6 +22,12 @@
       cursor: auto !important;
     }
   }
+
+  /* Prevent horizontal scroll on mobile */
+  body, html {
+    overflow-x: hidden;
+    width: 100%;
+  }
 }
 
 @layer components {
@@ -81,11 +87,116 @@
       backface-visibility: hidden;
     }
   }
+
+  /* Responsive interactive elements */
+  .interactive {
+    @apply transition-all duration-300 ease-out;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Responsive grid improvements */
+  @media (max-width: 640px) {
+    .grid-responsive {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+  }
+
+  @media (min-width: 641px) and (max-width: 1024px) {
+    .grid-responsive {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+    }
+  }
+
+  @media (min-width: 1025px) {
+    .grid-responsive {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
+    }
+  }
+
+  /* Responsive spacing */
+  .section-padding {
+    @apply px-4 py-8;
+  }
+
+  @media (min-width: 640px) {
+    .section-padding {
+      @apply px-6 py-12;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .section-padding {
+      @apply px-8 py-16;
+    }
+  }
+
+  /* Responsive typography */
+  .heading-responsive {
+    @apply text-2xl font-bold;
+  }
+
+  @media (min-width: 640px) {
+    .heading-responsive {
+      @apply text-3xl;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .heading-responsive {
+      @apply text-4xl;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .heading-responsive {
+      @apply text-5xl;
+    }
+  }
+
+  /* Responsive card layouts */
+  .card-responsive {
+    @apply w-full max-w-sm mx-auto;
+  }
+
+  @media (min-width: 640px) {
+    .card-responsive {
+      @apply max-w-none mx-0;
+    }
+  }
+
+  /* Responsive button sizing */
+  .btn-responsive {
+    @apply px-4 py-2 text-sm;
+    min-height: 44px; /* iOS touch target minimum */
+    min-width: 44px;
+  }
+
+  @media (min-width: 640px) {
+    .btn-responsive {
+      @apply px-6 py-3 text-base;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .btn-responsive {
+      @apply px-8 py-4 text-lg;
+    }
+  }
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
+}
+
+@media (min-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
 }
 
 ::-webkit-scrollbar-track {
@@ -122,12 +233,42 @@
   .font-orbitron {
     letter-spacing: 0.02em;
   }
+
+  /* Prevent zoom on input focus */
+  input, select, textarea {
+    font-size: 16px;
+  }
+
+  /* Optimize modal sizing */
+  .modal-responsive {
+    @apply w-full h-full max-w-none max-h-none rounded-none;
+  }
 }
 
 /* Tablet optimizations */
 @media (min-width: 768px) and (max-width: 1024px) {
   .glass-panel {
     padding: 1.5rem;
+  }
+
+  /* Tablet-specific grid layouts */
+  .tablet-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+/* Desktop optimizations */
+@media (min-width: 1024px) {
+  /* Enhanced hover effects for desktop */
+  .interactive:hover {
+    transform: translateY(-2px);
+  }
+
+  /* Desktop-specific layouts */
+  .desktop-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
   }
 }
 
@@ -139,5 +280,70 @@
       0 0 4px currentColor, 
       0 0 6px currentColor,
       0 0 8px currentColor;
+  }
+}
+
+/* Ultra-wide screen optimizations */
+@media (min-width: 1920px) {
+  .container-ultra {
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  body {
+    background: white !important;
+    color: black !important;
+  }
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  .motion-safe {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Focus styles for keyboard navigation */
+.interactive:focus-visible {
+  outline: 2px solid #00ffff;
+  outline-offset: 2px;
+}
+
+/* Loading states */
+.loading-skeleton {
+  background: linear-gradient(90deg, rgba(255,255,255,0.1) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Safe area handling for mobile devices with notches */
+@supports (padding: max(0px)) {
+  .safe-area-top {
+    padding-top: max(1rem, env(safe-area-inset-top));
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  
+  .safe-area-left {
+    padding-left: max(1rem, env(safe-area-inset-left));
+  }
+  
+  .safe-area-right {
+    padding-right: max(1rem, env(safe-area-inset-right));
   }
 }

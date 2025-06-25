@@ -21,7 +21,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
   const userPlanets = getUserPlanets();
 
   return (
-    <div className="min-h-screen pt-20 sm:pt-44">
+    <div className="min-h-screen pt-16 sm:pt-20 lg:pt-44">
       <FloatingElements />
       <AnimatedBackground />
       
@@ -30,36 +30,39 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 1 }}
-        className="relative h-screen"
+        className="relative min-h-screen flex items-center justify-center"
       >
-        <Canvas camera={{ position: [0, 0, 10], fov: 50 }}>
-          <Suspense fallback={null}>
-            <ambientLight intensity={0.2} />
-            <pointLight position={[10, 10, 10]} intensity={1} />
-            
-            {userPlanets.map((planet) => (
-              <DevPlanet3D
-                key={planet.id}
-                planet={planet}
-                onClick={() => console.log(`Clicked on ${planet.name}`)}
+        {/* 3D Canvas - Hidden on mobile for performance */}
+        <div className="hidden md:block absolute inset-0">
+          <Canvas camera={{ position: [0, 0, 10], fov: 50 }}>
+            <Suspense fallback={null}>
+              <ambientLight intensity={0.2} />
+              <pointLight position={[10, 10, 10]} intensity={1} />
+              
+              {userPlanets.map((planet) => (
+                <DevPlanet3D
+                  key={planet.id}
+                  planet={planet}
+                  onClick={() => console.log(`Clicked on ${planet.name}`)}
+                />
+              ))}
+              
+              <OrbitControls
+                enableZoom={true}
+                enablePan={true}
+                enableRotate={true}
+                zoomSpeed={0.6}
+                panSpeed={0.5}
+                rotateSpeed={0.4}
               />
-            ))}
-            
-            <OrbitControls
-              enableZoom={true}
-              enablePan={true}
-              enableRotate={true}
-              zoomSpeed={0.6}
-              panSpeed={0.5}
-              rotateSpeed={0.4}
-            />
-            <Environment preset="night" />
-          </Suspense>
-        </Canvas>
+              <Environment preset="night" />
+            </Suspense>
+          </Canvas>
+        </div>
 
         {/* Overlay Content */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="flex flex-col items-center justify-center h-full text-center px-4">
+        <div className="relative z-10 w-full">
+          <div className="flex flex-col items-center justify-center min-h-screen text-center px-4">
             <motion.div
               initial={{ y: 50, opacity: 0, scale: 0.8, rotateX: -30 }}
               animate={{ y: 0, opacity: 1, scale: 1, rotateX: 0 }}
@@ -69,10 +72,38 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
                 type: "spring",
                 stiffness: 100
               }}
-              className="pointer-events-auto"
+              className="max-w-4xl mx-auto"
             >
+              {/* Logo Integration */}
+              <motion.div
+                className="mb-6 sm:mb-8"
+                initial={{ scale: 0, rotateZ: -180 }}
+                animate={{ scale: 1, rotateZ: 0 }}
+                transition={{ delay: 0.3, duration: 1, type: "spring" }}
+              >
+                <motion.img
+                  src="/white_circle_360x360.png"
+                  alt="DevVerse³ Logo"
+                  className="w-16 h-16 sm:w-24 sm:h-24 md:w-32 md:h-32 mx-auto mb-4 opacity-90"
+                  animate={{ 
+                    rotateZ: [0, 360],
+                    scale: [1, 1.05, 1],
+                    filter: [
+                      'drop-shadow(0 0 20px rgba(0, 255, 255, 0.5))',
+                      'drop-shadow(0 0 40px rgba(255, 0, 255, 0.8))',
+                      'drop-shadow(0 0 20px rgba(0, 255, 255, 0.5))'
+                    ]
+                  }}
+                  transition={{ 
+                    rotateZ: { duration: 20, repeat: Infinity, ease: "linear" },
+                    scale: { duration: 3, repeat: Infinity, ease: "easeInOut" },
+                    filter: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+                  }}
+                />
+              </motion.div>
+
               <motion.h1 
-                className="font-orbitron text-4xl sm:text-6xl md:text-8xl font-black mb-4"
+                className="font-orbitron text-3xl sm:text-4xl md:text-6xl lg:text-8xl font-black mb-4 sm:mb-6"
                 animate={{
                   textShadow: [
                     '0 0 20px #00ffff, 0 0 40px #00ffff',
@@ -125,7 +156,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
               </motion.h1>
               
               <motion.p 
-                className="font-sora text-lg sm:text-xl md:text-2xl text-white/80 mb-8 max-w-2xl"
+                className="font-sora text-base sm:text-lg md:text-xl lg:text-2xl text-white/80 mb-6 sm:mb-8 max-w-2xl mx-auto leading-relaxed"
                 initial={{ opacity: 0, y: 20, rotateX: -20 }}
                 animate={{ opacity: 1, y: 0, rotateX: 0 }}
                 transition={{ delay: 1, duration: 0.8 }}
@@ -135,7 +166,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
               
               <motion.button
                 onClick={() => onNavigate('builder')}
-                className="interactive px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-orbitron font-bold text-base sm:text-lg transition-all duration-500 text-white"
+                className="interactive px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-orbitron font-bold text-sm sm:text-base lg:text-lg transition-all duration-500 text-white min-h-[44px] min-w-[200px]"
                 style={{
                   background: 'linear-gradient(45deg, #00ffff, #ff00ff)'
                 }}
@@ -163,7 +194,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
 
       {/* Galaxy Stats */}
       <div className="max-w-7xl mx-auto px-4 py-8 sm:py-16">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           <motion.div
             initial={{ opacity: 0, y: 50, rotateY: -15, scale: 0.8 }}
             animate={{ opacity: 1, y: 0, rotateY: 0, scale: 1 }}
@@ -180,7 +211,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
                 transition={{ type: "spring", stiffness: 300 }}
               >
                 <motion.div 
-                  className="text-3xl sm:text-4xl font-orbitron font-bold text-cyber-blue mb-2"
+                  className="text-2xl sm:text-3xl lg:text-4xl font-orbitron font-bold text-cyber-blue mb-2"
                   animate={{ 
                     scale: [1, 1.1, 1],
                     rotateZ: [0, 5, -5, 0],
@@ -215,7 +246,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
                 transition={{ type: "spring", stiffness: 300 }}
               >
                 <motion.div 
-                  className="text-3xl sm:text-4xl font-orbitron font-bold text-cyber-pink mb-2"
+                  className="text-2xl sm:text-3xl lg:text-4xl font-orbitron font-bold text-cyber-pink mb-2"
                   animate={{ 
                     scale: [1, 1.1, 1],
                     rotateZ: [0, -5, 5, 0],
@@ -251,7 +282,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
                 transition={{ type: "spring", stiffness: 300 }}
               >
                 <motion.div 
-                  className="text-3xl sm:text-4xl font-orbitron font-bold text-cyber-yellow mb-2"
+                  className="text-2xl sm:text-3xl lg:text-4xl font-orbitron font-bold text-cyber-yellow mb-2"
                   animate={{ 
                     scale: [1, 1.2, 1],
                     rotate: [0, 10, -10, 0],
