@@ -55,6 +55,11 @@ export const UserSearch: React.FC<UserSearchProps> = ({ onNavigateToUser }) => {
     }
   }, [searchTerm]);
 
+  const handleUserClick = (userId: string) => {
+    console.log('Clicking user with ID:', userId); // Debug log
+    onNavigateToUser(userId);
+  };
+
   return (
     <div className="min-h-screen pt-44 px-4">
       <div className="max-w-4xl mx-auto py-8">
@@ -120,11 +125,12 @@ export const UserSearch: React.FC<UserSearchProps> = ({ onNavigateToUser }) => {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
+                  onClick={() => handleUserClick(user.id)}
+                  className="cursor-pointer"
                 >
                   <GlassPanel 
                     glowColor="#ff00ff"
-                    className="hover:scale-[1.02] transition-transform duration-300 cursor-pointer"
-                    onClick={() => onNavigateToUser(user.id)}
+                    className="hover:scale-[1.02] transition-transform duration-300"
                   >
                     <div className="flex items-start space-x-4">
                       <motion.img
