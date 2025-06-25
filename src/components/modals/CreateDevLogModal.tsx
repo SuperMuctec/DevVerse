@@ -66,7 +66,7 @@ export const CreateDevLogModal: React.FC<CreateDevLogModalProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-start justify-center p-4 pt-40"
           onClick={onClose}
         >
           <motion.div
@@ -78,8 +78,8 @@ export const CreateDevLogModal: React.FC<CreateDevLogModalProps> = ({
             className="w-full max-w-6xl h-fit"
           >
             <GlassPanel glowColor="#ffff00">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="font-orbitron text-2xl font-bold text-cyber-yellow">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-orbitron text-lg font-bold text-cyber-yellow">
                   Create DevLog Entry
                 </h2>
                 <motion.button
@@ -88,31 +88,31 @@ export const CreateDevLogModal: React.FC<CreateDevLogModalProps> = ({
                   whileHover={{ scale: 1.1, rotate: 90 }}
                   whileTap={{ scale: 0.9 }}
                 >
-                  <X className="w-5 h-5 text-white/70" />
+                  <X className="w-4 h-4 text-white/70" />
                 </motion.button>
               </div>
 
-              <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+              <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-white/80 mb-2">
+                  <label className="block text-xs font-medium text-white/80 mb-1">
                     DevLog Title
                   </label>
                   <div className="relative">
-                    <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-white/50" />
+                    <FileText className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/50" />
                     <input
                       {...register('title')}
-                      className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-yellow focus:ring-1 focus:ring-cyber-yellow transition-all duration-300"
+                      className="w-full pl-8 pr-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-yellow focus:ring-1 focus:ring-cyber-yellow transition-all duration-300 text-sm"
                       placeholder="Building My First 3D Dev Planet"
                     />
                   </div>
                   {errors.title && (
-                    <p className="mt-1 text-sm text-red-400">{errors.title.message}</p>
+                    <p className="mt-1 text-xs text-red-400">{errors.title.message}</p>
                   )}
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <label className="block text-sm font-medium text-white/80">
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-medium text-white/80">
                       Content
                     </label>
                     <span className={`text-xs ${contentLength > 1800 ? 'text-red-400' : 'text-white/60'}`}>
@@ -121,34 +121,34 @@ export const CreateDevLogModal: React.FC<CreateDevLogModalProps> = ({
                   </div>
                   <textarea
                     {...register('content')}
-                    rows={12}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-yellow focus:ring-1 focus:ring-cyber-yellow transition-all duration-300 resize-none"
+                    rows={8}
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-yellow focus:ring-1 focus:ring-cyber-yellow transition-all duration-300 resize-none text-sm"
                     placeholder="Share your development journey, insights, challenges, and breakthroughs..."
                   />
                   {errors.content && (
-                    <p className="mt-1 text-sm text-red-400">{errors.content.message}</p>
+                    <p className="mt-1 text-xs text-red-400">{errors.content.message}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-white/80 mb-2">
+                  <label className="block text-xs font-medium text-white/80 mb-1">
                     Tags (comma-separated)
                   </label>
                   <div className="relative">
-                    <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-white/50" />
+                    <Tag className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/50" />
                     <input
                       {...register('tags')}
-                      className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-yellow focus:ring-1 focus:ring-cyber-yellow transition-all duration-300"
+                      className="w-full pl-8 pr-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-yellow focus:ring-1 focus:ring-cyber-yellow transition-all duration-300 text-sm"
                       placeholder="React, Three.js, 3D, TypeScript"
                     />
                   </div>
                 </div>
 
-                <div className="flex space-x-4 pt-4">
+                <div className="flex space-x-3 pt-3">
                   <motion.button
                     type="button"
                     onClick={onClose}
-                    className="flex-1 px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg font-semibold transition-colors"
+                    className="flex-1 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg font-semibold transition-colors text-sm"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
@@ -157,7 +157,7 @@ export const CreateDevLogModal: React.FC<CreateDevLogModalProps> = ({
                   <motion.button
                     type="submit"
                     disabled={isLoading}
-                    className="flex-1 bg-gradient-to-r from-cyber-yellow to-cyber-pink px-6 py-3 rounded-lg font-orbitron font-bold text-white transition-all duration-300 disabled:opacity-50"
+                    className="flex-1 bg-gradient-to-r from-cyber-yellow to-cyber-pink px-4 py-2 rounded-lg font-orbitron font-bold text-white transition-all duration-300 disabled:opacity-50 text-sm"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >

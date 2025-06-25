@@ -149,7 +149,7 @@ export const ProfilePictureModal: React.FC<ProfilePictureModalProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[70] flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-start justify-center p-4 pt-40"
           onClick={onClose}
         >
           <motion.div
@@ -158,11 +158,11 @@ export const ProfilePictureModal: React.FC<ProfilePictureModalProps> = ({
             exit={{ opacity: 0, scale: 0.9, rotateY: 15 }}
             transition={{ type: "spring", duration: 0.5 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-4xl"
+            className="w-full max-w-4xl h-fit"
           >
             <GlassPanel glowColor="#00ffff">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="font-orbitron text-2xl font-bold text-cyber-blue">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-orbitron text-lg font-bold text-cyber-blue">
                   Update Profile Picture
                 </h2>
                 <motion.button
@@ -171,19 +171,19 @@ export const ProfilePictureModal: React.FC<ProfilePictureModalProps> = ({
                   whileHover={{ scale: 1.1, rotate: 90 }}
                   whileTap={{ scale: 0.9 }}
                 >
-                  <X className="w-5 h-5 text-white/70" />
+                  <X className="w-4 h-4 text-white/70" />
                 </motion.button>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {/* Current Avatar */}
                 {currentAvatar && !selectedImage && (
                   <div className="text-center">
-                    <h3 className="font-semibold text-white mb-3">Current Avatar</h3>
+                    <h3 className="font-semibold text-white mb-2 text-sm">Current Avatar</h3>
                     <img
                       src={currentAvatar}
                       alt="Current avatar"
-                      className="w-32 h-32 rounded-full mx-auto border-2 border-cyber-blue"
+                      className="w-24 h-24 rounded-full mx-auto border-2 border-cyber-blue"
                     />
                   </div>
                 )}
@@ -199,30 +199,30 @@ export const ProfilePictureModal: React.FC<ProfilePictureModalProps> = ({
                   />
                   <motion.button
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex items-center space-x-2 bg-cyber-blue/20 hover:bg-cyber-blue/30 text-cyber-blue px-6 py-3 rounded-lg font-semibold transition-colors mx-auto"
+                    className="flex items-center space-x-2 bg-cyber-blue/20 hover:bg-cyber-blue/30 text-cyber-blue px-4 py-2 rounded-lg font-semibold transition-colors mx-auto text-sm"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    <Upload className="w-5 h-5" />
+                    <Upload className="w-4 h-4" />
                     <span>Choose Image</span>
                   </motion.button>
-                  <p className="text-white/60 text-sm mt-2">
+                  <p className="text-white/60 text-xs mt-1">
                     Max size: 5MB. Supported formats: JPG, PNG, GIF
                   </p>
                 </div>
 
                 {/* Image Preview and Crop Controls */}
                 {selectedImage && (
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     <div className="text-center">
-                      <h3 className="font-semibold text-white mb-3">Crop Your Image</h3>
+                      <h3 className="font-semibold text-white mb-2 text-sm">Crop Your Image</h3>
                       <div className="relative inline-block">
                         <img
                           ref={imageRef}
                           src={selectedImage}
                           alt="Selected"
                           onLoad={handleImageLoad}
-                          className="max-w-full max-h-64 rounded-lg"
+                          className="max-w-full max-h-48 rounded-lg"
                           style={{
                             transform: `scale(${cropData.scale}) rotate(${cropData.rotation}deg)`,
                           }}
@@ -232,9 +232,9 @@ export const ProfilePictureModal: React.FC<ProfilePictureModalProps> = ({
                     </div>
 
                     {/* Crop Controls */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-sm text-white/80 mb-1">Scale</label>
+                        <label className="block text-xs text-white/80 mb-1">Scale</label>
                         <input
                           type="range"
                           min="0.5"
@@ -246,7 +246,7 @@ export const ProfilePictureModal: React.FC<ProfilePictureModalProps> = ({
                         />
                       </div>
                       <div>
-                        <label className="block text-sm text-white/80 mb-1">Rotation</label>
+                        <label className="block text-xs text-white/80 mb-1">Rotation</label>
                         <input
                           type="range"
                           min="0"
@@ -259,24 +259,24 @@ export const ProfilePictureModal: React.FC<ProfilePictureModalProps> = ({
                       </div>
                     </div>
 
-                    <div className="flex justify-center space-x-3">
+                    <div className="flex justify-center space-x-2">
                       <motion.button
                         onClick={resetCrop}
-                        className="flex items-center space-x-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors"
+                        className="flex items-center space-x-1 px-3 py-1 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors text-sm"
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                       >
-                        <RotateCw className="w-4 h-4" />
+                        <RotateCw className="w-3 h-3" />
                         <span>Reset</span>
                       </motion.button>
                       <motion.button
                         onClick={handleCrop}
                         disabled={isProcessing}
-                        className="flex items-center space-x-2 bg-cyber-pink/20 hover:bg-cyber-pink/30 text-cyber-pink px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+                        className="flex items-center space-x-1 bg-cyber-pink/20 hover:bg-cyber-pink/30 text-cyber-pink px-3 py-1 rounded-lg transition-colors disabled:opacity-50 text-sm"
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                       >
-                        <Crop className="w-4 h-4" />
+                        <Crop className="w-3 h-3" />
                         <span>{isProcessing ? 'Processing...' : 'Crop'}</span>
                       </motion.button>
                     </div>
@@ -286,11 +286,11 @@ export const ProfilePictureModal: React.FC<ProfilePictureModalProps> = ({
                 {/* Cropped Preview */}
                 {croppedImage && (
                   <div className="text-center">
-                    <h3 className="font-semibold text-white mb-3">Preview</h3>
+                    <h3 className="font-semibold text-white mb-2 text-sm">Preview</h3>
                     <img
                       src={croppedImage}
                       alt="Cropped preview"
-                      className="w-32 h-32 rounded-full mx-auto border-2 border-cyber-green"
+                      className="w-24 h-24 rounded-full mx-auto border-2 border-cyber-green"
                     />
                   </div>
                 )}
@@ -299,10 +299,10 @@ export const ProfilePictureModal: React.FC<ProfilePictureModalProps> = ({
                 <canvas ref={canvasRef} className="hidden" />
 
                 {/* Action Buttons */}
-                <div className="flex space-x-4 pt-4">
+                <div className="flex space-x-3 pt-3">
                   <motion.button
                     onClick={onClose}
-                    className="flex-1 px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg font-semibold transition-colors"
+                    className="flex-1 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg font-semibold transition-colors text-sm"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
@@ -311,11 +311,11 @@ export const ProfilePictureModal: React.FC<ProfilePictureModalProps> = ({
                   <motion.button
                     onClick={handleSave}
                     disabled={!croppedImage}
-                    className="flex-1 bg-gradient-to-r from-cyber-blue to-cyber-green px-6 py-3 rounded-lg font-orbitron font-bold text-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
+                    className="flex-1 bg-gradient-to-r from-cyber-blue to-cyber-green px-4 py-2 rounded-lg font-orbitron font-bold text-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-1 text-sm"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
-                    <Save className="w-4 h-4" />
+                    <Save className="w-3 h-3" />
                     <span>Save Avatar</span>
                   </motion.button>
                 </div>

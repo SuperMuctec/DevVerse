@@ -293,7 +293,7 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] flex items-start justify-center p-4 pt-40"
           onClick={onClose}
         >
           <motion.div
@@ -302,11 +302,11 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
             exit={{ opacity: 0, scale: 0.9, rotateY: 15 }}
             transition={{ type: "spring", duration: 0.5 }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-7xl h-fit max-h-[90vh] overflow-y-auto"
+            className="w-full max-w-7xl h-fit"
           >
             <GlassPanel glowColor="#ff00ff">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="font-orbitron text-2xl font-bold text-cyber-pink">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-orbitron text-lg font-bold text-cyber-pink">
                   Create AI Challenge
                 </h2>
                 <motion.button
@@ -315,97 +315,97 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
                   whileHover={{ scale: 1.1, rotate: 90 }}
                   whileTap={{ scale: 0.9 }}
                 >
-                  <X className="w-5 h-5 text-white/70" />
+                  <X className="w-4 h-4 text-white/70" />
                 </motion.button>
               </div>
 
               {/* AI Challenge Generator */}
-              <div className="mb-6 p-4 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-lg border border-purple-500/30">
-                <div className="flex items-center justify-between mb-3">
+              <div className="mb-4 p-3 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-lg border border-purple-500/30">
+                <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center space-x-2">
-                    <Sparkles className="w-5 h-5 text-purple-400" />
-                    <h3 className="font-orbitron text-lg font-bold text-purple-400">
+                    <Sparkles className="w-4 h-4 text-purple-400" />
+                    <h3 className="font-orbitron text-base font-bold text-purple-400">
                       AI Challenge Generator
                     </h3>
                   </div>
                   <motion.button
                     onClick={generateChallenge}
                     disabled={isGenerating}
-                    className="flex items-center space-x-2 bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-2 rounded-lg font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center space-x-2 bg-gradient-to-r from-purple-500 to-pink-500 px-3 py-1 rounded-lg font-semibold text-white disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    <Sparkles className="w-4 h-4" />
+                    <Sparkles className="w-3 h-3" />
                     <span>{isGenerating ? 'Generating...' : 'Generate Challenge'}</span>
                   </motion.button>
                 </div>
-                <p className="text-white/70 text-sm">
+                <p className="text-white/70 text-xs">
                   Let AI create a coding challenge based on your selected difficulty level. 
                   Time limit will be automatically set: {getTimeRange(difficulty)}
                 </p>
               </div>
 
-              <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-white/80 mb-2">
+                    <label className="block text-xs font-medium text-white/80 mb-1">
                       Challenge Title
                     </label>
                     <input
                       {...register('title')}
-                      className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300"
+                      className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300 text-sm"
                       placeholder="Two Sum Challenge"
                     />
                     {errors.title && (
-                      <p className="mt-1 text-sm text-red-400">{errors.title.message}</p>
+                      <p className="mt-1 text-xs text-red-400">{errors.title.message}</p>
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-white/80 mb-2">
+                    <label className="block text-xs font-medium text-white/80 mb-1">
                       Time Limit (minutes)
                     </label>
                     <div className="relative">
-                      <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-white/50" />
+                      <Clock className="absolute left-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/50" />
                       <input
                         {...register('timeLimit', { valueAsNumber: true })}
                         type="number"
                         min="5"
                         max="180"
-                        className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300"
+                        className="w-full pl-8 pr-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300 text-sm"
                         placeholder="30"
                       />
                     </div>
                     {errors.timeLimit && (
-                      <p className="mt-1 text-sm text-red-400">{errors.timeLimit.message}</p>
+                      <p className="mt-1 text-xs text-red-400">{errors.timeLimit.message}</p>
                     )}
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-white/80 mb-2">
+                  <label className="block text-xs font-medium text-white/80 mb-1">
                     Challenge Description
                   </label>
                   <textarea
                     {...register('description')}
-                    rows={3}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300 resize-none"
+                    rows={2}
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300 resize-none text-sm"
                     placeholder="Describe the coding challenge..."
                   />
                   {errors.description && (
-                    <p className="mt-1 text-sm text-red-400">{errors.description.message}</p>
+                    <p className="mt-1 text-xs text-red-400">{errors.description.message}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-white/80 mb-2">
+                  <label className="block text-xs font-medium text-white/80 mb-1">
                     Difficulty
                   </label>
-                  <div className="flex space-x-4">
+                  <div className="flex space-x-3">
                     {['easy', 'medium', 'hard'].map((diff) => (
                       <motion.label
                         key={diff}
-                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg cursor-pointer transition-all duration-300 ${
+                        className={`flex items-center space-x-2 px-3 py-2 rounded-lg cursor-pointer transition-all duration-300 ${
                           difficulty === diff
                             ? 'border-2'
                             : 'bg-white/5 hover:bg-white/10'
@@ -423,9 +423,9 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
                           value={diff}
                           className="hidden"
                         />
-                        <Zap className="w-4 h-4" style={{ color: getDifficultyColor(diff) }} />
+                        <Zap className="w-3 h-3" style={{ color: getDifficultyColor(diff) }} />
                         <div>
-                          <span className="capitalize font-semibold" style={{ color: getDifficultyColor(diff) }}>
+                          <span className="capitalize font-semibold text-sm" style={{ color: getDifficultyColor(diff) }}>
                             {diff}
                           </span>
                           <div className="text-xs text-white/60">
@@ -436,61 +436,61 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
                     ))}
                   </div>
                   {errors.difficulty && (
-                    <p className="mt-1 text-sm text-red-400">{errors.difficulty.message}</p>
+                    <p className="mt-1 text-xs text-red-400">{errors.difficulty.message}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-white/80 mb-2">
+                  <label className="block text-xs font-medium text-white/80 mb-1">
                     Problem Title
                   </label>
                   <input
                     {...register('problemTitle')}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300"
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300 text-sm"
                     placeholder="Two Sum"
                   />
                   {errors.problemTitle && (
-                    <p className="mt-1 text-sm text-red-400">{errors.problemTitle.message}</p>
+                    <p className="mt-1 text-xs text-red-400">{errors.problemTitle.message}</p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-white/80 mb-2">
+                  <label className="block text-xs font-medium text-white/80 mb-1">
                     Problem Description
                   </label>
                   <textarea
                     {...register('problemDescription')}
-                    rows={4}
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300 resize-none"
+                    rows={3}
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300 resize-none text-sm"
                     placeholder="Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target..."
                   />
                   {errors.problemDescription && (
-                    <p className="mt-1 text-sm text-red-400">{errors.problemDescription.message}</p>
+                    <p className="mt-1 text-xs text-red-400">{errors.problemDescription.message}</p>
                   )}
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <label className="block text-sm font-medium text-white/80">
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="block text-xs font-medium text-white/80">
                       Examples
                     </label>
                     <motion.button
                       type="button"
                       onClick={() => appendExample({ input: '', output: '', explanation: '' })}
-                      className="flex items-center space-x-2 px-3 py-1 bg-cyber-blue/20 text-cyber-blue rounded-lg hover:bg-cyber-blue/30 transition-colors"
+                      className="flex items-center space-x-1 px-2 py-1 bg-cyber-blue/20 text-cyber-blue rounded-lg hover:bg-cyber-blue/30 transition-colors text-xs"
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                     >
-                      <Plus className="w-4 h-4" />
+                      <Plus className="w-3 h-3" />
                       <span>Add Example</span>
                     </motion.button>
                   </div>
                   
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {exampleFields.map((field, index) => (
-                      <div key={field.id} className="bg-white/5 p-4 rounded-lg border border-white/10">
-                        <div className="flex items-center justify-between mb-3">
-                          <h4 className="font-semibold text-white">Example {index + 1}</h4>
+                      <div key={field.id} className="bg-white/5 p-3 rounded-lg border border-white/10">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4 className="font-semibold text-white text-sm">Example {index + 1}</h4>
                           {exampleFields.length > 1 && (
                             <motion.button
                               type="button"
@@ -499,17 +499,17 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
                               whileHover={{ scale: 1.1 }}
                               whileTap={{ scale: 0.9 }}
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-3 h-3" />
                             </motion.button>
                           )}
                         </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           <div>
                             <label className="block text-xs text-white/60 mb-1">Input</label>
                             <input
                               {...register(`examples.${index}.input`)}
-                              className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded text-white placeholder-white/50 focus:outline-none focus:border-cyber-blue text-sm"
+                              className="w-full px-2 py-1 bg-white/10 border border-white/20 rounded text-white placeholder-white/50 focus:outline-none focus:border-cyber-blue text-xs"
                               placeholder="nums = [2,7,11,15], target = 9"
                             />
                           </div>
@@ -517,17 +517,17 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
                             <label className="block text-xs text-white/60 mb-1">Output</label>
                             <input
                               {...register(`examples.${index}.output`)}
-                              className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded text-white placeholder-white/50 focus:outline-none focus:border-cyber-blue text-sm"
+                              className="w-full px-2 py-1 bg-white/10 border border-white/20 rounded text-white placeholder-white/50 focus:outline-none focus:border-cyber-blue text-xs"
                               placeholder="[0,1]"
                             />
                           </div>
                         </div>
                         
-                        <div className="mt-3">
+                        <div className="mt-2">
                           <label className="block text-xs text-white/60 mb-1">Explanation (Optional)</label>
                           <input
                             {...register(`examples.${index}.explanation`)}
-                            className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded text-white placeholder-white/50 focus:outline-none focus:border-cyber-blue text-sm"
+                            className="w-full px-2 py-1 bg-white/10 border border-white/20 rounded text-white placeholder-white/50 focus:outline-none focus:border-cyber-blue text-xs"
                             placeholder="Because nums[0] + nums[1] == 9, we return [0, 1]"
                           />
                         </div>
@@ -537,18 +537,18 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <label className="block text-sm font-medium text-white/80">
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="block text-xs font-medium text-white/80">
                       Constraints
                     </label>
                     <motion.button
                       type="button"
                       onClick={() => appendConstraint('')}
-                      className="flex items-center space-x-2 px-3 py-1 bg-cyber-yellow/20 text-cyber-yellow rounded-lg hover:bg-cyber-yellow/30 transition-colors"
+                      className="flex items-center space-x-1 px-2 py-1 bg-cyber-yellow/20 text-cyber-yellow rounded-lg hover:bg-cyber-yellow/30 transition-colors text-xs"
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                     >
-                      <Plus className="w-4 h-4" />
+                      <Plus className="w-3 h-3" />
                       <span>Add Constraint</span>
                     </motion.button>
                   </div>
@@ -558,18 +558,18 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
                       <div key={field.id} className="flex items-center space-x-2">
                         <input
                           {...register(`constraints.${index}`)}
-                          className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-yellow focus:ring-1 focus:ring-cyber-yellow transition-all duration-300"
+                          className="flex-1 px-2 py-1 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-yellow focus:ring-1 focus:ring-cyber-yellow transition-all duration-300 text-xs"
                           placeholder="2 <= nums.length <= 10^4"
                         />
                         {constraintFields.length > 1 && (
                           <motion.button
                             type="button"
                             onClick={() => removeConstraint(index)}
-                            className="p-2 text-red-400 hover:bg-red-400/20 rounded"
+                            className="p-1 text-red-400 hover:bg-red-400/20 rounded"
                             whileHover={{ scale: 1.1 }}
                             whileTap={{ scale: 0.9 }}
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3 h-3" />
                           </motion.button>
                         )}
                       </div>
@@ -577,11 +577,11 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
                   </div>
                 </div>
 
-                <div className="flex space-x-4 pt-4">
+                <div className="flex space-x-3 pt-3">
                   <motion.button
                     type="button"
                     onClick={onClose}
-                    className="flex-1 px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-lg font-semibold transition-colors"
+                    className="flex-1 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg font-semibold transition-colors text-sm"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
@@ -590,7 +590,7 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
                   <motion.button
                     type="submit"
                     disabled={isLoading}
-                    className="flex-1 bg-gradient-to-r from-cyber-pink to-cyber-blue px-6 py-3 rounded-lg font-orbitron font-bold text-white transition-all duration-300 disabled:opacity-50"
+                    className="flex-1 bg-gradient-to-r from-cyber-pink to-cyber-blue px-4 py-2 rounded-lg font-orbitron font-bold text-white transition-all duration-300 disabled:opacity-50 text-sm"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >
