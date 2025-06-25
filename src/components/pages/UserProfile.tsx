@@ -12,11 +12,10 @@ import {
   ArrowLeft,
   Zap,
   Code,
-  Loader,
-  ChevronDown,
-  ChevronUp
+  Loader
 } from 'lucide-react';
 import { GlassPanel } from '../ui/GlassPanel';
+import { LanguageChart } from '../ui/PieChart';
 import { User as UserType } from '../../types';
 
 interface UserProfileProps {
@@ -49,7 +48,6 @@ interface ProjectWithLanguages {
 export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
   const [user, setUser] = useState<UserType | null>(null);
   const [projectsWithLanguages, setProjectsWithLanguages] = useState<ProjectWithLanguages[]>([]);
-  const [expandedLanguages, setExpandedLanguages] = useState<{[key: string]: boolean}>({});
 
   // Get user data from localStorage
   const getUserData = (): UserType | null => {
@@ -174,162 +172,6 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
       React: '#61dafb',
     };
     return colors[language] || '#ffffff';
-  };
-
-  // Toggle expanded languages for a project
-  const toggleExpandedLanguages = (projectId: string) => {
-    setExpandedLanguages(prev => ({
-      ...prev,
-      [projectId]: !prev[projectId]
-    }));
-  };
-
-  // Animated Pie Chart Component
-  const AnimatedPieChart: React.FC<{ 
-    segments: Array<{
-      language: string;
-      percentage: number;
-      color: string;
-    }>;
-    size?: number;
-  }> = ({ segments, size = 48 }) => {
-    const radius = (size - 8) / 2;
-    const circumference = 2 * Math.PI * radius;
-    
-    let cumulativePercentage = 0;
-
-    return (
-      <div className="relative" style={{ width: size, height: size }}>
-        <svg width={size} height={size} className="transform -rotate-90">
-          {/* Background circle */}
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            fill="none"
-            stroke="rgba(255,255,255,0.1)"
-            strokeWidth="4"
-          />
-          
-          {/* Animated segments */}
-          {segments.map((segment, index) => {
-            const strokeDasharray = `${(segment.percentage / 100) * circumference} ${circumference}`;
-            const strokeDashoffset = -((cumulativePercentage / 100) * circumference);
-            
-            cumulativePercentage += segment.percentage;
-
-            return (
-              <motion.circle
-                key={index}
-                cx={size / 2}
-                cy={size / 2}
-                r={radius}
-                fill="none"
-                stroke={segment.color}
-                strokeWidth="4"
-                strokeDasharray={strokeDasharray}
-                strokeDashoffset={strokeDashoffset}
-                strokeLinecap="round"
-                initial={{ 
-                  strokeDasharray: `0 ${circumference}`,
-                  opacity: 0
-                }}
-                animate={{ 
-                  strokeDasharray: strokeDasharray,
-                  opacity: 1
-                }}
-                transition={{ 
-                  duration: 1.5,
-                  delay: index * 0.3,
-                  ease: "easeInOut"
-                }}
-              />
-            );
-          })}
-        </svg>
-      </div>
-    );
-  };
-
-  // Create pie chart for languages
-  const createLanguageChart = (languages: GitHubLanguages, projectId: string) => {
-    const total = Object.values(languages).reduce((sum, bytes) => sum + bytes, 0);
-    if (total === 0) return null;
-
-    const sortedLanguages = Object.entries(languages)
-      .sort(([, a], [, b]) => b - a);
-
-    const segments = sortedLanguages.map(([lang, bytes]) => {
-      const percentage = (bytes / total) * 100;
-      return {
-        language: lang,
-        percentage: percentage,
-        color: getLanguageColor(lang)
-      };
-    });
-
-    const isExpanded = expandedLanguages[projectId];
-    const displayedLanguages = isExpanded ? segments : segments.slice(0, 3);
-    const hasMore = segments.length > 3;
-
-    return (
-      <div className="flex items-start space-x-4">
-        {/* Animated Pie Chart */}
-        <AnimatedPieChart segments={segments} />
-
-        {/* Language Legend */}
-        <div className="flex-1">
-          <div className="space-y-1">
-            {displayedLanguages.map((segment) => (
-              <motion.div 
-                key={segment.language} 
-                className="flex items-center justify-between"
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                <div className="flex items-center space-x-2">
-                  <motion.div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: segment.color }}
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ duration: 0.3, delay: 0.1 }}
-                  />
-                  <span className="text-sm text-white/80 font-medium">
-                    {segment.language}
-                  </span>
-                </div>
-                <span className="text-sm text-white/60 font-mono">
-                  {segment.percentage.toFixed(2)}%
-                </span>
-              </motion.div>
-            ))}
-          </div>
-          
-          {hasMore && (
-            <motion.button
-              onClick={() => toggleExpandedLanguages(projectId)}
-              className="flex items-center space-x-1 mt-2 text-xs text-cyber-blue hover:text-cyber-pink transition-colors"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              {isExpanded ? (
-                <>
-                  <ChevronUp className="w-3 h-3" />
-                  <span>Show less</span>
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="w-3 h-3" />
-                  <span>+{segments.length - 3} more</span>
-                </>
-              )}
-            </motion.button>
-          )}
-        </div>
-      </div>
-    );
   };
 
   if (!user) {
@@ -515,27 +357,25 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
                       </div>
 
                       {/* GitHub Language Chart */}
-                      <div className="mb-4 p-4 bg-white/5 rounded-lg border border-white/10">
-                        {project.languagesLoading ? (
-                          <div className="flex items-center space-x-2 text-white/50">
-                            <Loader className="w-4 h-4 animate-spin" />
-                            <span className="text-sm">Loading language data...</span>
-                          </div>
-                        ) : project.languages ? (
-                          <div>
-                            <h4 className="text-sm font-semibold text-white/80 mb-3 flex items-center space-x-2">
-                              <Code className="w-4 h-4" />
-                              <span>Language Distribution</span>
-                            </h4>
-                            {createLanguageChart(project.languages, project.id)}
-                          </div>
-                        ) : (
-                          <div className="text-sm text-white/50 flex items-center space-x-2">
-                            <Code className="w-4 h-4" />
-                            <span>Language data unavailable</span>
-                          </div>
-                        )}
-                      </div>
+                      {project.languagesLoading ? (
+                        <div className="flex items-center space-x-2 text-white/50 p-4 bg-white/5 rounded-lg border border-white/10">
+                          <Loader className="w-4 h-4 animate-spin" />
+                          <span className="text-sm">Loading language data...</span>
+                        </div>
+                      ) : project.languages ? (
+                        <LanguageChart 
+                          data={project.languages}
+                          title="Language Distribution"
+                          size={80}
+                          maxLegendItems={4}
+                          className="mb-4"
+                        />
+                      ) : (
+                        <div className="text-sm text-white/50 flex items-center space-x-2 p-4 bg-white/5 rounded-lg border border-white/10 mb-4">
+                          <Code className="w-4 h-4" />
+                          <span>Language data unavailable</span>
+                        </div>
+                      )}
 
                       <div className="flex flex-wrap gap-2">
                         {project.topics.map((topic) => (
