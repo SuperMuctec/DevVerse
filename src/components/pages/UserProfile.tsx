@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   User, 
@@ -11,17 +11,33 @@ import {
   ExternalLink,
   ArrowLeft,
   Zap,
-  Sparkles
+  Sparkles,
+  Code,
+  Loader,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { GlassPanel } from '../ui/GlassPanel';
-import { User as UserType } from '../../types';
+import { User as UserType, Project } from '../../types';
 
 interface UserProfileProps {
   userId: string;
   onBack: () => void;
 }
 
+interface GitHubLanguages {
+  [key: string]: number;
+}
+
+interface ProjectWithLanguages extends Project {
+  languages?: GitHubLanguages;
+  languagesLoading?: boolean;
+}
+
 export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
+  const [projectsWithLanguages, setProjectsWithLanguages] = useState<ProjectWithLanguages[]>([]);
+  const [expandedLanguages, setExpandedLanguages] = useState<{[key: string]: boolean}>({});
+
   // Get user data from localStorage
   const getUserData = (): UserType | null => {
     const users = JSON.parse(localStorage.getItem('devverse_users') || '[]');
@@ -29,6 +45,64 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
   };
 
   const user = getUserData();
+
+  // Fetch GitHub languages for a repository
+  const fetchGitHubLanguages = async (githubUrl: string): Promise<GitHubLanguages | null> => {
+    try {
+      // Extract owner and repo from GitHub URL
+      const match = githubUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+      if (!match) return null;
+
+      const [, owner, repo] = match;
+      const cleanRepo = repo.replace(/\.git$/, ''); // Remove .git suffix if present
+
+      const response = await fetch(`https://api.github.com/repos/${owner}/${cleanRepo}/languages`);
+      
+      if (!response.ok) {
+        console.warn(`Failed to fetch languages for ${owner}/${cleanRepo}:`, response.status);
+        return null;
+      }
+
+      const languages = await response.json();
+      return languages;
+    } catch (error) {
+      console.error('Error fetching GitHub languages:', error);
+      return null;
+    }
+  };
+
+  // Load projects with language data
+  useEffect(() => {
+    if (user?.projects) {
+      const loadProjectLanguages = async () => {
+        const projectsWithLangs = await Promise.all(
+          user.projects.map(async (project) => {
+            const projectWithLang: ProjectWithLanguages = { 
+              ...project, 
+              languagesLoading: true 
+            };
+            
+            try {
+              const languages = await fetchGitHubLanguages(project.githubUrl);
+              projectWithLang.languages = languages || undefined;
+            } catch (error) {
+              console.error(`Error loading languages for ${project.name}:`, error);
+            } finally {
+              projectWithLang.languagesLoading = false;
+            }
+            
+            return projectWithLang;
+          })
+        );
+        
+        setProjectsWithLanguages(projectsWithLangs);
+      };
+
+      loadProjectLanguages();
+    } else {
+      setProjectsWithLanguages([]);
+    }
+  }, [user?.projects]);
 
   // Calculate user level based on XP
   const calculateLevel = (xp: number) => {
@@ -96,8 +170,178 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
       Java: '#ed8b00',
       'C++': '#00599c',
       Go: '#00add8',
+      HTML: '#e34c26',
+      CSS: '#1572b6',
+      Rust: '#dea584',
+      PHP: '#777bb4',
+      Ruby: '#cc342d',
+      Swift: '#fa7343',
+      Kotlin: '#7f52ff',
+      Dart: '#0175c2',
+      Shell: '#89e051',
+      C: '#555555',
+      'C#': '#239120',
+      Jupyter: '#da5b0b',
+      Vue: '#4fc08d',
+      Svelte: '#ff3e00',
     };
     return colors[language] || '#ffffff';
+  };
+
+  // Toggle expanded languages for a project
+  const toggleExpandedLanguages = (projectId: string) => {
+    setExpandedLanguages(prev => ({
+      ...prev,
+      [projectId]: !prev[projectId]
+    }));
+  };
+
+  // Animated Pie Chart Component
+  const AnimatedPieChart: React.FC<{ 
+    segments: Array<{
+      language: string;
+      percentage: number;
+      color: string;
+    }>;
+    size?: number;
+  }> = ({ segments, size = 48 }) => {
+    const radius = (size - 8) / 2;
+    const circumference = 2 * Math.PI * radius;
+    
+    let cumulativePercentage = 0;
+
+    return (
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg width={size} height={size} className="transform -rotate-90">
+          {/* Background circle */}
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke="rgba(255,255,255,0.1)"
+            strokeWidth="4"
+          />
+          
+          {/* Animated segments */}
+          {segments.map((segment, index) => {
+            const strokeDasharray = `${(segment.percentage / 100) * circumference} ${circumference}`;
+            const strokeDashoffset = -((cumulativePercentage / 100) * circumference);
+            
+            cumulativePercentage += segment.percentage;
+
+            return (
+              <motion.circle
+                key={index}
+                cx={size / 2}
+                cy={size / 2}
+                r={radius}
+                fill="none"
+                stroke={segment.color}
+                strokeWidth="4"
+                strokeDasharray={strokeDasharray}
+                strokeDashoffset={strokeDashoffset}
+                strokeLinecap="round"
+                initial={{ 
+                  strokeDasharray: `0 ${circumference}`,
+                  opacity: 0
+                }}
+                animate={{ 
+                  strokeDasharray: strokeDasharray,
+                  opacity: 1
+                }}
+                transition={{ 
+                  duration: 1.5,
+                  delay: index * 0.3,
+                  ease: "easeInOut"
+                }}
+              />
+            );
+          })}
+        </svg>
+      </div>
+    );
+  };
+
+  // Create pie chart for languages
+  const createLanguageChart = (languages: GitHubLanguages, projectId: string) => {
+    const total = Object.values(languages).reduce((sum, bytes) => sum + bytes, 0);
+    if (total === 0) return null;
+
+    const sortedLanguages = Object.entries(languages)
+      .sort(([, a], [, b]) => b - a);
+
+    const segments = sortedLanguages.map(([lang, bytes]) => {
+      const percentage = (bytes / total) * 100;
+      return {
+        language: lang,
+        percentage: percentage,
+        color: getLanguageColor(lang)
+      };
+    });
+
+    const isExpanded = expandedLanguages[projectId];
+    const displayedLanguages = isExpanded ? segments : segments.slice(0, 3);
+    const hasMore = segments.length > 3;
+
+    return (
+      <div className="flex items-start space-x-4">
+        {/* Animated Pie Chart */}
+        <AnimatedPieChart segments={segments} />
+
+        {/* Language Legend */}
+        <div className="flex-1">
+          <div className="space-y-1">
+            {displayedLanguages.map((segment) => (
+              <motion.div 
+                key={segment.language} 
+                className="flex items-center justify-between"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="flex items-center space-x-2">
+                  <motion.div
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: segment.color }}
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ duration: 0.3, delay: 0.1 }}
+                  />
+                  <span className="text-sm text-white/80 font-medium">
+                    {segment.language}
+                  </span>
+                </div>
+                <span className="text-sm text-white/60 font-mono">
+                  {segment.percentage.toFixed(2)}%
+                </span>
+              </motion.div>
+            ))}
+          </div>
+          
+          {hasMore && (
+            <motion.button
+              onClick={() => toggleExpandedLanguages(projectId)}
+              className="flex items-center space-x-1 mt-2 text-xs text-cyber-blue hover:text-cyber-pink transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              {isExpanded ? (
+                <>
+                  <ChevronUp className="w-3 h-3" />
+                  <span>Show less</span>
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="w-3 h-3" />
+                  <span>+{segments.length - 3} more</span>
+                </>
+              )}
+            </motion.button>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -274,7 +518,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
                   }}
                   transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                 >
-                  Projects ({user.projects?.length || 0})
+                  Projects ({projectsWithLanguages.length})
                 </motion.h2>
                 <motion.div
                   animate={{ 
@@ -291,8 +535,8 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
               </div>
 
               <div className="space-y-4">
-                {user.projects && user.projects.length > 0 ? (
-                  user.projects.map((project, index) => (
+                {projectsWithLanguages.length > 0 ? (
+                  projectsWithLanguages.map((project, index) => (
                     <motion.div
                       key={project.id}
                       initial={{ opacity: 0, y: 30, rotateX: -15 }}
@@ -356,7 +600,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center space-x-4 text-sm text-white/60">
                           <motion.div 
                             className="flex items-center space-x-1"
@@ -392,7 +636,30 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap gap-2 mt-3">
+                      {/* GitHub Language Chart */}
+                      <div className="mb-4 p-4 bg-white/5 rounded-lg border border-white/10">
+                        {project.languagesLoading ? (
+                          <div className="flex items-center space-x-2 text-white/50">
+                            <Loader className="w-4 h-4 animate-spin" />
+                            <span className="text-sm">Loading language data...</span>
+                          </div>
+                        ) : project.languages ? (
+                          <div>
+                            <h4 className="text-sm font-semibold text-white/80 mb-3 flex items-center space-x-2">
+                              <Code className="w-4 h-4" />
+                              <span>Language Distribution</span>
+                            </h4>
+                            {createLanguageChart(project.languages, project.id)}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-white/50 flex items-center space-x-2">
+                            <Code className="w-4 h-4" />
+                            <span>Language data unavailable</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
                         {project.topics.map((topic, topicIndex) => (
                           <motion.span
                             key={topic}
