@@ -47,16 +47,34 @@ interface ProjectWithLanguages {
 }
 
 export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
+  const [user, setUser] = useState<UserType | null>(null);
   const [projectsWithLanguages, setProjectsWithLanguages] = useState<ProjectWithLanguages[]>([]);
   const [expandedLanguages, setExpandedLanguages] = useState<{[key: string]: boolean}>({});
 
   // Get user data from localStorage
   const getUserData = (): UserType | null => {
     const users = JSON.parse(localStorage.getItem('devverse_users') || '[]');
-    return users.find((user: any) => user.id === userId) || null;
+    const foundUser = users.find((user: any) => user.id === userId);
+    if (foundUser) {
+      // Ensure dates are properly converted
+      return {
+        ...foundUser,
+        joinedAt: new Date(foundUser.joinedAt),
+        projects: foundUser.projects?.map((project: any) => ({
+          ...project,
+          createdAt: new Date(project.createdAt),
+          updatedAt: new Date(project.updatedAt)
+        })) || []
+      };
+    }
+    return null;
   };
 
-  const user = getUserData();
+  // Load user data on mount
+  useEffect(() => {
+    const userData = getUserData();
+    setUser(userData);
+  }, [userId]);
 
   // Fetch GitHub languages for a repository
   const fetchGitHubLanguages = async (githubUrl: string): Promise<GitHubLanguages | null> => {
@@ -85,7 +103,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
 
   // Load projects with language data
   useEffect(() => {
-    if (user?.projects) {
+    if (user?.projects && user.projects.length > 0) {
       const loadProjectLanguages = async () => {
         const projectsWithLangs = await Promise.all(
           user.projects.map(async (project) => {
@@ -417,7 +435,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
                 )}
                 <div className="flex items-center space-x-2 text-white/70">
                   <Calendar className="w-4 h-4" />
-                  <span>Joined {new Date(user.joinedAt).toLocaleDateString()}</span>
+                  <span>Joined {user.joinedAt.toLocaleDateString()}</span>
                 </div>
               </div>
             </GlassPanel>
@@ -491,7 +509,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
                           </div>
                           <div className="flex items-center space-x-1">
                             <Calendar className="w-4 h-4" />
-                            <span>Updated {new Date(project.updatedAt).toLocaleDateString()}</span>
+                            <span>Updated {project.updatedAt.toLocaleDateString()}</span>
                           </div>
                         </div>
                       </div>
