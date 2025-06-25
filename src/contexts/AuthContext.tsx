@@ -189,9 +189,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('users')
         .select('id, password_hash')
         .eq('email', email)
-        .single();
+        .maybeSingle(); // Changed from .single() to .maybeSingle()
 
-      if (userError || !userData) {
+      if (userError) {
+        console.error('Database error:', userError);
+        toast.error('Login failed');
+        return false;
+      }
+
+      if (!userData) {
         toast.error('User not found');
         return false;
       }
@@ -250,7 +256,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('users')
         .select('id')
         .or(`email.eq.${email},username.eq.${username}`)
-        .single();
+        .maybeSingle(); // Changed from .single() to .maybeSingle()
 
       if (existingUser) {
         toast.error('Email or username already exists');
@@ -260,10 +266,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Hash password
       const passwordHash = await bcrypt.hash(password, 10);
 
-      // Create user in our users table
+      // First create user in Supabase Auth to get proper authentication
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password: 'temp-password', // Temporary password for auth
+      });
+
+      if (authError || !authData.user) {
+        console.error('Auth creation error:', authError);
+        toast.error('Registration failed');
+        return false;
+      }
+
+      // Now create user in our users table with the auth user's ID
       const { data: newUser, error: userError } = await supabase
         .from('users')
         .insert({
+          id: authData.user.id, // Use the auth user's ID
           username,
           email,
           password_hash: passwordHash,
@@ -274,22 +293,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (userError || !newUser) {
         console.error('User creation error:', userError);
+        // Clean up auth user if our user creation fails
+        await supabase.auth.signOut();
         toast.error('Registration failed');
         return false;
       }
 
-      // Create user in Supabase Auth
-      const { error: authError } = await supabase.auth.signUp({
-        email,
-        password: newUser.id, // Use user ID as password for Supabase Auth
+      // Update the auth user's password to use their ID
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newUser.id,
       });
 
-      if (authError) {
-        console.error('Auth creation error:', authError);
-        // Clean up user record if auth creation fails
-        await supabase.from('users').delete().eq('id', newUser.id);
-        toast.error('Registration failed');
-        return false;
+      if (updateError) {
+        console.error('Password update error:', updateError);
+        // Continue anyway as the user is created
       }
 
       // Create default planet
