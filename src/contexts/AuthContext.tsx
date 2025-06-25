@@ -20,6 +20,41 @@ export const useAuth = () => {
   return context;
 };
 
+// Helper function to convert date strings back to Date objects
+const deserializeDates = (obj: any): any => {
+  if (obj === null || obj === undefined) return obj;
+  
+  if (typeof obj === 'string') {
+    // Check if string looks like a date
+    const dateRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
+    if (dateRegex.test(obj)) {
+      return new Date(obj);
+    }
+    return obj;
+  }
+  
+  if (Array.isArray(obj)) {
+    return obj.map(deserializeDates);
+  }
+  
+  if (typeof obj === 'object') {
+    const result: any = {};
+    for (const key in obj) {
+      if (obj.hasOwnProperty(key)) {
+        // Special handling for known date fields
+        if (['joinedAt', 'createdAt', 'updatedAt', 'unlockedAt'].includes(key)) {
+          result[key] = obj[key] ? new Date(obj[key]) : obj[key];
+        } else {
+          result[key] = deserializeDates(obj[key]);
+        }
+      }
+    }
+    return result;
+  }
+  
+  return obj;
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
@@ -33,8 +68,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (storedUser) {
       try {
         const user = JSON.parse(storedUser);
+        // Deserialize date strings back to Date objects
+        const deserializedUser = deserializeDates(user);
         setAuthState({
-          user,
+          user: deserializedUser,
           isAuthenticated: true,
           isLoading: false,
         });
@@ -105,13 +142,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const { password: _, ...userWithoutPassword } = user;
+      // Deserialize date strings back to Date objects
+      const deserializedUser = deserializeDates(userWithoutPassword);
+      
       setAuthState({
-        user: userWithoutPassword,
+        user: deserializedUser,
         isAuthenticated: true,
         isLoading: false,
       });
 
-      localStorage.setItem('devverse_user', JSON.stringify(userWithoutPassword));
+      localStorage.setItem('devverse_user', JSON.stringify(deserializedUser));
       
       // Award achievement for logging in
       const achievements = JSON.parse(localStorage.getItem(`achievements_${user.id}`) || '[]');
