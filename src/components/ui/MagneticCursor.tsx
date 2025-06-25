@@ -6,6 +6,14 @@ export const MagneticCursor: React.FC = () => {
   const cursorDotRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Check if device is mobile/touch device
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                     ('ontouchstart' in window) || 
+                     (navigator.maxTouchPoints > 0);
+
+    // Don't show cursor on mobile devices
+    if (isMobile) return;
+
     const cursor = cursorRef.current;
     const cursorDot = cursorDotRef.current;
 
@@ -45,6 +53,14 @@ export const MagneticCursor: React.FC = () => {
       });
     };
   }, []);
+
+  // Check if device is mobile/touch device
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                   ('ontouchstart' in window) || 
+                   (navigator.maxTouchPoints > 0);
+
+  // Don't render cursor on mobile
+  if (isMobile) return null;
 
   return (
     <>

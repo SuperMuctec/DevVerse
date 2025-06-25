@@ -21,7 +21,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
   const userPlanets = getUserPlanets();
 
   return (
-    <div className="min-h-screen pt-44">
+    <div className="min-h-screen pt-20 sm:pt-44">
       <FloatingElements />
       <AnimatedBackground />
       
@@ -59,15 +59,20 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
 
         {/* Overlay Content */}
         <div className="absolute inset-0 pointer-events-none">
-          <div className="flex flex-col items-center justify-center h-full text-center">
+          <div className="flex flex-col items-center justify-center h-full text-center px-4">
             <motion.div
-              initial={{ y: 50, opacity: 0, scale: 0.8 }}
-              animate={{ y: 0, opacity: 1, scale: 1 }}
-              transition={{ delay: 0.5, duration: 0.8 }}
+              initial={{ y: 50, opacity: 0, scale: 0.8, rotateX: -30 }}
+              animate={{ y: 0, opacity: 1, scale: 1, rotateX: 0 }}
+              transition={{ 
+                delay: 0.5, 
+                duration: 1.2,
+                type: "spring",
+                stiffness: 100
+              }}
               className="pointer-events-auto"
             >
               <motion.h1 
-                className="font-orbitron text-6xl md:text-8xl font-black mb-4"
+                className="font-orbitron text-4xl sm:text-6xl md:text-8xl font-black mb-4"
                 animate={{
                   textShadow: [
                     '0 0 20px #00ffff, 0 0 40px #00ffff',
@@ -79,42 +84,50 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
               >
                 <motion.span 
-                  className="neon-text text-cyber-blue"
+                  className="neon-text text-cyber-blue inline-block"
                   animate={{ 
                     color: ['#00ffff', '#0099ff', '#00ffff'],
-                    scale: [1, 1.05, 1]
+                    scale: [1, 1.05, 1],
+                    rotateY: [0, 5, -5, 0]
                   }}
                   transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                 >
                   Dev
                 </motion.span>
                 <motion.span 
-                  className="neon-text text-cyber-pink"
+                  className="neon-text text-cyber-pink inline-block"
                   animate={{ 
                     color: ['#ff00ff', '#ff0099', '#ff00ff'],
-                    scale: [1, 1.05, 1]
+                    scale: [1, 1.05, 1],
+                    rotateY: [0, -5, 5, 0]
                   }}
                   transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
                 >
                   Verse
                 </motion.span>
                 <motion.span 
-                  className="neon-text text-cyber-yellow"
+                  className="neon-text text-cyber-yellow inline-block"
                   animate={{ 
                     color: ['#ffff00', '#ffcc00', '#ffff00'],
-                    scale: [1, 1.1, 1],
-                    rotate: [0, 5, -5, 0]
+                    scale: [1, 1.2, 1],
+                    rotate: [0, 10, -10, 0],
+                    rotateZ: [0, 360]
                   }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                  transition={{ 
+                    color: { duration: 2, repeat: Infinity, ease: "easeInOut", delay: 1 },
+                    scale: { duration: 2, repeat: Infinity, ease: "easeInOut", delay: 1 },
+                    rotate: { duration: 2, repeat: Infinity, ease: "easeInOut", delay: 1 },
+                    rotateZ: { duration: 8, repeat: Infinity, ease: "linear" }
+                  }}
                 >
                   ³
                 </motion.span>
               </motion.h1>
               
               <motion.p 
-                className="font-sora text-xl md:text-2xl text-white/80 mb-8 max-w-2xl"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+                className="font-sora text-lg sm:text-xl md:text-2xl text-white/80 mb-8 max-w-2xl"
+                initial={{ opacity: 0, y: 20, rotateX: -20 }}
+                animate={{ opacity: 1, y: 0, rotateX: 0 }}
                 transition={{ delay: 1, duration: 0.8 }}
               >
                 Build. Orbit. Share. Your coding universe awaits.
@@ -122,16 +135,27 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
               
               <motion.button
                 onClick={() => onNavigate('builder')}
-                className="interactive bg-gradient-to-r from-cyber-blue to-cyber-pink px-8 py-4 rounded-xl font-orbitron font-bold text-lg transition-all duration-500"
-                initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
+                className="interactive bg-gradient-to-r from-cyber-blue to-cyber-pink px-6 sm:px-8 py-3 sm:py-4 rounded-xl font-orbitron font-bold text-base sm:text-lg transition-all duration-500"
+                initial={{ opacity: 0, y: 20, scale: 0.9, rotateX: -20 }}
+                animate={{ opacity: 1, y: 0, scale: 1, rotateX: 0 }}
                 transition={{ delay: 1.2, duration: 0.8 }}
                 whileHover={{ 
                   scale: 1.05,
+                  rotateY: 10,
+                  rotateX: 10,
                   boxShadow: '0 0 40px rgba(0, 255, 255, 0.6)',
-                  rotateX: 10
+                  background: [
+                    'linear-gradient(45deg, #00ffff, #ff00ff)',
+                    'linear-gradient(45deg, #ff00ff, #ffff00)',
+                    'linear-gradient(45deg, #ffff00, #00ffff)',
+                    'linear-gradient(45deg, #00ffff, #ff00ff)'
+                  ]
                 }}
-                whileTap={{ scale: 0.95 }}
+                whileTap={{ 
+                  scale: 0.95,
+                  rotateY: -5,
+                  rotateX: -5
+                }}
               >
                 <motion.span
                   animate={{
@@ -153,23 +177,28 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
       </motion.div>
 
       {/* Galaxy Stats */}
-      <div className="max-w-7xl mx-auto px-4 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="max-w-7xl mx-auto px-4 py-8 sm:py-16">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-8">
           <motion.div
-            initial={{ opacity: 0, y: 50, rotateY: -15 }}
-            animate={{ opacity: 1, y: 0, rotateY: 0 }}
+            initial={{ opacity: 0, y: 50, rotateY: -15, scale: 0.8 }}
+            animate={{ opacity: 1, y: 0, rotateY: 0, scale: 1 }}
             transition={{ delay: 0.2, duration: 0.8 }}
           >
             <GlassPanel glowColor="#00ffff">
               <motion.div 
                 className="text-center"
-                whileHover={{ scale: 1.05 }}
+                whileHover={{ 
+                  scale: 1.05,
+                  rotateY: 5,
+                  rotateX: 5
+                }}
                 transition={{ type: "spring", stiffness: 300 }}
               >
                 <motion.div 
-                  className="text-4xl font-orbitron font-bold text-cyber-blue mb-2"
+                  className="text-3xl sm:text-4xl font-orbitron font-bold text-cyber-blue mb-2"
                   animate={{ 
                     scale: [1, 1.1, 1],
+                    rotateZ: [0, 5, -5, 0],
                     textShadow: [
                       '0 0 10px #00ffff',
                       '0 0 20px #00ffff, 0 0 30px #00ffff',
@@ -180,26 +209,31 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
                 >
                   {userPlanets.length}
                 </motion.div>
-                <div className="text-white/70 font-sora">Active Planets</div>
+                <div className="text-white/70 font-sora text-sm sm:text-base">Active Planets</div>
               </motion.div>
             </GlassPanel>
           </motion.div>
           
           <motion.div
-            initial={{ opacity: 0, y: 50, rotateY: 15 }}
-            animate={{ opacity: 1, y: 0, rotateY: 0 }}
+            initial={{ opacity: 0, y: 50, rotateY: 15, scale: 0.8 }}
+            animate={{ opacity: 1, y: 0, rotateY: 0, scale: 1 }}
             transition={{ delay: 0.4, duration: 0.8 }}
           >
             <GlassPanel glowColor="#ff00ff">
               <motion.div 
                 className="text-center"
-                whileHover={{ scale: 1.05 }}
+                whileHover={{ 
+                  scale: 1.05,
+                  rotateY: -5,
+                  rotateX: 5
+                }}
                 transition={{ type: "spring", stiffness: 300 }}
               >
                 <motion.div 
-                  className="text-4xl font-orbitron font-bold text-cyber-pink mb-2"
+                  className="text-3xl sm:text-4xl font-orbitron font-bold text-cyber-pink mb-2"
                   animate={{ 
                     scale: [1, 1.1, 1],
+                    rotateZ: [0, -5, 5, 0],
                     textShadow: [
                       '0 0 10px #ff00ff',
                       '0 0 20px #ff00ff, 0 0 30px #ff00ff',
@@ -210,38 +244,49 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
                 >
                   {userPlanets.reduce((total, planet) => total + planet.stack.languages.length + planet.stack.frameworks.length, 0)}
                 </motion.div>
-                <div className="text-white/70 font-sora">Tech Stacks</div>
+                <div className="text-white/70 font-sora text-sm sm:text-base">Tech Stacks</div>
               </motion.div>
             </GlassPanel>
           </motion.div>
           
           <motion.div
-            initial={{ opacity: 0, y: 50, rotateY: -15 }}
-            animate={{ opacity: 1, y: 0, rotateY: 0 }}
+            initial={{ opacity: 0, y: 50, rotateY: -15, scale: 0.8 }}
+            animate={{ opacity: 1, y: 0, rotateY: 0, scale: 1 }}
             transition={{ delay: 0.6, duration: 0.8 }}
+            className="sm:col-span-2 lg:col-span-1"
           >
             <GlassPanel glowColor="#ffff00">
               <motion.div 
                 className="text-center"
-                whileHover={{ scale: 1.05 }}
+                whileHover={{ 
+                  scale: 1.05,
+                  rotateY: 5,
+                  rotateX: -5
+                }}
                 transition={{ type: "spring", stiffness: 300 }}
               >
                 <motion.div 
-                  className="text-4xl font-orbitron font-bold text-cyber-yellow mb-2"
+                  className="text-3xl sm:text-4xl font-orbitron font-bold text-cyber-yellow mb-2"
                   animate={{ 
                     scale: [1, 1.2, 1],
-                    rotate: [0, 5, -5, 0],
+                    rotate: [0, 10, -10, 0],
+                    rotateZ: [0, 360],
                     textShadow: [
                       '0 0 10px #ffff00',
                       '0 0 20px #ffff00, 0 0 30px #ffff00',
                       '0 0 10px #ffff00'
                     ]
                   }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+                  transition={{ 
+                    scale: { duration: 2, repeat: Infinity, ease: "easeInOut", delay: 1 },
+                    rotate: { duration: 2, repeat: Infinity, ease: "easeInOut", delay: 1 },
+                    rotateZ: { duration: 8, repeat: Infinity, ease: "linear" },
+                    textShadow: { duration: 2, repeat: Infinity, ease: "easeInOut", delay: 1 }
+                  }}
                 >
                   ∞
                 </motion.div>
-                <div className="text-white/70 font-sora">Possibilities</div>
+                <div className="text-white/70 font-sora text-sm sm:text-base">Possibilities</div>
               </motion.div>
             </GlassPanel>
           </motion.div>

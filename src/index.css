@@ -11,11 +11,23 @@
   html {
     scroll-behavior: smooth;
   }
+
+  /* Hide cursor on mobile devices */
+  @media (hover: none) and (pointer: coarse) {
+    body {
+      cursor: auto !important;
+    }
+    
+    .magnetic-cursor {
+      cursor: auto !important;
+    }
+  }
 }
 
 @layer components {
   .glass-panel {
     @apply bg-white/5 backdrop-blur-md border border-white/10 rounded-xl;
+    transform-style: preserve-3d;
   }
   
   .neon-text {
@@ -29,6 +41,13 @@
   
   .magnetic-cursor {
     cursor: none;
+  }
+
+  /* Only apply magnetic cursor on non-touch devices */
+  @media (hover: hover) and (pointer: fine) {
+    .magnetic-cursor {
+      cursor: none;
+    }
   }
   
   .starfield {
@@ -47,11 +66,26 @@
     0% { background-position: 0 0, 0 0, 0 0, 0 0, 0 0; }
     100% { background-position: -200px 0, -200px 0, -200px 0, -200px 0, -200px 0; }
   }
+
+  /* Responsive text sizing */
+  @media (max-width: 640px) {
+    .neon-text {
+      text-shadow: 0 0 3px currentColor, 0 0 6px currentColor, 0 0 9px currentColor;
+    }
+  }
+
+  /* Enhanced 3D transforms for mobile */
+  @media (max-width: 768px) {
+    .glass-panel {
+      transform-style: preserve-3d;
+      backface-visibility: hidden;
+    }
+  }
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -60,9 +94,50 @@
 
 ::-webkit-scrollbar-thumb {
   background: linear-gradient(45deg, #00ffff, #ff00ff);
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(45deg, #ff00ff, #00ffff);
+}
+
+/* Mobile-specific optimizations */
+@media (max-width: 768px) {
+  /* Reduce motion for better performance on mobile */
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  /* Optimize touch targets */
+  button, .interactive {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Improve text readability on small screens */
+  .font-orbitron {
+    letter-spacing: 0.02em;
+  }
+}
+
+/* Tablet optimizations */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .glass-panel {
+    padding: 1.5rem;
+  }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .neon-text {
+    text-shadow: 
+      0 0 2px currentColor, 
+      0 0 4px currentColor, 
+      0 0 6px currentColor,
+      0 0 8px currentColor;
+  }
 }
