@@ -272,8 +272,66 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (authError) {
         // Handle specific case where user already exists in Supabase Auth
         if (authError.message && authError.message.includes('User already registered')) {
-          toast.error('An account with this email already exists');
-          return false;
+          // Try to sign in with the original password to see if this is a legitimate user
+          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+            email,
+            password: password, // Try with the original password first
+          });
+
+          if (!signInError && signInData.user) {
+            // User exists in auth but not in our users table - create the profile
+            const { data: newUser, error: userError } = await supabase
+              .from('users')
+              .insert({
+                id: signInData.user.id,
+                username,
+                email,
+                password_hash: passwordHash,
+                avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
+              })
+              .select()
+              .single();
+
+            if (userError) {
+              console.error('User creation error:', userError);
+              await supabase.auth.signOut();
+              toast.error('Registration failed');
+              return false;
+            }
+
+            // Update the auth user's password to use our system
+            const finalAuthPassword = `devverse_${newUser.id}`;
+            await supabase.auth.updateUser({
+              password: finalAuthPassword,
+            });
+
+            // Create default planet
+            await supabase
+              .from('dev_planets')
+              .insert({
+                user_id: newUser.id,
+                name: `${username}'s Planet`,
+              });
+
+            // Award achievement for registering
+            await supabase
+              .from('achievements')
+              .insert({
+                user_id: newUser.id,
+                achievement_id: 'beginning',
+                name: 'The Beginning',
+                description: 'User makes an account and Logs in',
+                icon: 'user',
+              });
+
+            toast.success('Welcome to DevVerse³! Your account has been set up!');
+            toast.success('Achievement unlocked: The Beginning! 🎉');
+            return true;
+          } else {
+            // User exists but password doesn't match - this is a real conflict
+            toast.error('An account with this email already exists');
+            return false;
+          }
         }
         
         console.error('Auth creation error:', authError);
