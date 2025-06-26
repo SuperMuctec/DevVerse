@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Search, User, MapPin, Globe, Calendar, Star, GitFork, ExternalLink, Zap, Sparkles } from 'lucide-react';
 import { GlassPanel } from '../ui/GlassPanel';
-import { dbOps } from '../../lib/database';
+import { supabase } from '../../lib/supabase';
 import { toast } from 'react-hot-toast';
 
 interface UserSearchProps {
@@ -49,22 +49,31 @@ export const UserSearch: React.FC<UserSearchProps> = ({ onNavigateToUser }) => {
       
       const searchUsers = async () => {
         try {
-          const allUsers = await dbOps.getAllUsers();
-          const filtered = allUsers.filter((user: any) => 
-            user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            (user.bio && user.bio.toLowerCase().includes(searchTerm.toLowerCase()))
-          );
+          const { data: users, error } = await supabase
+            .from('users')
+            .select(`
+              id,
+              username,
+              email,
+              avatar,
+              bio,
+              location,
+              website,
+              xp,
+              level,
+              created_at,
+              projects (*)
+            `)
+            .or(`username.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,bio.ilike.%${searchTerm}%`)
+            .limit(20);
 
-          // Get projects for each user
-          const usersWithProjects = await Promise.all(
-            filtered.map(async (user: any) => {
-              const projects = await dbOps.getProjectsByUserId(user.id);
-              return { ...user, projects };
-            })
-          );
-
-          setSearchResults(usersWithProjects.slice(0, 20)); // Limit to 20 results
+          if (error) {
+            console.error('Search error:', error);
+            toast.error('Search failed');
+            setSearchResults([]);
+          } else {
+            setSearchResults(users || []);
+          }
         } catch (error) {
           console.error('Search error:', error);
           toast.error('Search failed');

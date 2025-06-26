@@ -5,7 +5,7 @@ import { GlassPanel } from '../ui/GlassPanel';
 import { CreateDevLogModal } from '../modals/CreateDevLogModal';
 import { CreateDevLogData, DevLog } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
-import { dbOps } from '../../lib/database';
+import { supabase } from '../../lib/supabase';
 import { toast } from 'react-hot-toast';
 
 export const DevLogs: React.FC = () => {
@@ -20,25 +20,31 @@ export const DevLogs: React.FC = () => {
   useEffect(() => {
     const loadDevLogs = async () => {
       try {
-        const dbDevLogs = await dbOps.getAllDevLogs();
+        const { data: dbDevLogs, error } = await supabase
+          .from('devlogs')
+          .select(`
+            *,
+            users (username)
+          `)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Failed to load devlogs:', error);
+          toast.error('Failed to load devlogs');
+          return;
+        }
+
+        const formattedDevLogs = dbDevLogs.map((devlog: any) => ({
+          id: devlog.id,
+          title: devlog.title,
+          content: devlog.content,
+          author: devlog.users?.username || 'Unknown',
+          tags: devlog.tags,
+          createdAt: new Date(devlog.created_at),
+          likes: devlog.likes,
+        }));
         
-        // Get user data for each devlog
-        const devLogsWithAuthors = await Promise.all(
-          dbDevLogs.map(async (devlog: any) => {
-            const userData = await dbOps.getUserById(devlog.user_id);
-            return {
-              id: devlog.id,
-              title: devlog.title,
-              content: devlog.content,
-              author: userData?.username || 'Unknown',
-              tags: devlog.tags,
-              createdAt: new Date(devlog.created_at),
-              likes: devlog.likes,
-            };
-          })
-        );
-        
-        setDevLogs(devLogsWithAuthors);
+        setDevLogs(formattedDevLogs);
       } catch (error) {
         console.error('Failed to load devlogs:', error);
         toast.error('Failed to load devlogs');
@@ -54,40 +60,54 @@ export const DevLogs: React.FC = () => {
     if (!user) return;
 
     try {
-      await dbOps.createDevLog({
-        user_id: user.id,
-        title: data.title,
-        content: data.content,
-        tags: data.tags,
-        likes: 0,
-      });
+      const { error } = await supabase
+        .from('devlogs')
+        .insert({
+          user_id: user.id,
+          title: data.title,
+          content: data.content,
+          tags: data.tags,
+          likes: 0,
+        });
+
+      if (error) {
+        console.error('Failed to create devlog:', error);
+        toast.error('Failed to create devlog');
+        return;
+      }
 
       // Reload devlogs
-      const dbDevLogs = await dbOps.getAllDevLogs();
-      const devLogsWithAuthors = await Promise.all(
-        dbDevLogs.map(async (devlog: any) => {
-          const userData = await dbOps.getUserById(devlog.user_id);
-          return {
-            id: devlog.id,
-            title: devlog.title,
-            content: devlog.content,
-            author: userData?.username || 'Unknown',
-            tags: devlog.tags,
-            createdAt: new Date(devlog.created_at),
-            likes: devlog.likes,
-          };
-        })
-      );
-      setDevLogs(devLogsWithAuthors);
+      const { data: dbDevLogs } = await supabase
+        .from('devlogs')
+        .select(`
+          *,
+          users (username)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (dbDevLogs) {
+        const formattedDevLogs = dbDevLogs.map((devlog: any) => ({
+          id: devlog.id,
+          title: devlog.title,
+          content: devlog.content,
+          author: devlog.users?.username || 'Unknown',
+          tags: devlog.tags,
+          createdAt: new Date(devlog.created_at),
+          likes: devlog.likes,
+        }));
+        setDevLogs(formattedDevLogs);
+      }
 
       // Award achievement for first devlog
-      await dbOps.createAchievement({
-        user_id: user.id,
-        achievement_id: 'journalist',
-        name: 'Journalist',
-        description: 'User writes their first devlog',
-        icon: 'file-text',
-      });
+      await supabase
+        .from('achievements')
+        .upsert({
+          user_id: user.id,
+          achievement_id: 'journalist',
+          name: 'Journalist',
+          description: 'User writes their first devlog',
+          icon: 'file-text',
+        }, { onConflict: 'user_id,achievement_id' });
 
       toast.success('DevLog published successfully!');
       toast.success('Achievement unlocked: Journalist! 📝');

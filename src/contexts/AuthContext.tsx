@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, AuthState } from '../types';
-import { dbOps } from '../lib/database';
+import { supabase } from '../lib/supabase';
 import { toast } from 'react-hot-toast';
 import bcrypt from 'bcryptjs';
 
@@ -33,17 +33,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Check for existing session
     const checkSession = async () => {
       try {
-        const currentUserId = localStorage.getItem('devverse_current_user');
-        if (currentUserId) {
-          const userData = await dbOps.getUserById(currentUserId);
-          if (userData) {
-            // Get user's projects, planet, and achievements
-            const [projects, planet, achievements] = await Promise.all([
-              dbOps.getProjectsByUserId(currentUserId),
-              dbOps.getPlanetByUserId(currentUserId),
-              dbOps.getAchievementsByUserId(currentUserId)
-            ]);
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (session?.user) {
+          // Fetch user data from our users table
+          const { data: userData, error } = await supabase
+            .from('users')
+            .select(`
+              *,
+              projects (*),
+              dev_planets (*),
+              achievements (*)
+            `)
+            .eq('id', session.user.id)
+            .single();
 
+          if (error) {
+            console.error('Error fetching user data:', error);
+            setAuthState(prev => ({ ...prev, isLoading: false }));
+            return;
+          }
+
+          if (userData) {
+            // Transform database data to match our User type
             const user: User = {
               id: userData.id,
               username: userData.username,
@@ -54,42 +66,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               website: userData.website,
               xp: userData.xp,
               level: userData.level,
-              projects: projects.map(p => ({
-                id: p.id,
-                name: p.name,
-                description: p.description,
-                language: p.language,
-                githubUrl: p.github_url,
-                homepage: p.homepage,
-                topics: p.topics,
-                isPrivate: Boolean(p.is_private),
-                stars: p.stars,
-                forks: p.forks,
-                createdAt: new Date(p.created_at),
-                updatedAt: new Date(p.updated_at),
-                owner: userData.username
-              })),
-              followers: 0,
-              following: 0,
+              projects: userData.projects || [],
+              followers: 0, // TODO: implement followers system
+              following: 0, // TODO: implement following system
               joinedAt: new Date(userData.created_at),
-              planet: planet ? {
-                id: planet.id,
-                name: planet.name,
+              planet: userData.dev_planets?.[0] ? {
+                id: userData.dev_planets[0].id,
+                name: userData.dev_planets[0].name,
                 owner: userData.username,
                 stack: {
-                  languages: planet.stack_languages,
-                  frameworks: planet.stack_frameworks,
-                  tools: planet.stack_tools,
-                  databases: planet.stack_databases,
+                  languages: userData.dev_planets[0].stack_languages || [],
+                  frameworks: userData.dev_planets[0].stack_frameworks || [],
+                  tools: userData.dev_planets[0].stack_tools || [],
+                  databases: userData.dev_planets[0].stack_databases || [],
                 },
-                position: [0, 0, 0],
-                color: planet.color,
-                size: planet.size,
-                rings: planet.rings,
-                achievements: achievements,
-                likes: planet.likes,
-                views: planet.views,
-                createdAt: new Date(planet.created_at),
+                position: [0, 0, 0], // Default position
+                color: userData.dev_planets[0].color,
+                size: userData.dev_planets[0].size,
+                rings: userData.dev_planets[0].rings,
+                achievements: userData.achievements || [],
+                likes: userData.dev_planets[0].likes,
+                views: userData.dev_planets[0].views,
+                createdAt: new Date(userData.dev_planets[0].created_at),
               } : {
                 id: '',
                 name: `${userData.username}'s Planet`,
@@ -111,9 +109,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               isAuthenticated: true,
               isLoading: false,
             });
-          } else {
-            localStorage.removeItem('devverse_current_user');
-            setAuthState(prev => ({ ...prev, isLoading: false }));
           }
         } else {
           setAuthState(prev => ({ ...prev, isLoading: false }));
@@ -125,6 +120,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     checkSession();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setAuthState({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+        });
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const calculateLevel = (xp: number) => {
@@ -148,7 +156,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const newLevel = calculateLevel(newXp);
       
       try {
-        await dbOps.updateUser(authState.user.id, { xp: newXp, level: newLevel });
+        // Update XP in database
+        const { error } = await supabase
+          .from('users')
+          .update({ xp: newXp, level: newLevel })
+          .eq('id', authState.user.id);
+
+        if (error) {
+          console.error('Error updating XP:', error);
+          return;
+        }
 
         const updatedUser = { ...authState.user, xp: newXp, level: newLevel };
         setAuthState(prev => ({ ...prev, user: updatedUser }));
@@ -167,8 +184,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      const userData = await dbOps.getUserByEmail(email);
-      
+      // First, get the user's password hash from our users table
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id, password_hash')
+        .eq('email', email)
+        .maybeSingle();
+
+      if (userError) {
+        console.error('Database error:', userError);
+        toast.error('Login failed');
+        return false;
+      }
+
       if (!userData) {
         toast.error('User not found');
         return false;
@@ -181,20 +209,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
-      // Set current user
-      localStorage.setItem('devverse_current_user', userData.id);
+      // Sign in with Supabase Auth using the user's email and a consistent password
+      const authPassword = `devverse_${userData.id}`;
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password: authPassword,
+      });
+
+      if (signInError) {
+        console.error('Auth sign in error:', signInError);
+        toast.error('Authentication failed');
+        return false;
+      }
 
       // Award achievement for logging in
-      await dbOps.createAchievement({
-        user_id: userData.id,
-        achievement_id: 'beginning',
-        name: 'The Beginning',
-        description: 'User makes an account and Logs in',
-        icon: 'user',
-      });
-      
-      // Reload user data
-      window.location.reload();
+      await supabase
+        .from('achievements')
+        .upsert({
+          user_id: userData.id,
+          achievement_id: 'beginning',
+          name: 'The Beginning',
+          description: 'User makes an account and Logs in',
+          icon: 'user',
+        }, { onConflict: 'user_id,achievement_id' });
       
       toast.success('Welcome back to DevVerse³!');
       return true;
@@ -207,60 +244,92 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = async (username: string, email: string, password: string): Promise<boolean> => {
     try {
-      // Check if email or username already exists
-      const [existingEmail, existingUsername] = await Promise.all([
-        dbOps.getUserByEmail(email),
-        dbOps.getUserByUsername(username)
-      ]);
+      // Check if email or username already exists in our users table
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('id')
+        .or(`email.eq.${email},username.eq.${username}`)
+        .maybeSingle();
 
-      if (existingEmail) {
-        toast.error('Email already exists');
+      if (existingUser) {
+        toast.error('Email or username already exists');
         return false;
       }
 
-      if (existingUsername) {
-        toast.error('Username already exists');
-        return false;
-      }
-
-      // Hash password
+      // Hash password for our database
       const passwordHash = await bcrypt.hash(password, 10);
 
-      // Create user
-      const userId = await dbOps.createUser({
-        username,
+      // Generate a temporary user ID for the auth password
+      const tempUserId = crypto.randomUUID();
+      const authPassword = `devverse_${tempUserId}`;
+
+      // First create user in Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
-        password_hash: passwordHash,
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`
+        password: authPassword,
       });
+
+      if (authError) {
+        console.error('Auth creation error:', authError);
+        toast.error('Registration failed');
+        return false;
+      }
+
+      if (!authData.user) {
+        toast.error('Registration failed');
+        return false;
+      }
+
+      // Now create user in our users table with the auth user's ID
+      const { data: newUser, error: userError } = await supabase
+        .from('users')
+        .insert({
+          id: authData.user.id, // Use the auth user's ID
+          username,
+          email,
+          password_hash: passwordHash,
+          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
+        })
+        .select()
+        .single();
+
+      if (userError || !newUser) {
+        console.error('User creation error:', userError);
+        // Clean up auth user if our user creation fails
+        await supabase.auth.signOut();
+        toast.error('Registration failed');
+        return false;
+      }
+
+      // Update the auth user's password to use the actual user ID
+      const finalAuthPassword = `devverse_${newUser.id}`;
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: finalAuthPassword,
+      });
+
+      if (updateError) {
+        console.error('Password update error:', updateError);
+        // Continue anyway as the user is created
+      }
 
       // Create default planet
-      await dbOps.createOrUpdatePlanet({
-        user_id: userId,
-        name: `${username}'s Planet`,
-        stack_languages: [],
-        stack_frameworks: [],
-        stack_tools: [],
-        stack_databases: [],
-        color: '#00ffff',
-        size: 1.0,
-        rings: 1
-      });
+      await supabase
+        .from('dev_planets')
+        .insert({
+          user_id: newUser.id,
+          name: `${username}'s Planet`,
+        });
 
       // Award achievement for registering
-      await dbOps.createAchievement({
-        user_id: userId,
-        achievement_id: 'beginning',
-        name: 'The Beginning',
-        description: 'User makes an account and Logs in',
-        icon: 'user',
-      });
-
-      // Set current user
-      localStorage.setItem('devverse_current_user', userId);
-      
-      // Reload to show logged in state
-      window.location.reload();
+      await supabase
+        .from('achievements')
+        .insert({
+          user_id: newUser.id,
+          achievement_id: 'beginning',
+          name: 'The Beginning',
+          description: 'User makes an account and Logs in',
+          icon: 'user',
+        });
       
       toast.success('Welcome to DevVerse³! Your planet has been created!');
       toast.success('Achievement unlocked: The Beginning! 🎉');
@@ -272,64 +341,80 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('devverse_current_user');
-    setAuthState({
-      user: null,
-      isAuthenticated: false,
-      isLoading: false,
-    });
-    toast.success('Logged out successfully');
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+      setAuthState({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+      });
+      toast.success('Logged out successfully');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error('Logout failed');
+    }
   };
 
   const updateUser = async (updates: Partial<User>) => {
     if (authState.user) {
       try {
         // Update user in database
-        const userUpdates: any = {};
-        if (updates.username) userUpdates.username = updates.username;
-        if (updates.email) userUpdates.email = updates.email;
-        if (updates.avatar) userUpdates.avatar = updates.avatar;
-        if (updates.bio !== undefined) userUpdates.bio = updates.bio;
-        if (updates.location !== undefined) userUpdates.location = updates.location;
-        if (updates.website !== undefined) userUpdates.website = updates.website;
+        const { error } = await supabase
+          .from('users')
+          .update({
+            username: updates.username,
+            email: updates.email,
+            avatar: updates.avatar,
+            bio: updates.bio,
+            location: updates.location,
+            website: updates.website,
+          })
+          .eq('id', authState.user.id);
 
-        if (Object.keys(userUpdates).length > 0) {
-          await dbOps.updateUser(authState.user.id, userUpdates);
+        if (error) {
+          console.error('Error updating user:', error);
+          toast.error('Failed to update profile');
+          return;
         }
 
         // Update planet if provided
         if (updates.planet) {
-          await dbOps.createOrUpdatePlanet({
-            user_id: authState.user.id,
-            name: updates.planet.name,
-            stack_languages: updates.planet.stack.languages,
-            stack_frameworks: updates.planet.stack.frameworks,
-            stack_tools: updates.planet.stack.tools,
-            stack_databases: updates.planet.stack.databases,
-            color: updates.planet.color,
-            size: updates.planet.size,
-            rings: updates.planet.rings,
-          });
+          await supabase
+            .from('dev_planets')
+            .upsert({
+              user_id: authState.user.id,
+              name: updates.planet.name,
+              stack_languages: updates.planet.stack.languages,
+              stack_frameworks: updates.planet.stack.frameworks,
+              stack_tools: updates.planet.stack.tools,
+              stack_databases: updates.planet.stack.databases,
+              color: updates.planet.color,
+              size: updates.planet.size,
+              rings: updates.planet.rings,
+            }, { onConflict: 'user_id' });
         }
 
         // Update projects if provided
         if (updates.projects) {
+          // This is a simplified approach - in a real app you'd handle individual project updates
           for (const project of updates.projects) {
-            if (!project.id.includes('temp')) {
-              await dbOps.createProject({
-                id: project.id,
-                user_id: authState.user.id,
-                name: project.name,
-                description: project.description,
-                language: project.language,
-                github_url: project.githubUrl,
-                homepage: project.homepage,
-                topics: project.topics,
-                is_private: project.isPrivate,
-                stars: project.stars,
-                forks: project.forks,
-              });
+            if (!project.id.includes('temp')) { // Only update existing projects
+              await supabase
+                .from('projects')
+                .upsert({
+                  id: project.id,
+                  user_id: authState.user.id,
+                  name: project.name,
+                  description: project.description,
+                  language: project.language,
+                  github_url: project.githubUrl,
+                  homepage: project.homepage,
+                  topics: project.topics,
+                  is_private: project.isPrivate,
+                  stars: project.stars,
+                  forks: project.forks,
+                });
             }
           }
         }
