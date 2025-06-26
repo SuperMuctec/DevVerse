@@ -50,6 +50,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           if (error) {
             console.error('Error fetching user data:', error);
+            // If user doesn't exist in our table but exists in auth, sign them out
+            await supabase.auth.signOut();
             setAuthState(prev => ({ ...prev, isLoading: false }));
             return;
           }
@@ -67,8 +69,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               xp: userData.xp,
               level: userData.level,
               projects: userData.projects || [],
-              followers: 0, // TODO: implement followers system
-              following: 0, // TODO: implement following system
+              followers: 0,
+              following: 0,
               joinedAt: new Date(userData.created_at),
               planet: userData.dev_planets?.[0] ? {
                 id: userData.dev_planets[0].id,
@@ -80,7 +82,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   tools: userData.dev_planets[0].stack_tools || [],
                   databases: userData.dev_planets[0].stack_databases || [],
                 },
-                position: [0, 0, 0], // Default position
+                position: [0, 0, 0],
                 color: userData.dev_planets[0].color,
                 size: userData.dev_planets[0].size,
                 rings: userData.dev_planets[0].rings,
@@ -156,7 +158,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const newLevel = calculateLevel(newXp);
       
       try {
-        // Update XP in database
         const { error } = await supabase
           .from('users')
           .update({ xp: newXp, level: newLevel })
@@ -182,12 +183,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const cleanupAuthUser = async (email: string) => {
+    try {
+      // First, try to sign in to get the user ID
+      const { data: signInData } = await supabase.auth.signInWithPassword({
+        email,
+        password: 'temp_password_for_cleanup'
+      });
+
+      if (signInData.user) {
+        // Delete the auth user
+        await supabase.auth.admin.deleteUser(signInData.user.id);
+      }
+    } catch (error) {
+      // If we can't clean up, that's okay - we'll handle it in registration
+      console.log('Could not cleanup auth user:', error);
+    }
+  };
+
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // First, get the user's password hash from our users table
+      // First, check if user exists in our users table
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('id, password_hash')
+        .select('id, password_hash, username')
         .eq('email', email)
         .maybeSingle();
 
@@ -209,7 +228,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
-      // Sign in with Supabase Auth using the user's email and a consistent password
+      // Sign in with Supabase Auth using a consistent password
       const authPassword = `devverse_${userData.id}`;
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
@@ -259,81 +278,101 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Hash password for our database
       const passwordHash = await bcrypt.hash(password, 10);
 
-      // Generate a temporary user ID for the auth password
-      const tempUserId = crypto.randomUUID();
-      const authPassword = `devverse_${tempUserId}`;
+      // Generate a unique user ID
+      const userId = crypto.randomUUID();
+      const authPassword = `devverse_${userId}`;
 
-      // First create user in Supabase Auth
+      // Try to create user in Supabase Auth first
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password: authPassword,
       });
 
-      if (authError) {
-        // Handle specific case where user already exists in Supabase Auth
-        if (authError.message && authError.message.includes('User already registered')) {
-          // Try to sign in with the original password to see if this is a legitimate user
-          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      // If auth user already exists, try to handle it
+      if (authError && authError.message.includes('User already registered')) {
+        // Try to sign in with various possible passwords to find the existing user
+        let existingAuthUser = null;
+        
+        // Try signing in with the new auth password
+        const { data: signInData1 } = await supabase.auth.signInWithPassword({
+          email,
+          password: authPassword,
+        });
+        
+        if (signInData1.user) {
+          existingAuthUser = signInData1.user;
+        } else {
+          // Try with the original password
+          const { data: signInData2 } = await supabase.auth.signInWithPassword({
             email,
-            password: password, // Try with the original password first
+            password: password,
           });
-
-          if (!signInError && signInData.user) {
-            // User exists in auth but not in our users table - create the profile
-            const { data: newUser, error: userError } = await supabase
-              .from('users')
-              .insert({
-                id: signInData.user.id,
-                username,
-                email,
-                password_hash: passwordHash,
-                avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
-              })
-              .select()
-              .single();
-
-            if (userError) {
-              console.error('User creation error:', userError);
-              await supabase.auth.signOut();
-              toast.error('Registration failed');
-              return false;
-            }
-
-            // Update the auth user's password to use our system
-            const finalAuthPassword = `devverse_${newUser.id}`;
-            await supabase.auth.updateUser({
-              password: finalAuthPassword,
-            });
-
-            // Create default planet
-            await supabase
-              .from('dev_planets')
-              .insert({
-                user_id: newUser.id,
-                name: `${username}'s Planet`,
-              });
-
-            // Award achievement for registering
-            await supabase
-              .from('achievements')
-              .insert({
-                user_id: newUser.id,
-                achievement_id: 'beginning',
-                name: 'The Beginning',
-                description: 'User makes an account and Logs in',
-                icon: 'user',
-              });
-
-            toast.success('Welcome to DevVerse³! Your account has been set up!');
-            toast.success('Achievement unlocked: The Beginning! 🎉');
-            return true;
-          } else {
-            // User exists but password doesn't match - this is a real conflict
-            toast.error('An account with this email already exists');
-            return false;
+          
+          if (signInData2.user) {
+            existingAuthUser = signInData2.user;
+            // Update password to our system
+            await supabase.auth.updateUser({ password: authPassword });
           }
         }
-        
+
+        if (existingAuthUser) {
+          // Check if user exists in our table
+          const { data: existingUserData } = await supabase
+            .from('users')
+            .select('id')
+            .eq('id', existingAuthUser.id)
+            .maybeSingle();
+
+          if (existingUserData) {
+            toast.error('User already exists');
+            return false;
+          }
+
+          // Create user in our table with the existing auth user's ID
+          const { data: newUser, error: userError } = await supabase
+            .from('users')
+            .insert({
+              id: existingAuthUser.id,
+              username,
+              email,
+              password_hash: passwordHash,
+              avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
+            })
+            .select()
+            .single();
+
+          if (userError) {
+            console.error('User creation error:', userError);
+            await supabase.auth.signOut();
+            toast.error('Registration failed');
+            return false;
+          }
+
+          // Create default planet and achievement
+          await Promise.all([
+            supabase.from('dev_planets').insert({
+              user_id: newUser.id,
+              name: `${username}'s Planet`,
+            }),
+            supabase.from('achievements').insert({
+              user_id: newUser.id,
+              achievement_id: 'beginning',
+              name: 'The Beginning',
+              description: 'User makes an account and Logs in',
+              icon: 'user',
+            })
+          ]);
+
+          toast.success('Welcome to DevVerse³! Your account has been set up!');
+          toast.success('Achievement unlocked: The Beginning! 🎉');
+          return true;
+        } else {
+          toast.error('Registration failed - unable to create account');
+          return false;
+        }
+      }
+
+      if (authError) {
         console.error('Auth creation error:', authError);
         toast.error('Registration failed');
         return false;
@@ -344,11 +383,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
-      // Now create user in our users table with the auth user's ID
+      // Create user in our users table
       const { data: newUser, error: userError } = await supabase
         .from('users')
         .insert({
-          id: authData.user.id, // Use the auth user's ID
+          id: authData.user.id,
           username,
           email,
           password_hash: passwordHash,
@@ -357,7 +396,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .select()
         .single();
 
-      if (userError || !newUser) {
+      if (userError) {
         console.error('User creation error:', userError);
         // Clean up auth user if our user creation fails
         await supabase.auth.signOut();
@@ -365,35 +404,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
-      // Update the auth user's password to use the actual user ID
-      const finalAuthPassword = `devverse_${newUser.id}`;
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: finalAuthPassword,
-      });
-
-      if (updateError) {
-        console.error('Password update error:', updateError);
-        // Continue anyway as the user is created
-      }
-
-      // Create default planet
-      await supabase
-        .from('dev_planets')
-        .insert({
+      // Create default planet and achievement
+      await Promise.all([
+        supabase.from('dev_planets').insert({
           user_id: newUser.id,
           name: `${username}'s Planet`,
-        });
-
-      // Award achievement for registering
-      await supabase
-        .from('achievements')
-        .insert({
+        }),
+        supabase.from('achievements').insert({
           user_id: newUser.id,
           achievement_id: 'beginning',
           name: 'The Beginning',
           description: 'User makes an account and Logs in',
           icon: 'user',
-        });
+        })
+      ]);
       
       toast.success('Welcome to DevVerse³! Your planet has been created!');
       toast.success('Achievement unlocked: The Beginning! 🎉');
@@ -461,9 +485,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         // Update projects if provided
         if (updates.projects) {
-          // This is a simplified approach - in a real app you'd handle individual project updates
           for (const project of updates.projects) {
-            if (!project.id.includes('temp')) { // Only update existing projects
+            if (!project.id.includes('temp')) {
               await supabase
                 .from('projects')
                 .upsert({
