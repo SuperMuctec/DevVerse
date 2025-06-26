@@ -1,7 +1,6 @@
 import { supabase } from './supabase';
 import { v4 as uuidv4 } from 'uuid';
 
-// Database operations using Supabase
 export const dbOps = {
   // Users
   async createUser(userData: {
@@ -10,13 +9,30 @@ export const dbOps = {
     password_hash: string;
     avatar?: string;
   }) {
+    const email = userData.email.trim().toLowerCase();
+    const username = userData.username.trim().toLowerCase();
+    const password = userData.password_hash;
+
+    const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
+
+    if (authError) {
+      if (authError.message.includes('User already registered')) {
+        throw new Error('User with this email already exists');
+      }
+      throw authError;
+    }
+
+    const userId = authData?.user?.id;
+    if (!userId) throw new Error('Could not retrieve user ID from Supabase Auth');
+
     const { data, error } = await supabase
       .from('users')
       .insert({
-        username: userData.username,
-        email: userData.email,
-        password_hash: userData.password_hash,
-        avatar: userData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.username}`
+        id: userId,
+        username,
+        email,
+        password_hash: password,
+        avatar: userData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`
       })
       .select()
       .single();
@@ -26,53 +42,30 @@ export const dbOps = {
   },
 
   async getUserByEmail(email: string) {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email)
-      .single();
-
+    const { data, error } = await supabase.from('users').select('*').eq('email', email).single();
     if (error && error.code !== 'PGRST116') throw error;
     return data;
   },
 
   async getUserByUsername(username: string) {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('username', username)
-      .single();
-
+    const { data, error } = await supabase.from('users').select('*').eq('username', username).single();
     if (error && error.code !== 'PGRST116') throw error;
     return data;
   },
 
   async getUserById(id: string) {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', id)
-      .single();
-
+    const { data, error } = await supabase.from('users').select('*').eq('id', id).single();
     if (error && error.code !== 'PGRST116') throw error;
     return data;
   },
 
   async updateUser(id: string, updates: any) {
-    const { error } = await supabase
-      .from('users')
-      .update(updates)
-      .eq('id', id);
-
+    const { error } = await supabase.from('users').update(updates).eq('id', id);
     if (error) throw error;
   },
 
   async getAllUsers() {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .order('created_at', { ascending: false });
-
+    const { data, error } = await supabase.from('users').select('*').order('created_at', { ascending: false });
     if (error) throw error;
     return data || [];
   },
@@ -113,7 +106,6 @@ export const dbOps = {
 
   // Dev Planets
   async createOrUpdatePlanet(planetData: any) {
-    // Check if planet exists
     const { data: existing } = await supabase
       .from('dev_planets')
       .select('id')
@@ -121,7 +113,6 @@ export const dbOps = {
       .single();
 
     if (existing) {
-      // Update existing planet
       const { error } = await supabase
         .from('dev_planets')
         .update({
@@ -138,7 +129,6 @@ export const dbOps = {
 
       if (error) throw error;
     } else {
-      // Create new planet
       const { error } = await supabase
         .from('dev_planets')
         .insert({
@@ -224,7 +214,6 @@ export const dbOps = {
       if (error) throw error;
       return data.id;
     } catch (error: any) {
-      // Achievement already exists, ignore
       if (error.code === '23505') return null;
       throw error;
     }
@@ -276,7 +265,6 @@ export const dbOps = {
   }
 };
 
-// Database statistics and utility functions
 export const getDatabaseStats = async () => {
   const stats = {
     users: 0,
@@ -289,7 +277,6 @@ export const getDatabaseStats = async () => {
   };
 
   try {
-    // Count records in each table
     const [usersCount, projectsCount, planetsCount, devlogsCount, achievementsCount, battlesCount] = await Promise.all([
       supabase.from('users').select('*', { count: 'exact', head: true }),
       supabase.from('projects').select('*', { count: 'exact', head: true }),
@@ -312,24 +299,8 @@ export const getDatabaseStats = async () => {
   return stats;
 };
 
-// Legacy functions for compatibility
-export const initDatabase = async () => {
-  // No initialization needed for Supabase
-  return true;
-};
-
-export const saveDatabase = () => {
-  // No manual saving needed for Supabase
-};
-
-export const exportDatabase = () => {
-  throw new Error('Database export not available with Supabase');
-};
-
-export const downloadDatabase = () => {
-  throw new Error('Database download not available with Supabase');
-};
-
-export const importDatabase = async () => {
-  throw new Error('Database import not available with Supabase');
-};
+export const initDatabase = async () => true;
+export const saveDatabase = () => {};
+export const exportDatabase = () => { throw new Error('Database export not available with Supabase'); };
+export const downloadDatabase = () => { throw new Error('Database download not available with Supabase'); };
+export const importDatabase = async () => { throw new Error('Database import not available with Supabase'); };
