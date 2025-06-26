@@ -1,74 +1,100 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Calendar, Heart, Hash, Plus, Search, Filter, BookOpen, Sparkles } from 'lucide-react';
 import { GlassPanel } from '../ui/GlassPanel';
 import { CreateDevLogModal } from '../modals/CreateDevLogModal';
 import { CreateDevLogData, DevLog } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
+import { dbOps } from '../../lib/database';
 import { toast } from 'react-hot-toast';
 
 export const DevLogs: React.FC = () => {
   const [showCreateDevLog, setShowCreateDevLog] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('recent');
+  const [devLogs, setDevLogs] = useState<DevLog[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
 
-  // Get user-created devlogs from localStorage
-  const getUserDevLogs = (): DevLog[] => {
-    const users = JSON.parse(localStorage.getItem('devverse_users') || '[]');
-    const allDevLogs: DevLog[] = [];
-    
-    users.forEach((userData: any) => {
-      const userDevLogs = JSON.parse(localStorage.getItem(`devlogs_${userData.id}`) || '[]');
-      userDevLogs.forEach((devlog: any) => {
-        allDevLogs.push({
-          ...devlog,
-          author: userData.username,
-          createdAt: new Date(devlog.createdAt)
-        });
-      });
-    });
-    
-    return allDevLogs;
-  };
-
-  const [devLogs, setDevLogs] = useState<DevLog[]>(getUserDevLogs());
-
-  const handleCreateDevLog = (data: CreateDevLogData) => {
-    if (!user) return;
-
-    const newDevLog: DevLog = {
-      id: Date.now().toString(),
-      ...data,
-      author: user.username,
-      createdAt: new Date(),
-      likes: 0,
+  // Load devlogs from database
+  useEffect(() => {
+    const loadDevLogs = async () => {
+      try {
+        const dbDevLogs = await dbOps.getAllDevLogs();
+        
+        // Get user data for each devlog
+        const devLogsWithAuthors = await Promise.all(
+          dbDevLogs.map(async (devlog: any) => {
+            const userData = await dbOps.getUserById(devlog.user_id);
+            return {
+              id: devlog.id,
+              title: devlog.title,
+              content: devlog.content,
+              author: userData?.username || 'Unknown',
+              tags: devlog.tags,
+              createdAt: new Date(devlog.created_at),
+              likes: devlog.likes,
+            };
+          })
+        );
+        
+        setDevLogs(devLogsWithAuthors);
+      } catch (error) {
+        console.error('Failed to load devlogs:', error);
+        toast.error('Failed to load devlogs');
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    // Save to user's devlogs
-    const userDevLogs = JSON.parse(localStorage.getItem(`devlogs_${user.id}`) || '[]');
-    userDevLogs.push(newDevLog);
-    localStorage.setItem(`devlogs_${user.id}`, JSON.stringify(userDevLogs));
+    loadDevLogs();
+  }, []);
 
-    // Update state
-    setDevLogs(getUserDevLogs());
+  const handleCreateDevLog = async (data: CreateDevLogData) => {
+    if (!user) return;
 
-    // Award achievement for first devlog
-    const achievements = JSON.parse(localStorage.getItem(`achievements_${user.id}`) || '[]');
-    if (!achievements.some((a: any) => a.id === 'journalist')) {
-      const newAchievement = {
-        id: 'journalist',
+    try {
+      await dbOps.createDevLog({
+        user_id: user.id,
+        title: data.title,
+        content: data.content,
+        tags: data.tags,
+        likes: 0,
+      });
+
+      // Reload devlogs
+      const dbDevLogs = await dbOps.getAllDevLogs();
+      const devLogsWithAuthors = await Promise.all(
+        dbDevLogs.map(async (devlog: any) => {
+          const userData = await dbOps.getUserById(devlog.user_id);
+          return {
+            id: devlog.id,
+            title: devlog.title,
+            content: devlog.content,
+            author: userData?.username || 'Unknown',
+            tags: devlog.tags,
+            createdAt: new Date(devlog.created_at),
+            likes: devlog.likes,
+          };
+        })
+      );
+      setDevLogs(devLogsWithAuthors);
+
+      // Award achievement for first devlog
+      await dbOps.createAchievement({
+        user_id: user.id,
+        achievement_id: 'journalist',
         name: 'Journalist',
         description: 'User writes their first devlog',
         icon: 'file-text',
-        unlockedAt: new Date()
-      };
-      achievements.push(newAchievement);
-      localStorage.setItem(`achievements_${user.id}`, JSON.stringify(achievements));
-      toast.success('Achievement unlocked: Journalist! 📝');
-    }
+      });
 
-    toast.success('DevLog published successfully!');
+      toast.success('DevLog published successfully!');
+      toast.success('Achievement unlocked: Journalist! 📝');
+    } catch (error) {
+      console.error('Failed to create devlog:', error);
+      toast.error('Failed to create devlog');
+    }
   };
 
   const handleLike = (logId: string) => {
@@ -95,6 +121,19 @@ export const DevLogs: React.FC = () => {
       default: return 0;
     }
   });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen pt-20 sm:pt-44 px-4">
+        <div className="max-w-4xl mx-auto py-8">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-cyber-blue border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-white/70">Loading DevLogs...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen pt-20 sm:pt-44 px-4">

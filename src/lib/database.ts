@@ -39,6 +39,106 @@ export const saveDatabase = () => {
   }
 };
 
+// Export database as downloadable file
+export const exportDatabase = () => {
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+  
+  const data = db.export();
+  return data;
+};
+
+// Download database as .db file
+export const downloadDatabase = (filename: string = 'devverse.db') => {
+  try {
+    const data = exportDatabase();
+    const blob = new Blob([data], { type: 'application/x-sqlite3' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.style.display = 'none';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    URL.revokeObjectURL(url);
+    
+    return true;
+  } catch (error) {
+    console.error('Failed to download database:', error);
+    return false;
+  }
+};
+
+// Import database from file
+export const importDatabase = async (file: File): Promise<boolean> => {
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    
+    // Initialize SQL.js if not already done
+    if (!SQL) {
+      SQL = await initSqlJs({
+        locateFile: (file: string) => `https://sql.js.org/dist/${file}`
+      });
+    }
+    
+    // Create new database from file
+    db = new SQL.Database(uint8Array);
+    
+    // Save to localStorage
+    saveDatabase();
+    
+    return true;
+  } catch (error) {
+    console.error('Failed to import database:', error);
+    return false;
+  }
+};
+
+// Get database statistics
+export const getDatabaseStats = async () => {
+  await initDatabase();
+  
+  const stats = {
+    users: 0,
+    projects: 0,
+    planets: 0,
+    devlogs: 0,
+    achievements: 0,
+    battles: 0,
+    size: 0
+  };
+  
+  try {
+    // Count records in each table
+    const tables = ['users', 'projects', 'dev_planets', 'devlogs', 'achievements', 'code_battles'];
+    
+    for (const table of tables) {
+      const stmt = db.prepare(`SELECT COUNT(*) as count FROM ${table}`);
+      const result = stmt.getAsObject();
+      stmt.free();
+      
+      const key = table === 'dev_planets' ? 'planets' : 
+                  table === 'code_battles' ? 'battles' : table;
+      stats[key as keyof typeof stats] = result.count as number;
+    }
+    
+    // Calculate database size
+    const data = db.export();
+    stats.size = data.length;
+    
+  } catch (error) {
+    console.error('Failed to get database stats:', error);
+  }
+  
+  return stats;
+};
+
 // Create all tables
 const createTables = async () => {
   const createTablesSQL = `

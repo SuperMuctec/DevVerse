@@ -18,7 +18,11 @@ import {
   Code,
   Plus,
   ExternalLink,
-  Loader
+  Loader,
+  Download,
+  Upload,
+  Database,
+  HardDrive
 } from 'lucide-react';
 import { GlassPanel } from '../ui/GlassPanel';
 import { LanguageChart } from '../ui/PieChart';
@@ -26,6 +30,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { CreateProjectModal } from '../modals/CreateProjectModal';
 import { ProfilePictureModal } from '../modals/ProfilePictureModal';
 import { Project, CreateProjectData } from '../../types';
+import { downloadDatabase, importDatabase, getDatabaseStats } from '../../lib/database';
 import { toast } from 'react-hot-toast';
 
 const profileSchema = z.object({
@@ -58,11 +63,13 @@ interface ProjectWithLanguages extends Project {
 }
 
 export const UserPanel: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'profile' | 'projects' | 'security'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'projects' | 'security' | 'database'>('profile');
   const [isEditing, setIsEditing] = useState(false);
   const [showCreateProject, setShowCreateProject] = useState(false);
   const [showProfilePicture, setShowProfilePicture] = useState(false);
   const [projectsWithLanguages, setProjectsWithLanguages] = useState<ProjectWithLanguages[]>([]);
+  const [dbStats, setDbStats] = useState<any>(null);
+  const [isLoadingStats, setIsLoadingStats] = useState(false);
   const { user, updateUser, addXP } = useAuth();
 
   const profileForm = useForm<ProfileFormData>({
@@ -79,6 +86,26 @@ export const UserPanel: React.FC = () => {
   const passwordForm = useForm<PasswordFormData>({
     resolver: zodResolver(passwordSchema),
   });
+
+  // Load database stats when database tab is active
+  useEffect(() => {
+    if (activeTab === 'database') {
+      loadDatabaseStats();
+    }
+  }, [activeTab]);
+
+  const loadDatabaseStats = async () => {
+    setIsLoadingStats(true);
+    try {
+      const stats = await getDatabaseStats();
+      setDbStats(stats);
+    } catch (error) {
+      console.error('Failed to load database stats:', error);
+      toast.error('Failed to load database statistics');
+    } finally {
+      setIsLoadingStats(false);
+    }
+  };
 
   // Fetch GitHub languages for a repository
   const fetchGitHubLanguages = async (githubUrl: string): Promise<GitHubLanguages | null> => {
@@ -230,6 +257,61 @@ export const UserPanel: React.FC = () => {
     toast.success('Project created successfully!');
   };
 
+  const handleDownloadDatabase = () => {
+    try {
+      const timestamp = new Date().toISOString().split('T')[0];
+      const filename = `devverse_${timestamp}.db`;
+      const success = downloadDatabase(filename);
+      
+      if (success) {
+        toast.success(`Database downloaded as ${filename}! 📁`);
+      } else {
+        toast.error('Failed to download database');
+      }
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.error('Failed to download database');
+    }
+  };
+
+  const handleImportDatabase = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.db') && !file.name.endsWith('.sqlite') && !file.name.endsWith('.sqlite3')) {
+      toast.error('Please select a valid SQLite database file (.db, .sqlite, .sqlite3)');
+      return;
+    }
+
+    try {
+      const success = await importDatabase(file);
+      
+      if (success) {
+        toast.success('Database imported successfully! Reloading...');
+        // Reload the page to reflect the new database
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } else {
+        toast.error('Failed to import database');
+      }
+    } catch (error) {
+      console.error('Import error:', error);
+      toast.error('Failed to import database');
+    }
+    
+    // Reset the input
+    event.target.value = '';
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
   const getLanguageColor = (language: string) => {
     const colors: { [key: string]: string } = {
       TypeScript: '#3178c6',
@@ -261,6 +343,7 @@ export const UserPanel: React.FC = () => {
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'projects', label: 'Projects', icon: Code },
     { id: 'security', label: 'Security', icon: Lock },
+    { id: 'database', label: 'Database', icon: Database },
   ];
 
   return (
@@ -699,6 +782,135 @@ export const UserPanel: React.FC = () => {
                     >
                       Delete Account
                     </motion.button>
+                  </div>
+                </div>
+              </GlassPanel>
+            )}
+
+            {activeTab === 'database' && (
+              <GlassPanel glowColor="#00ffff">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="font-orbitron text-2xl font-bold text-white">
+                    Database Management
+                  </h2>
+                  <motion.button
+                    onClick={loadDatabaseStats}
+                    disabled={isLoadingStats}
+                    className="flex items-center space-x-2 px-4 py-2 bg-cyber-blue/20 text-cyber-blue rounded-lg hover:bg-cyber-blue/30 transition-colors disabled:opacity-50"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    {isLoadingStats ? (
+                      <Loader className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Database className="w-4 h-4" />
+                    )}
+                    <span>Refresh Stats</span>
+                  </motion.button>
+                </div>
+
+                {/* Database Statistics */}
+                {dbStats && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+                    {[
+                      { label: 'Users', value: dbStats.users, color: '#00ffff' },
+                      { label: 'Projects', value: dbStats.projects, color: '#ff00ff' },
+                      { label: 'Planets', value: dbStats.planets, color: '#ffff00' },
+                      { label: 'DevLogs', value: dbStats.devlogs, color: '#00ff00' },
+                      { label: 'Achievements', value: dbStats.achievements, color: '#ff6600' },
+                      { label: 'Battles', value: dbStats.battles, color: '#6600ff' },
+                    ].map((stat, index) => (
+                      <motion.div
+                        key={stat.label}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        className="bg-white/5 border border-white/10 rounded-lg p-4 text-center"
+                      >
+                        <div 
+                          className="text-2xl font-orbitron font-bold mb-1"
+                          style={{ color: stat.color }}
+                        >
+                          {stat.value}
+                        </div>
+                        <div className="text-white/70 text-sm">{stat.label}</div>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Database Size */}
+                {dbStats && (
+                  <div className="bg-white/5 border border-white/10 rounded-lg p-4 mb-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <HardDrive className="w-5 h-5 text-cyber-blue" />
+                        <span className="font-semibold text-white">Database Size</span>
+                      </div>
+                      <span className="text-cyber-blue font-mono">
+                        {formatFileSize(dbStats.size)}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Database Actions */}
+                <div className="space-y-4">
+                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                    <h3 className="font-semibold text-blue-400 mb-2 flex items-center space-x-2">
+                      <Download className="w-4 h-4" />
+                      <span>Export Database</span>
+                    </h3>
+                    <p className="text-white/70 text-sm mb-3">
+                      Download your DevVerse³ database as a .db file to your computer. This creates a backup of all your data including users, projects, planets, and achievements.
+                    </p>
+                    <motion.button
+                      onClick={handleDownloadDatabase}
+                      className="flex items-center space-x-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 px-4 py-2 rounded-lg transition-colors"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>Download Database</span>
+                    </motion.button>
+                  </div>
+
+                  <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                    <h3 className="font-semibold text-green-400 mb-2 flex items-center space-x-2">
+                      <Upload className="w-4 h-4" />
+                      <span>Import Database</span>
+                    </h3>
+                    <p className="text-white/70 text-sm mb-3">
+                      Import a previously exported .db file to restore your data. This will replace your current database entirely.
+                    </p>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="file"
+                        accept=".db,.sqlite,.sqlite3"
+                        onChange={handleImportDatabase}
+                        className="hidden"
+                        id="database-import"
+                      />
+                      <motion.label
+                        htmlFor="database-import"
+                        className="flex items-center space-x-2 bg-green-500/20 hover:bg-green-500/30 text-green-400 px-4 py-2 rounded-lg transition-colors cursor-pointer"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Upload className="w-4 h-4" />
+                        <span>Import Database</span>
+                      </motion.label>
+                    </div>
+                  </div>
+
+                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+                    <h3 className="font-semibold text-yellow-400 mb-2">⚠️ Important Notes</h3>
+                    <ul className="text-white/70 text-sm space-y-1">
+                      <li>• Database files are stored locally in your browser</li>
+                      <li>• Importing a database will completely replace your current data</li>
+                      <li>• Always backup your database before making major changes</li>
+                      <li>• Database files are compatible across different browsers</li>
+                    </ul>
                   </div>
                 </div>
               </GlassPanel>
