@@ -6,6 +6,7 @@ import { GlassPanel } from '../ui/GlassPanel';
 import { CreateBattleModal } from '../modals/CreateBattleModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { CodeBattle, BattleProblem, CreateBattleData } from '../../types';
+import { dbOps } from '../../lib/database';
 import { toast } from 'react-hot-toast';
 
 export const CodeArena: React.FC = () => {
@@ -23,20 +24,52 @@ export const CodeArena: React.FC = () => {
     currentStreak: 0
   });
   const [codeHistory, setCodeHistory] = useState<{[key: string]: {[key: string]: string}}>({});
+  const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
 
   // Load user challenges and stats
   useEffect(() => {
-    if (user) {
-      const challenges = JSON.parse(localStorage.getItem(`challenges_${user.id}`) || '[]');
-      setUserChallenges(challenges);
-      
-      const stats = JSON.parse(localStorage.getItem(`arena_stats_${user.id}`) || JSON.stringify(userStats));
-      setUserStats(stats);
+    const loadChallenges = async () => {
+      if (user) {
+        try {
+          const challenges = await dbOps.getCodeBattlesByUserId(user.id);
+          const formattedChallenges = challenges.map((battle: any) => ({
+            id: battle.id,
+            title: battle.title,
+            description: battle.description,
+            difficulty: battle.difficulty as 'easy' | 'medium' | 'hard',
+            timeLimit: battle.time_limit,
+            participants: [],
+            status: battle.status as 'waiting' | 'active' | 'completed',
+            createdAt: new Date(battle.created_at),
+            problem: {
+              title: battle.problem_title,
+              description: battle.problem_description,
+              examples: battle.examples,
+              constraints: battle.constraints,
+              testCases: battle.examples.map((ex: any) => ({
+                input: ex.input,
+                expectedOutput: ex.output
+              }))
+            }
+          }));
+          
+          setUserChallenges(formattedChallenges);
+          
+          const stats = JSON.parse(localStorage.getItem(`arena_stats_${user.id}`) || JSON.stringify(userStats));
+          setUserStats(stats);
 
-      const history = JSON.parse(localStorage.getItem(`code_history_${user.id}`) || '{}');
-      setCodeHistory(history);
-    }
+          const history = JSON.parse(localStorage.getItem(`code_history_${user.id}`) || '{}');
+          setCodeHistory(history);
+        } catch (error) {
+          console.error('Failed to load challenges:', error);
+          toast.error('Failed to load challenges');
+        }
+      }
+      setIsLoading(false);
+    };
+
+    loadChallenges();
   }, [user?.id]);
 
   // Timer effect
@@ -70,33 +103,63 @@ export const CodeArena: React.FC = () => {
     }
   }, [code, selectedBattle, user, language]);
 
-  const handleCreateBattle = (data: CreateBattleData) => {
-    const newBattle: CodeBattle = {
-      id: Date.now().toString(),
-      ...data,
-      participants: [],
-      status: 'waiting',
-      createdAt: new Date(),
-      problem: {
-        title: data.problemTitle,
-        description: data.problemDescription,
+  const handleCreateBattle = async (data: CreateBattleData) => {
+    if (!user) return;
+
+    try {
+      await dbOps.createCodeBattle({
+        user_id: user.id,
+        title: data.title,
+        description: data.description,
+        difficulty: data.difficulty,
+        time_limit: data.timeLimit,
+        problem_title: data.problemTitle,
+        problem_description: data.problemDescription,
         examples: data.examples,
         constraints: data.constraints,
-        testCases: data.examples.map(ex => ({
-          input: ex.input,
-          expectedOutput: ex.output
-        }))
-      }
-    };
+        status: 'waiting'
+      });
 
-    if (user) {
-      const challenges = JSON.parse(localStorage.getItem(`challenges_${user.id}`) || '[]');
-      challenges.push(newBattle);
-      localStorage.setItem(`challenges_${user.id}`, JSON.stringify(challenges));
-      setUserChallenges(challenges);
+      // Reload challenges
+      const challenges = await dbOps.getCodeBattlesByUserId(user.id);
+      const formattedChallenges = challenges.map((battle: any) => ({
+        id: battle.id,
+        title: battle.title,
+        description: battle.description,
+        difficulty: battle.difficulty as 'easy' | 'medium' | 'hard',
+        timeLimit: battle.time_limit,
+        participants: [],
+        status: battle.status as 'waiting' | 'active' | 'completed',
+        createdAt: new Date(battle.created_at),
+        problem: {
+          title: battle.problem_title,
+          description: battle.problem_description,
+          examples: battle.examples,
+          constraints: battle.constraints,
+          testCases: battle.examples.map((ex: any) => ({
+            input: ex.input,
+            expectedOutput: ex.output
+          }))
+        }
+      }));
+      
+      setUserChallenges(formattedChallenges);
+
+      // Award achievement for creating first challenge
+      await dbOps.createAchievement({
+        user_id: user.id,
+        achievement_id: 'warrior',
+        name: 'A Warrior',
+        description: 'User completes their first code arena',
+        icon: 'sword',
+      });
+
+      toast.success('Challenge created successfully!');
+      toast.success('Achievement unlocked: A Warrior! ⚔️');
+    } catch (error) {
+      console.error('Failed to create challenge:', error);
+      toast.error('Failed to create challenge');
     }
-
-    toast.success('Challenge created successfully!');
   };
 
   const formatTime = (seconds: number) => {
@@ -194,18 +257,6 @@ export const CodeArena: React.FC = () => {
     const completionTime = (selectedBattle.timeLimit * 60) - timeLeft;
     
     if (testResults.passed === testResults.total) {
-      const updatedBattle = {
-        ...selectedBattle,
-        status: 'completed' as const,
-        completedAt: new Date()
-      };
-
-      const challenges = userChallenges.map(c => 
-        c.id === selectedBattle.id ? updatedBattle : c
-      );
-      localStorage.setItem(`challenges_${user.id}`, JSON.stringify(challenges));
-      setUserChallenges(challenges);
-
       const newStats = {
         challengesCompleted: userStats.challengesCompleted + 1,
         averageTime: Math.floor((userStats.averageTime * userStats.challengesCompleted + completionTime) / (userStats.challengesCompleted + 1)),
@@ -214,20 +265,6 @@ export const CodeArena: React.FC = () => {
       };
       localStorage.setItem(`arena_stats_${user.id}`, JSON.stringify(newStats));
       setUserStats(newStats);
-
-      const achievements = JSON.parse(localStorage.getItem(`achievements_${user.id}`) || '[]');
-      if (!achievements.some((a: any) => a.id === 'warrior')) {
-        const newAchievement = {
-          id: 'warrior',
-          name: 'A Warrior',
-          description: 'User completes their first code arena',
-          icon: 'sword',
-          unlockedAt: new Date()
-        };
-        achievements.push(newAchievement);
-        localStorage.setItem(`achievements_${user.id}`, JSON.stringify(achievements));
-        toast.success('Achievement unlocked: A Warrior! ⚔️');
-      }
 
       toast.success('Challenge completed successfully! 🎉');
       setSelectedBattle(null);
@@ -276,6 +313,19 @@ export const CodeArena: React.FC = () => {
     }
     setLanguage(newLanguage);
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen pt-20 sm:pt-44 px-4">
+        <div className="max-w-7xl mx-auto py-8">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-cyber-blue border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-white/70">Loading Code Arena...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (selectedBattle) {
     return (
@@ -804,7 +854,7 @@ export const CodeArena: React.FC = () => {
                           <span>{battle.timeLimit}min</span>
                         </motion.div>
                         <div className="flex items-center space-x-1">
-                          <span>Created {new Date(battle.createdAt).toLocaleDateString()}</span>
+                          <span>Created {battle.createdAt.toLocaleDateString()}</span>
                         </div>
                       </div>
 

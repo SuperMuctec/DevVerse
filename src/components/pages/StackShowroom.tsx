@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Filter, TrendingUp, User, Eye, Heart, Star } from 'lucide-react';
 import { GlassPanel } from '../ui/GlassPanel';
+import { dbOps } from '../../lib/database';
 
 interface StackShowroomProps {
   onNavigateToUser: (userId: string) => void;
@@ -11,6 +12,8 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser }
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [sortBy, setSortBy] = useState('recent');
+  const [allPlanets, setAllPlanets] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const filters = [
     { id: 'all', label: 'All Planets' },
@@ -27,17 +30,34 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser }
     { id: 'owner', label: 'Owner Name' },
   ];
 
-  // Get user-created planets from localStorage
-  const getUserPlanets = () => {
-    const users = JSON.parse(localStorage.getItem('devverse_users') || '[]');
-    return users.map((user: any) => ({
-      ...user.planet,
-      owner: user.username,
-      ownerId: user.id
-    })).filter((planet: any) => planet && planet.name);
-  };
+  // Load planets from database
+  useEffect(() => {
+    const loadPlanets = async () => {
+      try {
+        const planets = await dbOps.getAllPlanets();
+        
+        // Get user data for each planet
+        const planetsWithOwners = await Promise.all(
+          planets.map(async (planet: any) => {
+            const userData = await dbOps.getUserById(planet.user_id);
+            return {
+              ...planet,
+              owner: userData?.username || 'Unknown',
+              ownerId: planet.user_id
+            };
+          })
+        );
+        
+        setAllPlanets(planetsWithOwners);
+      } catch (error) {
+        console.error('Failed to load planets:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const allPlanets = getUserPlanets();
+    loadPlanets();
+  }, []);
 
   // Filter and search planets
   const filteredPlanets = allPlanets.filter((planet: any) => {
@@ -47,11 +67,11 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser }
     if (selectedFilter === 'all') return matchesSearch;
     
     // Simple categorization based on tech stack
-    const hasReact = planet.stack.frameworks.some((f: string) => f.includes('React') || f.includes('Vue') || f.includes('Angular'));
-    const hasBackend = planet.stack.frameworks.some((f: string) => f.includes('Express') || f.includes('Django') || f.includes('Spring'));
-    const hasMobile = planet.stack.frameworks.some((f: string) => f.includes('React Native') || f.includes('Flutter'));
-    const hasAI = planet.stack.languages.some((l: string) => l.includes('Python')) && 
-                 planet.stack.frameworks.some((f: string) => f.includes('TensorFlow') || f.includes('PyTorch'));
+    const hasReact = planet.stack_frameworks.some((f: string) => f.includes('React') || f.includes('Vue') || f.includes('Angular'));
+    const hasBackend = planet.stack_frameworks.some((f: string) => f.includes('Express') || f.includes('Django') || f.includes('Spring'));
+    const hasMobile = planet.stack_frameworks.some((f: string) => f.includes('React Native') || f.includes('Flutter'));
+    const hasAI = planet.stack_languages.some((l: string) => l.includes('Python')) && 
+                 planet.stack_frameworks.some((f: string) => f.includes('TensorFlow') || f.includes('PyTorch'));
     
     switch (selectedFilter) {
       case 'frontend': return hasReact && matchesSearch;
@@ -68,10 +88,23 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser }
     switch (sortBy) {
       case 'name': return a.name.localeCompare(b.name);
       case 'owner': return a.owner.localeCompare(b.owner);
-      case 'recent': return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      case 'recent': return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       default: return 0;
     }
   });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen pt-20 sm:pt-44 px-4">
+        <div className="max-w-7xl mx-auto py-8">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-cyber-blue border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-white/70">Loading planets...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen pt-20 sm:pt-44 px-4">
@@ -327,7 +360,7 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser }
 
                       <div className="mb-3">
                         <div className="flex flex-wrap gap-1">
-                          {planet.stack.languages.slice(0, 2).map((lang: string, langIndex: number) => (
+                          {planet.stack_languages.slice(0, 2).map((lang: string, langIndex: number) => (
                             <motion.span
                               key={lang}
                               className="px-2 py-1 bg-cyber-blue/20 text-cyber-blue text-xs rounded-full"
@@ -342,7 +375,7 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser }
                               {lang}
                             </motion.span>
                           ))}
-                          {planet.stack.languages.length > 2 && (
+                          {planet.stack_languages.length > 2 && (
                             <motion.span 
                               className="px-2 py-1 bg-white/10 text-white/70 text-xs rounded-full"
                               whileHover={{ 
@@ -350,7 +383,7 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser }
                                 backgroundColor: 'rgba(255, 255, 255, 0.2)'
                               }}
                             >
-                              +{planet.stack.languages.length - 2}
+                              +{planet.stack_languages.length - 2}
                             </motion.span>
                           )}
                         </div>
