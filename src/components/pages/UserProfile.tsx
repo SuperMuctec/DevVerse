@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { GlassPanel } from '../ui/GlassPanel';
 import { LanguageChart } from '../ui/PieChart';
+import { dbOps } from '../../lib/database';
 import { User as UserType } from '../../types';
 
 interface UserProfileProps {
@@ -49,29 +50,92 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
   const [user, setUser] = useState<UserType | null>(null);
   const [projectsWithLanguages, setProjectsWithLanguages] = useState<ProjectWithLanguages[]>([]);
 
-  // Get user data from localStorage
-  const getUserData = (): UserType | null => {
-    const users = JSON.parse(localStorage.getItem('devverse_users') || '[]');
-    const foundUser = users.find((user: any) => user.id === userId);
-    if (foundUser) {
-      // Ensure dates are properly converted
+  // Get user data from database
+  const getUserData = async (): Promise<UserType | null> => {
+    try {
+      const userData = await dbOps.getUserById(userId);
+      if (!userData) return null;
+
+      const [projects, planet, achievements] = await Promise.all([
+        dbOps.getProjectsByUserId(userId),
+        dbOps.getPlanetByUserId(userId),
+        dbOps.getAchievementsByUserId(userId)
+      ]);
+
       return {
-        ...foundUser,
-        joinedAt: new Date(foundUser.joinedAt),
-        projects: foundUser.projects?.map((project: any) => ({
-          ...project,
-          createdAt: new Date(project.createdAt),
-          updatedAt: new Date(project.updatedAt)
-        })) || []
+        id: userData.id,
+        username: userData.username,
+        email: userData.email,
+        avatar: userData.avatar,
+        bio: userData.bio,
+        location: userData.location,
+        website: userData.website,
+        xp: userData.xp,
+        level: userData.level,
+        projects: projects.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          description: p.description,
+          language: p.language,
+          githubUrl: p.github_url,
+          homepage: p.homepage,
+          topics: p.topics,
+          isPrivate: Boolean(p.is_private),
+          stars: p.stars,
+          forks: p.forks,
+          createdAt: new Date(p.created_at),
+          updatedAt: new Date(p.updated_at),
+          owner: userData.username
+        })),
+        followers: 0,
+        following: 0,
+        joinedAt: new Date(userData.created_at),
+        planet: planet ? {
+          id: planet.id,
+          name: planet.name,
+          owner: userData.username,
+          stack: {
+            languages: planet.stack_languages,
+            frameworks: planet.stack_frameworks,
+            tools: planet.stack_tools,
+            databases: planet.stack_databases,
+          },
+          position: [0, 0, 0],
+          color: planet.color,
+          size: planet.size,
+          rings: planet.rings,
+          achievements: achievements,
+          likes: planet.likes,
+          views: planet.views,
+          createdAt: new Date(planet.created_at),
+        } : {
+          id: '',
+          name: `${userData.username}'s Planet`,
+          owner: userData.username,
+          stack: { languages: [], frameworks: [], tools: [], databases: [] },
+          position: [0, 0, 0],
+          color: '#00ffff',
+          size: 1.0,
+          rings: 1,
+          achievements: [],
+          likes: 0,
+          views: 0,
+          createdAt: new Date(),
+        }
       };
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      return null;
     }
-    return null;
   };
 
   // Load user data on mount
   useEffect(() => {
-    const userData = getUserData();
-    setUser(userData);
+    const loadUserData = async () => {
+      const userData = await getUserData();
+      setUser(userData);
+    };
+    loadUserData();
   }, [userId]);
 
   // Fetch GitHub languages for a repository
@@ -283,7 +347,7 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
             </GlassPanel>
           </div>
 
-          {/* User Projects - Exact copy from Control Deck */}
+          {/* User Projects */}
           <div className="lg:col-span-2">
             <GlassPanel glowColor="#00ff00">
               <div className="flex items-center justify-between mb-6">
