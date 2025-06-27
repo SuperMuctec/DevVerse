@@ -217,6 +217,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('email', email)
         .maybeSingle();
 
+      console.log(userData)
+
       if (userError) {
         console.error('Database error:', userError);
         toast.error('Login failed');
