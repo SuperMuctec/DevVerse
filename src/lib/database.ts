@@ -5,18 +5,25 @@ export const dbOps = {
   async createUser(userData: {
     username: string;
     email: string;
-    password_hash: string;
+    password: string;
     avatar?: string;
   }) {
     const email = userData.email.trim().toLowerCase();
     const username = userData.username.trim().toLowerCase();
-    const password = userData.password_hash;
+    const password = userData.password;
 
-    const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password
+    });
 
     if (authError) {
-      if (authError.message.includes('User already registered') || authError.status === 422) {
-        const { data: existingUserData, error: fetchError } = await supabase.auth.admin.getUserByEmail(email);
+      if (
+        authError.message.includes('User already registered') ||
+        authError.status === 422
+      ) {
+        const { data: existingUserData, error: fetchError } =
+          await supabase.auth.admin.getUserByEmail(email);
         if (fetchError || !existingUserData?.user?.id) throw authError;
         return existingUserData.user.id;
       }
@@ -32,7 +39,6 @@ export const dbOps = {
         id: userId,
         username,
         email,
-        password_hash: password,
         avatar: userData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`
       })
       .select()
@@ -43,19 +49,34 @@ export const dbOps = {
   },
 
   async getUserByEmail(email: string) {
-    const { data, error } = await supabase.from('users').select('*').eq('email', email).single();
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .single();
+
     if (error && error.code !== 'PGRST116') throw error;
     return data || null;
   },
 
   async getUserByUsername(username: string) {
-    const { data, error } = await supabase.from('users').select('*').eq('username', username).single();
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('username', username)
+      .single();
+
     if (error && error.code !== 'PGRST116') throw error;
     return data || null;
   },
 
   async getUserById(id: string) {
-    const { data, error } = await supabase.from('users').select('*').eq('id', id).single();
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', id)
+      .single();
+
     if (error && error.code !== 'PGRST116') throw error;
     return data || null;
   },
@@ -66,7 +87,11 @@ export const dbOps = {
   },
 
   async getAllUsers() {
-    const { data, error } = await supabase.from('users').select('*').order('created_at', { ascending: false });
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .order('created_at', { ascending: false });
+
     if (error) throw error;
     return data || [];
   },
@@ -186,100 +211,3 @@ export const dbOps = {
     try {
       const { data, error } = await supabase
         .from('achievements')
-        .insert({
-          user_id: achievementData.user_id,
-          achievement_id: achievementData.achievement_id,
-          name: achievementData.name,
-          description: achievementData.description,
-          icon: achievementData.icon
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data.id;
-    } catch (error: any) {
-      if (error.code === '23505') return null; // unique constraint violation
-      throw error;
-    }
-  },
-
-  async getAchievementsByUserId(userId: string) {
-    const { data, error } = await supabase
-      .from('achievements')
-      .select('*')
-      .eq('user_id', userId)
-      .order('unlocked_at', { ascending: false });
-
-    if (error) throw error;
-    return data || [];
-  },
-
-  // Code Battles
-  async createCodeBattle(battleData: Record<string, any>) {
-    const { data, error } = await supabase
-      .from('code_battles')
-      .insert({
-        user_id: battleData.user_id,
-        title: battleData.title,
-        description: battleData.description,
-        difficulty: battleData.difficulty,
-        time_limit: battleData.time_limit,
-        problem_title: battleData.problem_title,
-        problem_description: battleData.problem_description,
-        examples: battleData.examples || [],
-        constraints: battleData.constraints || [],
-        status: battleData.status || 'waiting'
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data.id;
-  },
-
-  async getCodeBattlesByUserId(userId: string) {
-    const { data, error } = await supabase
-      .from('code_battles')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return data || [];
-  }
-};
-
-// Utility function to get table sizes
-export const getDatabaseStats = async () => {
-  const stats = {
-    users: 0,
-    projects: 0,
-    planets: 0,
-    devlogs: 0,
-    achievements: 0,
-    battles: 0
-  };
-
-  try {
-    const [users, projects, planets, devlogs, achievements, battles] = await Promise.all([
-      supabase.from('users').select('*', { count: 'exact', head: true }),
-      supabase.from('projects').select('*', { count: 'exact', head: true }),
-      supabase.from('dev_planets').select('*', { count: 'exact', head: true }),
-      supabase.from('devlogs').select('*', { count: 'exact', head: true }),
-      supabase.from('achievements').select('*', { count: 'exact', head: true }),
-      supabase.from('code_battles').select('*', { count: 'exact', head: true })
-    ]);
-
-    stats.users = users.count || 0;
-    stats.projects = projects.count || 0;
-    stats.planets = planets.count || 0;
-    stats.devlogs = devlogs.count || 0;
-    stats.achievements = achievements.count || 0;
-    stats.battles = battles.count || 0;
-  } catch (error) {
-    console.error('Failed to get database stats:', error);
-  }
-
-  return stats;
-};
