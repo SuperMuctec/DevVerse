@@ -1,213 +1,267 @@
-import { supabase } from './supabase';
+import { createClient } from '@supabase/supabase-js';
 
-export const dbOps = {
-  // Users
-  async createUser(userData: {
-    username: string;
-    email: string;
-    password: string;
-    avatar?: string;
-  }) {
-    const email = userData.email.trim().toLowerCase();
-    const username = userData.username.trim().toLowerCase();
-    const password = userData.password;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password
-    });
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables. Please connect to Supabase first.');
+}
 
-    if (authError) {
-      if (
-        authError.message.includes('User already registered') ||
-        authError.status === 422
-      ) {
-        const { data: existingUserData, error: fetchError } =
-          await supabase.auth.admin.getUserByEmail(email);
-        if (fetchError || !existingUserData?.user?.id) throw authError;
-        return existingUserData.user.id;
-      }
-      throw authError;
-    }
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-    const userId = authData?.user?.id;
-    if (!userId) throw new Error('Could not retrieve user ID from Supabase Auth');
-
-    const { data, error } = await supabase
-      .from('users')
-      .insert({
-        id: userId,
-        username,
-        email,
-        avatar: userData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data.id;
-  },
-
-  async getUserByEmail(email: string) {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email)
-      .single();
-
-    if (error && error.code !== 'PGRST116') throw error;
-    return data || null;
-  },
-
-  async getUserByUsername(username: string) {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('username', username)
-      .single();
-
-    if (error && error.code !== 'PGRST116') throw error;
-    return data || null;
-  },
-
-  async getUserById(id: string) {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (error && error.code !== 'PGRST116') throw error;
-    return data || null;
-  },
-
-  async updateUser(id: string, updates: Record<string, any>) {
-    const { error } = await supabase.from('users').update(updates).eq('id', id);
-    if (error) throw error;
-  },
-
-  async getAllUsers() {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return data || [];
-  },
-
-  // Projects
-  async createProject(projectData: Record<string, any>) {
-    const { data, error } = await supabase
-      .from('projects')
-      .insert({
-        user_id: projectData.user_id,
-        name: projectData.name,
-        description: projectData.description,
-        language: projectData.language,
-        github_url: projectData.github_url,
-        homepage: projectData.homepage || null,
-        topics: projectData.topics || [],
-        is_private: projectData.is_private || false,
-        stars: projectData.stars || 0,
-        forks: projectData.forks || 0
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data.id;
-  },
-
-  async getProjectsByUserId(userId: string) {
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return data || [];
-  },
-
-  // Dev Planets
-  async createOrUpdatePlanet(planetData: Record<string, any>) {
-    const { data: existing } = await supabase
-      .from('dev_planets')
-      .select('id')
-      .eq('user_id', planetData.user_id)
-      .single();
-
-    const payload = {
-      name: planetData.name,
-      stack_languages: planetData.stack_languages || [],
-      stack_frameworks: planetData.stack_frameworks || [],
-      stack_tools: planetData.stack_tools || [],
-      stack_databases: planetData.stack_databases || [],
-      color: planetData.color || '#00ffff',
-      size: planetData.size || 1.0,
-      rings: planetData.rings || 1
+// Database types
+export interface Database {
+  public: {
+    Tables: {
+      users: {
+        Row: {
+          id: string;
+          username: string;
+          email: string;
+          password_hash: string;
+          avatar: string | null;
+          bio: string | null;
+          location: string | null;
+          website: string | null;
+          xp: number;
+          level: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          username: string;
+          email: string;
+          password_hash: string;
+          avatar?: string | null;
+          bio?: string | null;
+          location?: string | null;
+          website?: string | null;
+          xp?: number;
+          level?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          username?: string;
+          email?: string;
+          password_hash?: string;
+          avatar?: string | null;
+          bio?: string | null;
+          location?: string | null;
+          website?: string | null;
+          xp?: number;
+          level?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      projects: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          description: string;
+          language: string;
+          github_url: string;
+          homepage: string | null;
+          topics: string[];
+          is_private: boolean;
+          stars: number;
+          forks: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          name: string;
+          description: string;
+          language: string;
+          github_url: string;
+          homepage?: string | null;
+          topics?: string[];
+          is_private?: boolean;
+          stars?: number;
+          forks?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          name?: string;
+          description?: string;
+          language?: string;
+          github_url?: string;
+          homepage?: string | null;
+          topics?: string[];
+          is_private?: boolean;
+          stars?: number;
+          forks?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      dev_planets: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          stack_languages: string[];
+          stack_frameworks: string[];
+          stack_tools: string[];
+          stack_databases: string[];
+          color: string;
+          size: number;
+          rings: number;
+          likes: number;
+          views: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          name: string;
+          stack_languages?: string[];
+          stack_frameworks?: string[];
+          stack_tools?: string[];
+          stack_databases?: string[];
+          color?: string;
+          size?: number;
+          rings?: number;
+          likes?: number;
+          views?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          name?: string;
+          stack_languages?: string[];
+          stack_frameworks?: string[];
+          stack_tools?: string[];
+          stack_databases?: string[];
+          color?: string;
+          size?: number;
+          rings?: number;
+          likes?: number;
+          views?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      devlogs: {
+        Row: {
+          id: string;
+          user_id: string;
+          title: string;
+          content: string;
+          tags: string[];
+          likes: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          title: string;
+          content: string;
+          tags?: string[];
+          likes?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          title?: string;
+          content?: string;
+          tags?: string[];
+          likes?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      achievements: {
+        Row: {
+          id: string;
+          user_id: string;
+          achievement_id: string;
+          name: string;
+          description: string;
+          icon: string;
+          unlocked_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          achievement_id: string;
+          name: string;
+          description: string;
+          icon: string;
+          unlocked_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          achievement_id?: string;
+          name?: string;
+          description?: string;
+          icon?: string;
+          unlocked_at?: string;
+        };
+      };
+      code_battles: {
+        Row: {
+          id: string;
+          user_id: string;
+          title: string;
+          description: string;
+          difficulty: string;
+          time_limit: number;
+          problem_title: string;
+          problem_description: string;
+          examples: any;
+          constraints: string[];
+          status: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          title: string;
+          description: string;
+          difficulty: string;
+          time_limit: number;
+          problem_title: string;
+          problem_description: string;
+          examples?: any;
+          constraints?: string[];
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          title?: string;
+          description?: string;
+          difficulty?: string;
+          time_limit?: number;
+          problem_title?: string;
+          problem_description?: string;
+          examples?: any;
+          constraints?: string[];
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
-
-    const query = existing
-      ? supabase.from('dev_planets').update(payload).eq('user_id', planetData.user_id)
-      : supabase.from('dev_planets').insert({ user_id: planetData.user_id, ...payload });
-
-    const { error } = await query;
-    if (error) throw error;
-  },
-
-  async getPlanetByUserId(userId: string) {
-    const { data, error } = await supabase
-      .from('dev_planets')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-
-    if (error && error.code !== 'PGRST116') throw error;
-    return data || null;
-  },
-
-  async getAllPlanets() {
-    const { data, error } = await supabase
-      .from('dev_planets')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return data || [];
-  },
-
-  // DevLogs
-  async createDevLog(devlogData: Record<string, any>) {
-    const { data, error } = await supabase
-      .from('devlogs')
-      .insert({
-        user_id: devlogData.user_id,
-        title: devlogData.title,
-        content: devlogData.content,
-        tags: devlogData.tags || [],
-        likes: devlogData.likes || 0
-      })
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data.id;
-  },
-
-  async getAllDevLogs() {
-    const { data, error } = await supabase
-      .from('devlogs')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return data || [];
-  },
-
-  // Achievements
-  async createAchievement(achievementData: Record<string, any>) {
-    try {
-      const { data, error } = await supabase
-        .from('achievements')
+  };
+}
