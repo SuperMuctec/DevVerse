@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Filter, TrendingUp, User, Eye, Heart, Star } from 'lucide-react';
+import { Search, Filter, TrendingUp, User, Heart, Star } from 'lucide-react';
 import { GlassPanel } from '../ui/GlassPanel';
 import { dbOps } from '../../lib/database';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
+import { toast } from 'react-hot-toast';
 
 interface StackShowroomProps {
   onNavigateToUser: (userId: string) => void;
@@ -16,6 +18,8 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser, 
   const [sortBy, setSortBy] = useState('recent');
   const [allPlanets, setAllPlanets] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [likedPlanets, setLikedPlanets] = useState<Set<string>>(new Set());
+  const { user } = useAuth();
 
   const filters = [
     { id: 'all', label: 'All Planets', color: '#ffffff' },
@@ -31,7 +35,6 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser, 
     { id: 'name', label: 'Planet Name' },
     { id: 'owner', label: 'Owner Name' },
     { id: 'likes', label: 'Most Liked' },
-    { id: 'views', label: 'Most Viewed' },
   ];
 
   // Helper function to get proper category label
@@ -74,6 +77,65 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser, 
     loadPlanets();
   }, []);
 
+  // Load user's liked planets
+  useEffect(() => {
+    if (user) {
+      const liked = JSON.parse(localStorage.getItem(`liked_planets_${user.id}`) || '[]');
+      setLikedPlanets(new Set(liked));
+    }
+  }, [user]);
+
+  // Handle like functionality
+  const handleLike = async (planetId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent navigation when clicking heart
+    
+    if (!user) {
+      toast.error('Please log in to like planets');
+      return;
+    }
+
+    try {
+      const isLiked = likedPlanets.has(planetId);
+      const newLikeCount = isLiked ? -1 : 1;
+
+      // Update in database
+      const { error } = await supabase.rpc('update_planet_likes', {
+        planet_id: planetId,
+        increment_value: newLikeCount
+      });
+
+      if (error) {
+        console.error('Error updating likes:', error);
+        toast.error('Failed to update like');
+        return;
+      }
+
+      // Update local state
+      const newLikedPlanets = new Set(likedPlanets);
+      if (isLiked) {
+        newLikedPlanets.delete(planetId);
+        toast.success('Removed like');
+      } else {
+        newLikedPlanets.add(planetId);
+        toast.success('Planet liked! ❤️');
+      }
+      
+      setLikedPlanets(newLikedPlanets);
+      localStorage.setItem(`liked_planets_${user.id}`, JSON.stringify([...newLikedPlanets]));
+
+      // Update planets list
+      setAllPlanets(prev => prev.map(planet => 
+        planet.id === planetId 
+          ? { ...planet, likes: (planet.likes || 0) + newLikeCount }
+          : planet
+      ));
+
+    } catch (error) {
+      console.error('Error handling like:', error);
+      toast.error('Failed to update like');
+    }
+  };
+
   // Filter and search planets
   const filteredPlanets = allPlanets.filter((planet: any) => {
     const matchesSearch = planet.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -109,7 +171,6 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser, 
       case 'name': return a.name.localeCompare(b.name);
       case 'owner': return a.owner.localeCompare(b.owner);
       case 'likes': return (b.likes || 0) - (a.likes || 0);
-      case 'views': return (b.views || 0) - (a.views || 0);
       case 'recent': return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       default: return 0;
     }
@@ -445,20 +506,29 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser, 
 
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3 text-xs text-white/60">
-                          <motion.div 
-                            className="flex items-center space-x-1"
-                            whileHover={{ scale: 1.1, color: '#ff0000' }}
+                          <motion.button
+                            onClick={(e) => handleLike(planet.id, e)}
+                            className={`flex items-center space-x-1 transition-colors ${
+                              likedPlanets.has(planet.id) 
+                                ? 'text-red-400' 
+                                : 'text-white/60 hover:text-red-400'
+                            }`}
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.9 }}
                           >
-                            <Heart className="w-3 h-3" />
+                            <motion.div
+                              animate={likedPlanets.has(planet.id) ? { 
+                                scale: [1, 1.3, 1],
+                                rotateZ: [0, 10, -10, 0]
+                              } : {}}
+                              transition={{ duration: 0.5 }}
+                            >
+                              <Heart 
+                                className={`w-3 h-3 ${likedPlanets.has(planet.id) ? 'fill-current' : ''}`} 
+                              />
+                            </motion.div>
                             <span>{planet.likes || 0}</span>
-                          </motion.div>
-                          <motion.div 
-                            className="flex items-center space-x-1"
-                            whileHover={{ scale: 1.1, color: '#00ff00' }}
-                          >
-                            <Eye className="w-3 h-3" />
-                            <span>{planet.views || 0}</span>
-                          </motion.div>
+                          </motion.button>
                         </div>
                         <motion.button
                           className="px-3 py-1 bg-gradient-to-r from-cyber-blue to-cyber-pink rounded-full text-xs font-semibold transition-all duration-300"

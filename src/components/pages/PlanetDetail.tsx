@@ -5,7 +5,6 @@ import {
   User, 
   Calendar, 
   Heart, 
-  Eye, 
   Star,
   Code,
   Database,
@@ -19,6 +18,8 @@ import {
 import { GlassPanel } from '../ui/GlassPanel';
 import { supabase } from '../../lib/supabase';
 import { dbOps } from '../../lib/database';
+import { useAuth } from '../../contexts/AuthContext';
+import { toast } from 'react-hot-toast';
 
 interface PlanetDetailProps {
   planetId: string;
@@ -30,6 +31,8 @@ export const PlanetDetail: React.FC<PlanetDetailProps> = ({ planetId, onBack, on
   const [planet, setPlanet] = useState<any>(null);
   const [owner, setOwner] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLiked, setIsLiked] = useState(false);
+  const { user } = useAuth();
 
   const categoryOptions = [
     { id: 'frontend', label: 'Frontend', color: '#00ffff' },
@@ -71,6 +74,12 @@ export const PlanetDetail: React.FC<PlanetDetailProps> = ({ planetId, onBack, on
         
         setPlanet(planetData);
         setOwner(ownerData);
+
+        // Check if user has liked this planet
+        if (user) {
+          const liked = JSON.parse(localStorage.getItem(`liked_planets_${user.id}`) || '[]');
+          setIsLiked(liked.includes(planetId));
+        }
       } catch (error) {
         console.error('Error loading planet data:', error);
       } finally {
@@ -79,7 +88,56 @@ export const PlanetDetail: React.FC<PlanetDetailProps> = ({ planetId, onBack, on
     };
 
     loadPlanetData();
-  }, [planetId]);
+  }, [planetId, user]);
+
+  // Handle like functionality
+  const handleLike = async () => {
+    if (!user) {
+      toast.error('Please log in to like planets');
+      return;
+    }
+
+    try {
+      const newLikeCount = isLiked ? -1 : 1;
+
+      // Update in database
+      const { error } = await supabase.rpc('update_planet_likes', {
+        planet_id: planetId,
+        increment_value: newLikeCount
+      });
+
+      if (error) {
+        console.error('Error updating likes:', error);
+        toast.error('Failed to update like');
+        return;
+      }
+
+      // Update local state
+      const liked = JSON.parse(localStorage.getItem(`liked_planets_${user.id}`) || '[]');
+      let newLiked;
+      
+      if (isLiked) {
+        newLiked = liked.filter((id: string) => id !== planetId);
+        toast.success('Removed like');
+      } else {
+        newLiked = [...liked, planetId];
+        toast.success('Planet liked! ❤️');
+      }
+      
+      localStorage.setItem(`liked_planets_${user.id}`, JSON.stringify(newLiked));
+      setIsLiked(!isLiked);
+
+      // Update planet likes count
+      setPlanet((prev: any) => ({
+        ...prev,
+        likes: (prev.likes || 0) + newLikeCount
+      }));
+
+    } catch (error) {
+      console.error('Error handling like:', error);
+      toast.error('Failed to update like');
+    }
+  };
 
   const getStackCategoryIcon = (category: string) => {
     switch (category) {
@@ -234,20 +292,34 @@ export const PlanetDetail: React.FC<PlanetDetailProps> = ({ planetId, onBack, on
                 </motion.h1>
 
                 {/* Planet Stats */}
-                <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="grid grid-cols-1 gap-4 mb-6">
                   <div className="text-center">
-                    <div className="flex items-center justify-center space-x-1 text-red-400 mb-1">
-                      <Heart className="w-4 h-4" />
-                      <span className="font-bold">{planet.likes}</span>
+                    <motion.button
+                      onClick={handleLike}
+                      className={`flex items-center justify-center space-x-2 mx-auto transition-colors ${
+                        isLiked 
+                          ? 'text-red-400' 
+                          : 'text-white/60 hover:text-red-400'
+                      }`}
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                    >
+                      <motion.div
+                        animate={isLiked ? { 
+                          scale: [1, 1.3, 1],
+                          rotateZ: [0, 10, -10, 0]
+                        } : {}}
+                        transition={{ duration: 0.5 }}
+                      >
+                        <Heart 
+                          className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} 
+                        />
+                      </motion.div>
+                      <span className="font-bold">{planet.likes || 0}</span>
+                    </motion.button>
+                    <div className="text-white/60 text-sm mt-1">
+                      {isLiked ? 'You liked this' : 'Click to like'}
                     </div>
-                    <div className="text-white/60 text-sm">Likes</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="flex items-center justify-center space-x-1 text-blue-400 mb-1">
-                      <Eye className="w-4 h-4" />
-                      <span className="font-bold">{planet.views}</span>
-                    </div>
-                    <div className="text-white/60 text-sm">Views</div>
                   </div>
                 </div>
 
