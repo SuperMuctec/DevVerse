@@ -31,9 +31,6 @@ const AppContent: React.FC = () => {
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-cyber-blue border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-white font-orbitron">Initializing DevVerse³...</p>
-          {!import.meta.env.VITE_SUPABASE_URL && (
-            <p className="text-white/60 text-sm mt-2">Running in demo mode - database not connected</p>
-          )}
         </div>
       </div>
     );
