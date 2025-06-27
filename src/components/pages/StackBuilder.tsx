@@ -76,29 +76,29 @@ export const StackBuilder: React.FC = () => {
     }
 
     if (user?.planet) {
-      const updatedPlanet = {
-        ...user.planet,
-        name: planetName,
-        stack: stack,
-        categories: selectedCategories
-      };
-      updateUser({ planet: updatedPlanet });
-      
-      await supabase
-  .from('dev_planets')
-  .insert({
-    user_id: user.id,
-    name: planetName,
-    stack_languages: stack.languages,
-    stack_frameworks: stack.frameworks,
-    stack_tools: stack.tools,
-    stack_databases: stack.databases,
-    categories: selectedCategories,
-    color: user.planet.color,
-    size: user.planet.size,
-    rings: user.planet.rings,
-  });
-
+      try {
+        const updatedPlanet = {
+          ...user.planet,
+          name: planetName,
+          stack: stack,
+          categories: selectedCategories
+        };
+        updateUser({ planet: updatedPlanet });
+        
+        await supabase
+          .from('dev_planets')
+          .insert({
+            user_id: user.id,
+            name: planetName,
+            stack_languages: stack.languages,
+            stack_frameworks: stack.frameworks,
+            stack_tools: stack.tools,
+            stack_databases: stack.databases,
+            categories: selectedCategories,
+            color: user.planet.color,
+            size: user.planet.size,
+            rings: user.planet.rings,
+          });
 
         // Award achievement for creating first planet
         await supabase
