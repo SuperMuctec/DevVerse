@@ -47,6 +47,11 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onPageChange }) => 
     setIsMobileMenuOpen(false);
   };
 
+  const handleLogout = () => {
+    logout();
+    setIsMobileMenuOpen(false);
+  };
+
   return (
     <>
       <motion.nav
@@ -199,7 +204,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onPageChange }) => 
               className="lg:hidden mt-2 mx-2 sm:mx-4"
             >
               <div className="glass-panel">
-                <div className="grid grid-cols-2 gap-2 p-2">
+                <div className="grid grid-cols-2 gap-2 p-2 mb-4">
                   {navItems.map((item, index) => (
                     <motion.button
                       key={item.id}
@@ -241,15 +246,81 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onPageChange }) => 
                     </motion.button>
                   ))}
                 </div>
+
+                {/* User Info and Logout in Mobile Menu */}
+                <div className="border-t border-white/10 pt-4 pb-2">
+                  <div className="flex items-center space-x-3 px-3 py-2 mb-3">
+                    <motion.img
+                      src={user?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.username}`}
+                      alt="Avatar"
+                      className="w-10 h-10 rounded-full border-2 border-cyber-blue/50"
+                      whileHover={{ 
+                        scale: 1.1,
+                        rotateZ: 360,
+                        borderColor: '#00ffff'
+                      }}
+                      transition={{ duration: 0.6 }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <motion.span 
+                        className="font-sora text-sm font-medium text-white block truncate"
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.7, duration: 0.5 }}
+                      >
+                        {user?.username}
+                      </motion.span>
+                      <div className="flex items-center space-x-2">
+                        <motion.span 
+                          className="text-xs text-cyber-blue font-semibold"
+                          animate={{ 
+                            textShadow: [
+                              '0 0 5px #00ffff',
+                              '0 0 10px #00ffff, 0 0 15px #00ffff',
+                              '0 0 5px #00ffff'
+                            ]
+                          }}
+                          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                        >
+                          Level {level}
+                        </motion.span>
+                        <div className="w-16 h-1 bg-white/20 rounded-full overflow-hidden">
+                          <motion.div 
+                            className="h-full bg-gradient-to-r from-cyber-blue to-cyber-pink"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${progressPercentage}%` }}
+                            transition={{ delay: 1, duration: 1.5, ease: "easeOut" }}
+                          />
+                        </div>
+                        <span className="text-xs text-white/60">
+                          {currentLevelXp}/{requiredXp}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <motion.button
+                    onClick={handleLogout}
+                    className="w-full flex items-center justify-center space-x-2 px-3 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-all duration-300"
+                    whileHover={{ 
+                      scale: 1.02,
+                      boxShadow: '0 0 15px rgba(255, 0, 0, 0.3)'
+                    }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span className="font-semibold">Logout</span>
+                  </motion.button>
+                </div>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </motion.nav>
 
-      {/* User Menu - Bottom Right (Desktop) / Bottom (Mobile) */}
+      {/* Desktop User Menu - Bottom Right */}
       <motion.div 
-        className="fixed bottom-4 sm:bottom-6 right-4 sm:right-6 left-4 sm:left-auto z-40"
+        className="hidden lg:block fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-40"
         initial={{ y: 100, opacity: 0, scale: 0.8 }}
         animate={{ y: 0, opacity: 1, scale: 1 }}
         transition={{ 

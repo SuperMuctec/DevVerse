@@ -350,7 +350,7 @@ export const StackBuilder: React.FC = () => {
                       <motion.button
                         key={tech}
                         onClick={() => addToStack(category as keyof typeof stack, tech)}
-                        className={`interactive p-2 sm:p-3 rounded-lg text-xs sm:text-sm font-sora transition-all duration-300 ${
+                        className={`interactive p-3 sm:p-3 rounded-lg text-sm font-sora transition-all duration-300 min-h-[44px] ${
                           stack[category as keyof typeof stack].includes(tech)
                             ? 'bg-white/20 text-white border border-white/30'
                             : 'bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
@@ -378,6 +378,7 @@ export const StackBuilder: React.FC = () => {
                             color: [getCategoryColor(category), '#ffffff', getCategoryColor(category)]
                           } : {}}
                           transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                          className="block text-center"
                         >
                           {tech}
                         </motion.span>
@@ -467,7 +468,7 @@ export const StackBuilder: React.FC = () => {
                           <motion.span
                             key={categoryId}
                             onClick={() => toggleCategory(categoryId)}
-                            className="px-3 py-1 rounded-full text-sm font-semibold cursor-pointer"
+                            className="px-3 py-2 rounded-full text-sm font-semibold cursor-pointer min-h-[36px] flex items-center"
                             style={{ 
                               backgroundColor: `${category.color}20`,
                               color: category.color,
@@ -530,7 +531,7 @@ export const StackBuilder: React.FC = () => {
                         <motion.span
                           key={item}
                           onClick={() => removeFromStack(category as keyof typeof stack, item)}
-                          className="interactive bg-gradient-to-r from-cyber-blue/20 to-cyber-pink/20 px-2 sm:px-3 py-1 rounded-full text-xs font-sora cursor-pointer hover:from-cyber-blue/30 hover:to-cyber-pink/30 transition-all duration-300"
+                          className="interactive bg-gradient-to-r from-cyber-blue/20 to-cyber-pink/20 px-3 py-2 rounded-full text-sm font-sora cursor-pointer hover:from-cyber-blue/30 hover:to-cyber-pink/30 transition-all duration-300 min-h-[36px] flex items-center"
                           initial={{ opacity: 0, scale: 0, rotateZ: -180 }}
                           animate={{ opacity: 1, scale: 1, rotateZ: 0 }}
                           transition={{ 

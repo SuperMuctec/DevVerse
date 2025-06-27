@@ -21,7 +21,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
   const userPlanets = getUserPlanets();
 
   return (
-    <div className="min-h-screen pt-16 sm:pt-20 lg:pt-44">
+    <div className="min-h-screen pt-16 sm:pt-20 lg:pt-44 overflow-hidden">
       <FloatingElements />
       <AnimatedBackground />
       
@@ -30,7 +30,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 1 }}
-        className="relative min-h-screen flex items-center justify-center"
+        className="relative min-h-screen flex items-center justify-center overflow-hidden"
       >
         {/* 3D Canvas - Hidden on mobile for performance */}
         <div className="hidden md:block absolute inset-0">
@@ -61,8 +61,8 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
         </div>
 
         {/* Overlay Content */}
-        <div className="relative z-10 w-full">
-          <div className="flex flex-col items-center justify-center min-h-screen text-center px-4">
+        <div className="relative z-10 w-full px-4">
+          <div className="flex flex-col items-center justify-center min-h-screen text-center">
             <motion.div
               initial={{ y: 50, opacity: 0, scale: 0.8, rotateX: -30 }}
               animate={{ y: 0, opacity: 1, scale: 1, rotateX: 0 }}
