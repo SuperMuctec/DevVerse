@@ -177,7 +177,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="text-white/50 hover:text-white transition-colors flex items-center justify-center w-6 h-6 pbottom-[20px]"
+                      className="text-white/50 hover:text-white transition-colors flex items-center justify-center w-6 h-4"
                       aria-label="Toggle password visibility"
                     >
                       {showPassword ? (
