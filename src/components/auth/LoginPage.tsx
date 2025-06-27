@@ -58,7 +58,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
           >
             <motion.div
               className="w-12 h-12 bg-gradient-to-r from-cyber-blue to-cyber-pink rounded-lg flex items-center justify-center"
-              animate={{ 
+              animate={{
                 rotateY: [0, 360],
                 boxShadow: [
                   '0 0 20px rgba(0, 255, 255, 0.5)',
@@ -66,16 +66,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
                   '0 0 20px rgba(0, 255, 255, 0.5)'
                 ]
               }}
-              transition={{ 
+              transition={{
                 rotateY: { duration: 4, repeat: Infinity, ease: "linear" },
                 boxShadow: { duration: 2, repeat: Infinity, ease: "easeInOut" }
               }}
             >
               <Rocket className="w-8 h-8 text-white" />
             </motion.div>
-            <motion.span 
+            <motion.span
               className="font-orbitron text-3xl font-bold neon-text text-cyber-blue"
-              animate={{ 
+              animate={{
                 textShadow: [
                   '0 0 10px #00ffff',
                   '0 0 20px #00ffff, 0 0 30px #00ffff',
@@ -87,7 +87,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
               DevVerse³
             </motion.span>
           </motion.div>
-          <motion.h1 
+          <motion.h1
             className="font-orbitron text-2xl font-bold text-white mb-2"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -95,7 +95,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
           >
             Welcome Back, Developer
           </motion.h1>
-          <motion.p 
+          <motion.p
             className="text-white/70 font-sora"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -112,6 +112,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
         >
           <GlassPanel glowColor="#00ffff">
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+              {/* Email Field */}
               <motion.div
                 initial={{ x: -50, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
@@ -135,7 +136,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
                   />
                 </div>
                 {errors.email && (
-                  <motion.p 
+                  <motion.p
                     className="mt-1 text-sm text-red-400"
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -145,6 +146,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
                 )}
               </motion.div>
 
+              {/* Password Field */}
               <motion.div
                 initial={{ x: 50, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
@@ -166,18 +168,28 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
                     className="w-full pl-10 pr-12 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-blue focus:ring-1 focus:ring-cyber-blue transition-all duration-300 hover:bg-white/15"
                     placeholder="Enter your password"
                   />
-                  <motion.button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white transition-colors"
+                  <motion.div
+                    layout="position"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2"
                     whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
+                    whileTap={{ scale: 0.95 }}
                   >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </motion.button>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="text-white/50 hover:text-white transition-colors flex items-center justify-center w-6 h-6"
+                      aria-label="Toggle password visibility"
+                    >
+                      {showPassword ? (
+                        <EyeOff key="eyeoff" className="w-5 h-5" />
+                      ) : (
+                        <Eye key="eye" className="w-5 h-5" />
+                      )}
+                    </button>
+                  </motion.div>
                 </div>
                 {errors.password && (
-                  <motion.p 
+                  <motion.p
                     className="mt-1 text-sm text-red-400"
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -187,7 +199,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
                 )}
               </motion.div>
 
-              <motion.div 
+              {/* Remember Me */}
+              <motion.div
                 className="flex items-center justify-between"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -202,17 +215,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
                 </label>
               </motion.div>
 
+              {/* Submit Button */}
               <motion.button
                 type="submit"
                 disabled={isLoading}
                 className="w-full bg-gradient-to-r from-cyber-blue to-cyber-pink py-3 rounded-lg font-orbitron font-bold text-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                whileHover={{ 
+                whileHover={{
                   scale: 1.02,
                   boxShadow: '0 0 30px rgba(0, 255, 255, 0.5)',
                   rotateX: 5
                 }}
                 whileTap={{ scale: 0.98 }}
-                animate={isLoading ? { 
+                animate={isLoading ? {
                   background: [
                     'linear-gradient(45deg, #00ffff, #ff00ff)',
                     'linear-gradient(45deg, #ff00ff, #00ffff)',
@@ -225,7 +239,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
               </motion.button>
             </form>
 
-            <motion.div 
+            {/* Switch to Register */}
+            <motion.div
               className="mt-6 text-center"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
