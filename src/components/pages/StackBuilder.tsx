@@ -84,28 +84,21 @@ export const StackBuilder: React.FC = () => {
       };
       updateUser({ planet: updatedPlanet });
       
-      // Update the planet in the database
-      try {
-        const { error } = await supabase
-          .from('dev_planets')
-          .upsert({
-            user_id: user.id,
-            name: planetName,
-            stack_languages: stack.languages,
-            stack_frameworks: stack.frameworks,
-            stack_tools: stack.tools,
-            stack_databases: stack.databases,
-            categories: selectedCategories,
-            color: user.planet.color,
-            size: user.planet.size,
-            rings: user.planet.rings,
-          }, { onConflict: 'user_id' });
+      await supabase
+  .from('dev_planets')
+  .insert({
+    user_id: user.id,
+    name: planetName,
+    stack_languages: stack.languages,
+    stack_frameworks: stack.frameworks,
+    stack_tools: stack.tools,
+    stack_databases: stack.databases,
+    categories: selectedCategories,
+    color: user.planet.color,
+    size: user.planet.size,
+    rings: user.planet.rings,
+  });
 
-        if (error) {
-          console.error('Error updating planet:', error);
-          toast.error('Failed to update planet');
-          return;
-        }
 
         // Award achievement for creating first planet
         await supabase
