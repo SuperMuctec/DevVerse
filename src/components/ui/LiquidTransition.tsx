@@ -20,16 +20,16 @@ export const LiquidTransition: React.FC<LiquidTransitionProps> = ({
     if (isTransitioning) {
       setPhase('melt');
       
-      // Melt phase duration
+      // Ultra-fast melt phase - 300ms
       const meltTimer = setTimeout(() => {
         setPhase('reform');
         onTransitionComplete();
-      }, 800);
+      }, 300);
 
-      // Reform phase duration
+      // Ultra-fast reform phase - 600ms total
       const reformTimer = setTimeout(() => {
         setPhase('complete');
-      }, 1600);
+      }, 600);
 
       return () => {
         clearTimeout(meltTimer);
@@ -40,12 +40,13 @@ export const LiquidTransition: React.FC<LiquidTransitionProps> = ({
 
   if (!isTransitioning && phase === 'complete') return null;
 
-  const liquidDrops = Array.from({ length: 20 }, (_, i) => ({
+  // Reduced number of drops for better performance
+  const liquidDrops = Array.from({ length: 8 }, (_, i) => ({
     id: i,
     x: Math.random() * 100,
     y: Math.random() * 100,
-    size: Math.random() * 40 + 20,
-    delay: Math.random() * 0.5,
+    size: Math.random() * 30 + 15,
+    delay: Math.random() * 0.1, // Much shorter delays
     color: ['#00ffff', '#ff00ff', '#ffff00', '#00ff00'][Math.floor(Math.random() * 4)]
   }));
 
@@ -57,8 +58,9 @@ export const LiquidTransition: React.FC<LiquidTransitionProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          transition={{ duration: 0.1 }}
         >
-          {/* Liquid drops melting down */}
+          {/* Liquid drops melting down - FAST */}
           {phase === 'melt' && liquidDrops.map((drop) => (
             <motion.div
               key={`melt-${drop.id}`}
@@ -68,8 +70,8 @@ export const LiquidTransition: React.FC<LiquidTransitionProps> = ({
                 top: `${drop.y}%`,
                 width: drop.size,
                 height: drop.size,
-                background: `radial-gradient(circle, ${drop.color}80, ${drop.color}40)`,
-                filter: 'blur(2px)',
+                background: `radial-gradient(circle, ${drop.color}60, ${drop.color}20)`,
+                filter: 'blur(1px)',
               }}
               initial={{
                 scale: 0,
@@ -77,20 +79,20 @@ export const LiquidTransition: React.FC<LiquidTransitionProps> = ({
                 opacity: 0,
               }}
               animate={{
-                scale: [0, 1.5, 0.8],
-                y: [0, window.innerHeight + 100],
-                opacity: [0, 1, 0.8, 0],
-                rotate: [0, 180, 360],
+                scale: [0, 1.2, 0.6],
+                y: [0, window.innerHeight + 50],
+                opacity: [0, 0.8, 0],
+                rotate: [0, 180],
               }}
               transition={{
-                duration: 0.8,
+                duration: 0.3, // Super fast
                 delay: drop.delay,
-                ease: [0.25, 0.46, 0.45, 0.94],
+                ease: [0.4, 0, 0.6, 1], // Fast ease
               }}
             />
           ))}
 
-          {/* Liquid drops reforming up */}
+          {/* Liquid drops reforming up - FAST */}
           {phase === 'reform' && liquidDrops.map((drop) => (
             <motion.div
               key={`reform-${drop.id}`}
@@ -100,102 +102,85 @@ export const LiquidTransition: React.FC<LiquidTransitionProps> = ({
                 top: `${drop.y}%`,
                 width: drop.size,
                 height: drop.size,
-                background: `radial-gradient(circle, ${drop.color}80, ${drop.color}40)`,
-                filter: 'blur(2px)',
+                background: `radial-gradient(circle, ${drop.color}60, ${drop.color}20)`,
+                filter: 'blur(1px)',
               }}
               initial={{
                 scale: 0,
-                y: window.innerHeight + 100,
+                y: window.innerHeight + 50,
                 opacity: 0,
               }}
               animate={{
-                scale: [0, 1.2, 1],
-                y: [window.innerHeight + 100, 0],
-                opacity: [0, 0.8, 1, 0],
-                rotate: [360, 180, 0],
+                scale: [0, 1, 0.8],
+                y: [window.innerHeight + 50, 0],
+                opacity: [0, 0.8, 0],
+                rotate: [180, 0],
               }}
               transition={{
-                duration: 0.8,
+                duration: 0.3, // Super fast
                 delay: drop.delay,
-                ease: [0.55, 0.06, 0.68, 0.19],
+                ease: [0.4, 0, 0.6, 1], // Fast ease
               }}
             />
           ))}
 
-          {/* Flowing liquid overlay */}
+          {/* Fast flowing liquid overlay */}
           <motion.div
             className="absolute inset-0"
             style={{
               background: `linear-gradient(45deg, 
-                rgba(0, 255, 255, 0.1) 0%, 
-                rgba(255, 0, 255, 0.1) 25%, 
-                rgba(255, 255, 0, 0.1) 50%, 
-                rgba(0, 255, 0, 0.1) 75%, 
-                rgba(0, 255, 255, 0.1) 100%)`,
-              backgroundSize: '400% 400%',
+                rgba(0, 255, 255, 0.05) 0%, 
+                rgba(255, 0, 255, 0.05) 50%, 
+                rgba(0, 255, 255, 0.05) 100%)`,
+              backgroundSize: '200% 200%',
             }}
             animate={{
-              backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
+              backgroundPosition: ['0% 50%', '100% 50%'],
             }}
             transition={{
-              duration: 1.6,
+              duration: 0.6,
               ease: "easeInOut",
             }}
           />
 
-          {/* Page transition text */}
+          {/* Minimal page transition text */}
           <div className="absolute inset-0 flex items-center justify-center">
             <motion.div
               className="text-center"
-              initial={{ opacity: 0, scale: 0.5 }}
+              initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.5 }}
-              transition={{ duration: 0.4, delay: 0.2 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ duration: 0.2 }}
             >
               <motion.h2
-                className="font-orbitron text-2xl sm:text-4xl font-bold mb-2"
+                className="font-orbitron text-xl sm:text-2xl font-bold"
                 animate={{
-                  color: ['#00ffff', '#ff00ff', '#ffff00', '#00ff00', '#00ffff'],
-                  textShadow: [
-                    '0 0 20px #00ffff',
-                    '0 0 30px #ff00ff',
-                    '0 0 25px #ffff00',
-                    '0 0 35px #00ff00',
-                    '0 0 20px #00ffff'
-                  ]
+                  color: ['#00ffff', '#ff00ff', '#00ffff'],
                 }}
-                transition={{ duration: 1.6, ease: "easeInOut" }}
+                transition={{ duration: 0.6, ease: "easeInOut" }}
               >
-                {phase === 'melt' ? 'Dissolving Reality...' : 'Reconstructing Universe...'}
+                {phase === 'melt' ? 'Transitioning...' : toPage}
               </motion.h2>
-              <motion.p
-                className="text-white/70 font-sora"
-                animate={{ opacity: [0.5, 1, 0.5] }}
-                transition={{ duration: 1, repeat: Infinity }}
-              >
-                {fromPage} → {toPage}
-              </motion.p>
             </motion.div>
           </div>
 
-          {/* Particle effects */}
-          {Array.from({ length: 50 }).map((_, i) => (
+          {/* Reduced particle effects for performance */}
+          {Array.from({ length: 15 }).map((_, i) => (
             <motion.div
               key={`particle-${i}`}
-              className="absolute w-1 h-1 bg-white/60 rounded-full"
+              className="absolute w-0.5 h-0.5 bg-white/40 rounded-full"
               style={{
                 left: `${Math.random() * 100}%`,
                 top: `${Math.random() * 100}%`,
               }}
               animate={{
                 y: phase === 'melt' ? [0, window.innerHeight] : [window.innerHeight, 0],
-                x: [0, Math.sin(i) * 50],
-                opacity: [0, 1, 0],
-                scale: [0, 1.5, 0],
+                opacity: [0, 0.6, 0],
+                scale: [0, 1, 0],
               }}
               transition={{
-                duration: phase === 'melt' ? 0.8 : 0.8,
-                delay: Math.random() * 0.5,
+                duration: 0.3,
+                delay: Math.random() * 0.1,
                 ease: "easeInOut",
               }}
             />

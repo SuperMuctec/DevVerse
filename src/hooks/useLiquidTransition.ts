@@ -12,14 +12,17 @@ export const useLiquidTransition = () => {
     setIsTransitioning(true);
     setPendingPage(to);
 
-    // Store the completion callback
+    // Ultra-fast transition - complete in 600ms total
     const handleTransitionComplete = () => {
       onComplete();
-      setIsTransitioning(false);
-      setPendingPage(null);
+      
+      // Clean up after a short delay
+      setTimeout(() => {
+        setIsTransitioning(false);
+        setPendingPage(null);
+      }, 100);
     };
 
-    // Return the completion handler
     return handleTransitionComplete;
   }, []);
 
