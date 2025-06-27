@@ -16,8 +16,10 @@ export const dbOps = {
     const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
 
     if (authError) {
-      if (authError.message.includes('User already registered')) {
-        throw new Error('User with this email already exists');
+      if (authError.message.includes('User already registered') || authError.status === 422) {
+        const { data: existingUser, error: fetchError } = await supabase.auth.admin.getUserByEmail(email);
+        if (fetchError || !existingUser) throw authError;
+        return existingUser.user.id;
       }
       throw authError;
     }
