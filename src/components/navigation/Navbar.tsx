@@ -158,7 +158,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onPageChange }) => 
               {/* Mobile Menu Button */}
               <motion.button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="lg:hidden w-10 h-10 flex items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                className="lg:hidden p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
                 whileHover={{ 
                   scale: 1.1,
                   rotateZ: 180
@@ -173,7 +173,6 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onPageChange }) => 
                       animate={{ rotateZ: 0, opacity: 1 }}
                       exit={{ rotateZ: 180, opacity: 0 }}
                       transition={{ duration: 0.3 }}
-                      className="flex items-center justify-center"
                     >
                       <X className="w-5 h-5" />
                     </motion.div>
@@ -184,7 +183,6 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onPageChange }) => 
                       animate={{ rotateZ: 0, opacity: 1 }}
                       exit={{ rotateZ: -180, opacity: 0 }}
                       transition={{ duration: 0.3 }}
-                      className="flex items-center justify-center"
                     >
                       <Menu className="w-5 h-5" />
                     </motion.div>
