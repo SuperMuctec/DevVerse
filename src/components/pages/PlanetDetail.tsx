@@ -17,6 +17,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { GlassPanel } from '../ui/GlassPanel';
+import { supabase } from '../../lib/supabase';
 import { dbOps } from '../../lib/database';
 
 interface PlanetDetailProps {
@@ -29,6 +30,26 @@ export const PlanetDetail: React.FC<PlanetDetailProps> = ({ planetId, onBack, on
   const [planet, setPlanet] = useState<any>(null);
   const [owner, setOwner] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const categoryOptions = [
+    { id: 'frontend', label: 'Frontend', color: '#00ffff' },
+    { id: 'backend', label: 'Backend', color: '#ff00ff' },
+    { id: 'fullstack', label: 'Full Stack', color: '#ffff00' },
+    { id: 'mobile', label: 'Mobile', color: '#00ff00' },
+    { id: 'ai', label: 'AI/ML', color: '#ff6600' },
+  ];
+
+  // Helper function to get proper category label
+  const getCategoryLabel = (categoryId: string) => {
+    const category = categoryOptions.find(c => c.id === categoryId);
+    return category ? category.label : categoryId.charAt(0).toUpperCase() + categoryId.slice(1);
+  };
+
+  // Helper function to get category color
+  const getCategoryColor = (categoryId: string) => {
+    const category = categoryOptions.find(c => c.id === categoryId);
+    return category ? category.color : '#ffffff';
+  };
 
   useEffect(() => {
     const loadPlanetData = async () => {
@@ -60,7 +81,7 @@ export const PlanetDetail: React.FC<PlanetDetailProps> = ({ planetId, onBack, on
     loadPlanetData();
   }, [planetId]);
 
-  const getCategoryIcon = (category: string) => {
+  const getStackCategoryIcon = (category: string) => {
     switch (category) {
       case 'languages': return <Code className="w-4 h-4" />;
       case 'frameworks': return <Layers className="w-4 h-4" />;
@@ -70,7 +91,7 @@ export const PlanetDetail: React.FC<PlanetDetailProps> = ({ planetId, onBack, on
     }
   };
 
-  const getCategoryColor = (category: string) => {
+  const getStackCategoryColor = (category: string) => {
     switch (category) {
       case 'languages': return '#00ffff';
       case 'frameworks': return '#ff00ff';
@@ -249,7 +270,7 @@ export const PlanetDetail: React.FC<PlanetDetailProps> = ({ planetId, onBack, on
                             boxShadow: `0 0 10px ${getCategoryColor(category)}50`
                           }}
                         >
-                          {category}
+                          {getCategoryLabel(category)}
                         </motion.span>
                       ))}
                     </div>
@@ -356,14 +377,14 @@ export const PlanetDetail: React.FC<PlanetDetailProps> = ({ planetId, onBack, on
                         <motion.div
                           animate={{ 
                             rotateZ: [0, 360],
-                            color: [getCategoryColor(key.replace('stack_', '')), '#ffffff', getCategoryColor(key.replace('stack_', ''))]
+                            color: [getStackCategoryColor(key.replace('stack_', '')), '#ffffff', getStackCategoryColor(key.replace('stack_', ''))]
                           }}
                           transition={{ 
                             rotateZ: { duration: 4, repeat: Infinity, ease: "linear" },
                             color: { duration: 3, repeat: Infinity, ease: "easeInOut" }
                           }}
                         >
-                          {getCategoryIcon(key.replace('stack_', ''))}
+                          {getStackCategoryIcon(key.replace('stack_', ''))}
                         </motion.div>
                         <h3 className="font-semibold text-white">{label} ({items.length})</h3>
                       </div>
@@ -374,9 +395,9 @@ export const PlanetDetail: React.FC<PlanetDetailProps> = ({ planetId, onBack, on
                             key={item}
                             className="px-3 py-1 rounded-full text-sm font-medium"
                             style={{ 
-                              backgroundColor: `${getCategoryColor(key.replace('stack_', ''))}20`,
-                              color: getCategoryColor(key.replace('stack_', '')),
-                              border: `1px solid ${getCategoryColor(key.replace('stack_', ''))}30`
+                              backgroundColor: `${getStackCategoryColor(key.replace('stack_', ''))}20`,
+                              color: getStackCategoryColor(key.replace('stack_', '')),
+                              border: `1px solid ${getStackCategoryColor(key.replace('stack_', ''))}30`
                             }}
                             initial={{ opacity: 0, scale: 0, rotateZ: -180 }}
                             animate={{ opacity: 1, scale: 1, rotateZ: 0 }}
@@ -388,7 +409,7 @@ export const PlanetDetail: React.FC<PlanetDetailProps> = ({ planetId, onBack, on
                             whileHover={{ 
                               scale: 1.05,
                               rotateZ: 5,
-                              boxShadow: `0 5px 15px ${getCategoryColor(key.replace('stack_', ''))}40`
+                              boxShadow: `0 5px 15px ${getStackCategoryColor(key.replace('stack_', ''))}40`
                             }}
                           >
                             {item}

@@ -34,6 +34,12 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser, 
     { id: 'views', label: 'Most Viewed' },
   ];
 
+  // Helper function to get proper category label
+  const getCategoryLabel = (categoryId: string) => {
+    const filter = filters.find(f => f.id === categoryId);
+    return filter ? filter.label : categoryId.charAt(0).toUpperCase() + categoryId.slice(1);
+  };
+
   // Load planets from database
   useEffect(() => {
     const loadPlanets = async () => {
@@ -399,7 +405,7 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser, 
                                   boxShadow: `0 0 10px ${filters.find(f => f.id === category)?.color || '#ffffff'}50`
                                 }}
                               >
-                                {category}
+                                {getCategoryLabel(category)}
                               </motion.span>
                             ))}
                           </div>
