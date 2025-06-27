@@ -4,6 +4,7 @@ import { Zap, Clock, Trophy, Play, Code, CheckCircle, Plus, ArrowLeft, Eye, Spar
 import Editor from '@monaco-editor/react';
 import { GlassPanel } from '../ui/GlassPanel';
 import { CreateBattleModal } from '../modals/CreateBattleModal';
+import { AIHintSystem } from '../ai/AIHintSystem';
 import { useAuth } from '../../contexts/AuthContext';
 import { CodeBattle, BattleProblem, CreateBattleData } from '../../types';
 import { dbOps } from '../../lib/database';
@@ -25,6 +26,7 @@ export const CodeArena: React.FC = () => {
   });
   const [codeHistory, setCodeHistory] = useState<{[key: string]: {[key: string]: string}}>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [isHintUsed, setIsHintUsed] = useState(false);
   const { user } = useAuth();
 
   // Load user challenges and stats
@@ -71,6 +73,15 @@ export const CodeArena: React.FC = () => {
 
     loadChallenges();
   }, [user?.id]);
+
+  // Reset hint usage when starting a new challenge
+  useEffect(() => {
+    if (selectedBattle) {
+      const hintUsageKey = `hint_used_${selectedBattle.id}_${user?.id}`;
+      const hintUsed = localStorage.getItem(hintUsageKey) === 'true';
+      setIsHintUsed(hintUsed);
+    }
+  }, [selectedBattle, user?.id]);
 
   // Timer effect
   useEffect(() => {
@@ -162,6 +173,14 @@ export const CodeArena: React.FC = () => {
     }
   };
 
+  const handleHintUsed = () => {
+    if (selectedBattle && user) {
+      const hintUsageKey = `hint_used_${selectedBattle.id}_${user.id}`;
+      localStorage.setItem(hintUsageKey, 'true');
+      setIsHintUsed(true);
+    }
+  };
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
@@ -189,6 +208,8 @@ export const CodeArena: React.FC = () => {
         return `// ${problem.title}\npublic class Solution {\n    public int ${functionName}() {\n        // Your solution here\n        \n    }\n}`;
       case 'cpp':
         return `// ${problem.title}\n#include <vector>\nusing namespace std;\n\nclass Solution {\npublic:\n    int ${functionName}() {\n        // Your solution here\n        \n    }\n};`;
+      case 'rust':
+        return `// ${problem.title}\nimpl Solution {\n    pub fn ${functionName}() -> i32 {\n        // Your solution here\n        \n    }\n}`;
       default:
         return `// ${problem.title}\n// Your solution here`;
     }
@@ -213,20 +234,26 @@ export const CodeArena: React.FC = () => {
         
         // Basic pattern matching for different problem types
         if (selectedBattle.problem.title.toLowerCase().includes('two sum')) {
-          shouldPass = code.includes('for') && (code.includes('map') || code.includes('object') || code.includes('dict'));
+          shouldPass = code.includes('for') && (code.includes('map') || code.includes('object') || code.includes('dict') || code.includes('HashMap'));
         } else if (selectedBattle.problem.title.toLowerCase().includes('palindrome')) {
-          shouldPass = code.includes('reverse') || code.includes('charAt') || code.includes('slice');
+          shouldPass = code.includes('reverse') || code.includes('charAt') || code.includes('slice') || code.includes('chars');
         } else if (selectedBattle.problem.title.toLowerCase().includes('parentheses')) {
-          shouldPass = code.includes('stack') || code.includes('push') || code.includes('pop');
+          shouldPass = code.includes('stack') || code.includes('push') || code.includes('pop') || code.includes('Vec');
         } else {
-          // General scoring based on code complexity
-          const hasLogic = code.includes('return') || code.includes('print') || code.includes('cout');
-          const hasLoops = code.includes('for') || code.includes('while');
-          const hasConditions = code.includes('if') || code.includes('else');
-          const hasDataStructures = code.includes('array') || code.includes('list') || code.includes('map');
+          // General scoring based on code complexity and language-specific patterns
+          const hasLogic = code.includes('return') || code.includes('print') || code.includes('cout') || code.includes('println!');
+          const hasLoops = code.includes('for') || code.includes('while') || code.includes('iter');
+          const hasConditions = code.includes('if') || code.includes('else') || code.includes('match');
+          const hasDataStructures = code.includes('array') || code.includes('list') || code.includes('map') || code.includes('Vec') || code.includes('HashMap');
           
-          const complexity = (hasLogic ? 1 : 0) + (hasLoops ? 1 : 0) + (hasConditions ? 1 : 0) + (hasDataStructures ? 1 : 0);
-          shouldPass = complexity >= 2;
+          // Rust-specific patterns
+          if (language === 'rust') {
+            const hasRustPatterns = code.includes('let') || code.includes('mut') || code.includes('&') || code.includes('impl');
+            shouldPass = (hasLogic ? 1 : 0) + (hasLoops ? 1 : 0) + (hasConditions ? 1 : 0) + (hasDataStructures ? 1 : 0) + (hasRustPatterns ? 1 : 0) >= 3;
+          } else {
+            const complexity = (hasLogic ? 1 : 0) + (hasLoops ? 1 : 0) + (hasConditions ? 1 : 0) + (hasDataStructures ? 1 : 0);
+            shouldPass = complexity >= 2;
+          }
         }
         
         if (shouldPass) {
@@ -397,19 +424,31 @@ export const CodeArena: React.FC = () => {
                   )}
                 </div>
               </div>
-              <motion.button
-                onClick={() => setSelectedBattle(null)}
-                className="flex items-center space-x-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
-                whileHover={{ 
-                  scale: 1.05,
-                  rotateY: 10,
-                  boxShadow: '0 5px 15px rgba(255, 255, 255, 0.2)'
-                }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Back</span>
-              </motion.button>
+              <div className="flex items-center space-x-3">
+                {selectedBattle.status === 'active' && (
+                  <AIHintSystem
+                    problemTitle={selectedBattle.problem.title}
+                    problemDescription={selectedBattle.problem.description}
+                    difficulty={selectedBattle.difficulty}
+                    language={language}
+                    onHintUsed={handleHintUsed}
+                    isHintUsed={isHintUsed}
+                  />
+                )}
+                <motion.button
+                  onClick={() => setSelectedBattle(null)}
+                  className="flex items-center space-x-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
+                  whileHover={{ 
+                    scale: 1.05,
+                    rotateY: 10,
+                    boxShadow: '0 5px 15px rgba(255, 255, 255, 0.2)'
+                  }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back</span>
+                </motion.button>
+              </div>
             </div>
           </motion.div>
 
@@ -553,6 +592,7 @@ export const CodeArena: React.FC = () => {
                       <option value="python" className="bg-space-dark">Python</option>
                       <option value="java" className="bg-space-dark">Java</option>
                       <option value="cpp" className="bg-space-dark">C++</option>
+                      <option value="rust" className="bg-space-dark">Rust 🦀</option>
                     </motion.select>
                   </div>
 
@@ -680,7 +720,7 @@ export const CodeArena: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.6 }}
           >
-            Practice coding challenges and improve your skills
+            Practice coding challenges with AI assistance
           </motion.p>
         </motion.div>
 

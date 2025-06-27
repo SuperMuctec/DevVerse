@@ -5,6 +5,8 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Navbar } from './components/navigation/Navbar';
 import { StarField } from './components/ui/StarField';
 import { MagneticCursor } from './components/ui/MagneticCursor';
+import { LiquidTransition } from './components/ui/LiquidTransition';
+import { useLiquidTransition } from './hooks/useLiquidTransition';
 import { GalaxyView } from './components/pages/GalaxyView';
 import { StackBuilder } from './components/pages/StackBuilder';
 import { StackShowroom } from './components/pages/StackShowroom';
@@ -22,6 +24,24 @@ const AppContent: React.FC = () => {
   const [authPage, setAuthPage] = useState<'login' | 'register' | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const { isAuthenticated, isLoading } = useAuth();
+  
+  const {
+    isTransitioning,
+    fromPage,
+    toPage,
+    pendingPage,
+    startTransition,
+  } = useLiquidTransition();
+
+  const handlePageChange = (newPage: string) => {
+    if (newPage === currentPage) return;
+    
+    const transitionComplete = startTransition(currentPage, newPage, () => {
+      setCurrentPage(newPage);
+    });
+    
+    return transitionComplete;
+  };
 
   if (isLoading) {
     return (
@@ -60,7 +80,7 @@ const AppContent: React.FC = () => {
       <div className="magnetic-cursor min-h-screen bg-space-dark text-white relative overflow-x-hidden">
         <StarField />
         <MagneticCursor />
-        <Navbar currentPage={currentPage} onPageChange={setCurrentPage} />
+        <Navbar currentPage={currentPage} onPageChange={handlePageChange} />
         <main className="relative z-10">
           <UserProfile 
             userId={selectedUserId} 
@@ -72,9 +92,11 @@ const AppContent: React.FC = () => {
   }
 
   const renderPage = () => {
-    switch (currentPage) {
+    const pageToRender = isTransitioning ? currentPage : (pendingPage || currentPage);
+    
+    switch (pageToRender) {
       case 'galaxy':
-        return <GalaxyView onNavigate={setCurrentPage} />;
+        return <GalaxyView onNavigate={handlePageChange} />;
       case 'builder':
         return <StackBuilder />;
       case 'showroom':
@@ -90,7 +112,7 @@ const AppContent: React.FC = () => {
       case 'settings':
         return <UserPanel />;
       default:
-        return <GalaxyView onNavigate={setCurrentPage} />;
+        return <GalaxyView onNavigate={handlePageChange} />;
     }
   };
 
@@ -98,7 +120,15 @@ const AppContent: React.FC = () => {
     <div className="magnetic-cursor min-h-screen bg-space-dark text-white relative overflow-x-hidden">
       <StarField />
       <MagneticCursor />
-      <Navbar currentPage={currentPage} onPageChange={setCurrentPage} />
+      <Navbar currentPage={currentPage} onPageChange={handlePageChange} />
+      
+      <LiquidTransition
+        isTransitioning={isTransitioning}
+        onTransitionComplete={() => {}}
+        fromPage={fromPage}
+        toPage={toPage}
+      />
+      
       <main className="relative z-10">
         {renderPage()}
       </main>
