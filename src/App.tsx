@@ -13,6 +13,7 @@ import { CodeArena } from './components/pages/CodeArena';
 import { UserPanel } from './components/pages/UserPanel';
 import { UserSearch } from './components/pages/UserSearch';
 import { UserProfile } from './components/pages/UserProfile';
+import { PlanetDetail } from './components/pages/PlanetDetail';
 import { Nebula } from './components/pages/Nebula';
 import { LoginPage } from './components/auth/LoginPage';
 import { RegisterPage } from './components/auth/RegisterPage';
@@ -21,6 +22,7 @@ const AppContent: React.FC = () => {
   const [currentPage, setCurrentPage] = useState('galaxy');
   const [authPage, setAuthPage] = useState<'login' | 'register' | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [selectedPlanetId, setSelectedPlanetId] = useState<string | null>(null);
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
@@ -71,6 +73,24 @@ const AppContent: React.FC = () => {
     );
   }
 
+  // Handle planet detail navigation
+  if (selectedPlanetId) {
+    return (
+      <div className="magnetic-cursor min-h-screen bg-space-dark text-white relative overflow-x-hidden">
+        <StarField />
+        <MagneticCursor />
+        <Navbar currentPage={currentPage} onPageChange={setCurrentPage} />
+        <main className="relative z-10">
+          <PlanetDetail 
+            planetId={selectedPlanetId} 
+            onBack={() => setSelectedPlanetId(null)}
+            onNavigateToUser={setSelectedUserId}
+          />
+        </main>
+      </div>
+    );
+  }
+
   const renderPage = () => {
     switch (currentPage) {
       case 'galaxy':
@@ -78,7 +98,10 @@ const AppContent: React.FC = () => {
       case 'builder':
         return <StackBuilder />;
       case 'showroom':
-        return <StackShowroom onNavigateToUser={setSelectedUserId} />;
+        return <StackShowroom 
+          onNavigateToUser={setSelectedUserId} 
+          onNavigateToPlanet={setSelectedPlanetId}
+        />;
       case 'devlogs':
         return <DevLogs />;
       case 'arena':

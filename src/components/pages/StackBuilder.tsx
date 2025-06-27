@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Code, Database, PenTool as Tool, Layers, Save, Rocket, Sparkles } from 'lucide-react';
+import { Plus, Code, Database, PenTool as Tool, Layers, Save, Rocket, Sparkles, Tag } from 'lucide-react';
 import { GlassPanel } from '../ui/GlassPanel';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
@@ -14,6 +14,9 @@ export const StackBuilder: React.FC = () => {
     tools: user?.planet?.stack?.tools || [],
     databases: user?.planet?.stack?.databases || []
   });
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(
+    user?.planet?.categories || []
+  );
 
   const techOptions = {
     languages: ['TypeScript', 'JavaScript', 'Python', 'Rust', 'Go', 'Java', 'C++', 'C#', 'PHP', 'Ruby', 'Swift', 'Kotlin'],
@@ -21,6 +24,14 @@ export const StackBuilder: React.FC = () => {
     tools: ['Docker', 'Kubernetes', 'AWS', 'GitHub Actions', 'Webpack', 'Vite', 'Jenkins', 'Terraform', 'Ansible'],
     databases: ['PostgreSQL', 'MongoDB', 'Redis', 'MySQL', 'DynamoDB', 'InfluxDB', 'SQLite', 'Cassandra']
   };
+
+  const categoryOptions = [
+    { id: 'frontend', label: 'Frontend', color: '#00ffff', description: 'UI/UX focused development' },
+    { id: 'backend', label: 'Backend', color: '#ff00ff', description: 'Server-side development' },
+    { id: 'fullstack', label: 'Full Stack', color: '#ffff00', description: 'End-to-end development' },
+    { id: 'mobile', label: 'Mobile', color: '#00ff00', description: 'Mobile app development' },
+    { id: 'ai', label: 'AI/ML', color: '#ff6600', description: 'Artificial Intelligence & Machine Learning' },
+  ];
 
   const addToStack = (category: keyof typeof stack, tech: string) => {
     if (!stack[category].includes(tech)) {
@@ -38,7 +49,17 @@ export const StackBuilder: React.FC = () => {
     }));
   };
 
-  const deployPlanet = () => {
+  const toggleCategory = (categoryId: string) => {
+    if (selectedCategories.includes(categoryId)) {
+      setSelectedCategories(prev => prev.filter(id => id !== categoryId));
+    } else if (selectedCategories.length < 2) {
+      setSelectedCategories(prev => [...prev, categoryId]);
+    } else {
+      toast.error('You can select maximum 2 categories');
+    }
+  };
+
+  const deployPlanet = async () => {
     if (!planetName.trim()) {
       toast.error('Please enter a planet name');
       return;
@@ -48,34 +69,51 @@ export const StackBuilder: React.FC = () => {
       const updatedPlanet = {
         ...user.planet,
         name: planetName,
-        stack: stack
+        stack: stack,
+        categories: selectedCategories
       };
       updateUser({ planet: updatedPlanet });
       
-      // Update the planet in the users database
-      const users = JSON.parse(localStorage.getItem('devverse_users') || '[]');
-      const userIndex = users.findIndex((u: any) => u.id === user.id);
-      if (userIndex !== -1) {
-        users[userIndex].planet = updatedPlanet;
-        localStorage.setItem('devverse_users', JSON.stringify(users));
-      }
+      // Update the planet in the database
+      try {
+        const { error } = await supabase
+          .from('dev_planets')
+          .upsert({
+            user_id: user.id,
+            name: planetName,
+            stack_languages: stack.languages,
+            stack_frameworks: stack.frameworks,
+            stack_tools: stack.tools,
+            stack_databases: stack.databases,
+            categories: selectedCategories,
+            color: user.planet.color,
+            size: user.planet.size,
+            rings: user.planet.rings,
+          }, { onConflict: 'user_id' });
 
-      // Award achievement for creating first planet
-      const achievements = JSON.parse(localStorage.getItem(`achievements_${user.id}`) || '[]');
-      if (!achievements.some((a: any) => a.id === 'god')) {
-        const newAchievement = {
-          id: 'god',
-          name: 'A God',
-          description: 'User Creates their first planet',
-          icon: 'planet',
-          unlockedAt: new Date()
-        };
-        achievements.push(newAchievement);
-        localStorage.setItem(`achievements_${user.id}`, JSON.stringify(achievements));
+        if (error) {
+          console.error('Error updating planet:', error);
+          toast.error('Failed to update planet');
+          return;
+        }
+
+        // Award achievement for creating first planet
+        await supabase
+          .from('achievements')
+          .upsert({
+            user_id: user.id,
+            achievement_id: 'god',
+            name: 'A God',
+            description: 'User Creates their first planet',
+            icon: 'planet',
+          }, { onConflict: 'user_id,achievement_id' });
+
+        toast.success('Planet deployed successfully! 🚀');
         toast.success('Achievement unlocked: A God! 🌍');
+      } catch (error) {
+        console.error('Error deploying planet:', error);
+        toast.error('Failed to deploy planet');
       }
-
-      toast.success('Planet deployed successfully! 🚀');
     }
   };
 
@@ -153,13 +191,118 @@ export const StackBuilder: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
           {/* Stack Categories */}
           <div className="space-y-4 sm:space-y-6">
+            {/* Planet Categories Selection */}
+            <motion.div
+              initial={{ opacity: 0, x: -50, rotateY: -15 }}
+              animate={{ opacity: 1, x: 0, rotateY: 0 }}
+              transition={{ duration: 0.8, type: "spring" }}
+            >
+              <GlassPanel glowColor="#ffffff">
+                <motion.div 
+                  className="flex items-center space-x-3 mb-4"
+                  whileHover={{ scale: 1.02, rotateX: 5 }}
+                >
+                  <motion.div
+                    animate={{ 
+                      rotateZ: [0, 360],
+                      scale: [1, 1.2, 1]
+                    }}
+                    transition={{ 
+                      rotateZ: { duration: 8, repeat: Infinity, ease: "linear" },
+                      scale: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+                    }}
+                  >
+                    <Tag className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </motion.div>
+                  <h3 className="font-orbitron text-lg sm:text-xl font-bold">
+                    Planet Categories
+                  </h3>
+                  <motion.div
+                    animate={{ 
+                      opacity: [0.5, 1, 0.5],
+                      scale: [1, 1.3, 1]
+                    }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                  >
+                    <Sparkles className="w-4 h-4 text-white/50" />
+                  </motion.div>
+                </motion.div>
+                
+                <p className="text-white/70 text-sm mb-4">
+                  Select up to 2 categories that best describe your planet (helps with discovery)
+                </p>
+                
+                <div className="grid grid-cols-1 gap-2">
+                  {categoryOptions.map((category, index) => (
+                    <motion.button
+                      key={category.id}
+                      onClick={() => toggleCategory(category.id)}
+                      className={`p-3 rounded-lg text-left transition-all duration-300 border-2 ${
+                        selectedCategories.includes(category.id)
+                          ? 'border-2'
+                          : 'bg-white/5 hover:bg-white/10 border-transparent'
+                      }`}
+                      style={{
+                        borderColor: selectedCategories.includes(category.id) ? category.color : 'transparent',
+                        backgroundColor: selectedCategories.includes(category.id) ? `${category.color}20` : undefined,
+                      }}
+                      initial={{ opacity: 0, scale: 0.8, rotateX: -20 }}
+                      animate={{ opacity: 1, scale: 1, rotateX: 0 }}
+                      transition={{ 
+                        delay: index * 0.1,
+                        duration: 0.4
+                      }}
+                      whileHover={{ 
+                        scale: 1.02,
+                        rotateY: 5,
+                        boxShadow: `0 5px 15px ${category.color}40`
+                      }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div 
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: category.color }}
+                        />
+                        <div className="flex-1">
+                          <div 
+                            className="font-semibold text-sm"
+                            style={{ color: selectedCategories.includes(category.id) ? category.color : '#ffffff' }}
+                          >
+                            {category.label}
+                          </div>
+                          <div className="text-xs text-white/60">
+                            {category.description}
+                          </div>
+                        </div>
+                        {selectedCategories.includes(category.id) && (
+                          <motion.div
+                            initial={{ scale: 0, rotateZ: -180 }}
+                            animate={{ scale: 1, rotateZ: 0 }}
+                            className="w-5 h-5 rounded-full flex items-center justify-center"
+                            style={{ backgroundColor: category.color }}
+                          >
+                            <span className="text-black text-xs font-bold">✓</span>
+                          </motion.div>
+                        )}
+                      </div>
+                    </motion.button>
+                  ))}
+                </div>
+                
+                <div className="mt-3 text-xs text-white/50 text-center">
+                  {selectedCategories.length}/2 categories selected
+                </div>
+              </GlassPanel>
+            </motion.div>
+
             {Object.entries(techOptions).map(([category, options], categoryIndex) => (
               <motion.div
                 key={category}
                 initial={{ opacity: 0, x: -50, rotateY: -15 }}
                 animate={{ opacity: 1, x: 0, rotateY: 0 }}
                 transition={{ 
-                  delay: categoryIndex * 0.2,
+                  delay: (categoryIndex + 1) * 0.2,
                   duration: 0.8,
                   type: "spring"
                 }}
@@ -208,7 +351,7 @@ export const StackBuilder: React.FC = () => {
                         initial={{ opacity: 0, scale: 0.8, rotateX: -20 }}
                         animate={{ opacity: 1, scale: 1, rotateX: 0 }}
                         transition={{ 
-                          delay: categoryIndex * 0.2 + techIndex * 0.05,
+                          delay: (categoryIndex + 1) * 0.2 + techIndex * 0.05,
                           duration: 0.4
                         }}
                         whileHover={{ 
@@ -297,6 +440,51 @@ export const StackBuilder: React.FC = () => {
                     />
                   </div>
                 </motion.div>
+
+                {/* Selected Categories Display */}
+                {selectedCategories.length > 0 && (
+                  <motion.div 
+                    className="mb-6"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.7, duration: 0.5 }}
+                  >
+                    <h4 className="font-sora font-semibold text-sm mb-3 flex items-center space-x-2">
+                      <Tag className="w-4 h-4" />
+                      <span>Categories ({selectedCategories.length})</span>
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedCategories.map((categoryId, index) => {
+                        const category = categoryOptions.find(c => c.id === categoryId);
+                        return category ? (
+                          <motion.span
+                            key={categoryId}
+                            className="px-3 py-1 rounded-full text-sm font-semibold"
+                            style={{ 
+                              backgroundColor: `${category.color}20`,
+                              color: category.color,
+                              border: `1px solid ${category.color}50`
+                            }}
+                            initial={{ opacity: 0, scale: 0, rotateZ: -180 }}
+                            animate={{ opacity: 1, scale: 1, rotateZ: 0 }}
+                            transition={{ 
+                              delay: index * 0.1,
+                              duration: 0.5,
+                              type: "spring"
+                            }}
+                            whileHover={{ 
+                              scale: 1.1,
+                              rotateZ: 5,
+                              boxShadow: `0 5px 15px ${category.color}40`
+                            }}
+                          >
+                            {category.label}
+                          </motion.span>
+                        ) : null;
+                      })}
+                    </div>
+                  </motion.div>
+                )}
                 
                 {Object.entries(stack).map(([category, items], index) => (
                   <motion.div 

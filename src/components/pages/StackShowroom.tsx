@@ -3,12 +3,14 @@ import { motion } from 'framer-motion';
 import { Search, Filter, TrendingUp, User, Eye, Heart, Star } from 'lucide-react';
 import { GlassPanel } from '../ui/GlassPanel';
 import { dbOps } from '../../lib/database';
+import { supabase } from '../../lib/supabase';
 
 interface StackShowroomProps {
   onNavigateToUser: (userId: string) => void;
+  onNavigateToPlanet: (planetId: string) => void;
 }
 
-export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser }) => {
+export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser, onNavigateToPlanet }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [sortBy, setSortBy] = useState('recent');
@@ -16,37 +18,44 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser }
   const [isLoading, setIsLoading] = useState(true);
 
   const filters = [
-    { id: 'all', label: 'All Planets' },
-    { id: 'frontend', label: 'Frontend' },
-    { id: 'backend', label: 'Backend' },
-    { id: 'fullstack', label: 'Full Stack' },
-    { id: 'mobile', label: 'Mobile' },
-    { id: 'ai', label: 'AI/ML' },
+    { id: 'all', label: 'All Planets', color: '#ffffff' },
+    { id: 'frontend', label: 'Frontend', color: '#00ffff' },
+    { id: 'backend', label: 'Backend', color: '#ff00ff' },
+    { id: 'fullstack', label: 'Full Stack', color: '#ffff00' },
+    { id: 'mobile', label: 'Mobile', color: '#00ff00' },
+    { id: 'ai', label: 'AI/ML', color: '#ff6600' },
   ];
 
   const sortOptions = [
     { id: 'recent', label: 'Recently Added' },
     { id: 'name', label: 'Planet Name' },
     { id: 'owner', label: 'Owner Name' },
+    { id: 'likes', label: 'Most Liked' },
+    { id: 'views', label: 'Most Viewed' },
   ];
 
   // Load planets from database
   useEffect(() => {
     const loadPlanets = async () => {
       try {
-        const planets = await dbOps.getAllPlanets();
+        const { data: planets, error } = await supabase
+          .from('dev_planets')
+          .select(`
+            *,
+            users (username)
+          `)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          console.error('Failed to load planets:', error);
+          return;
+        }
         
-        // Get user data for each planet
-        const planetsWithOwners = await Promise.all(
-          planets.map(async (planet: any) => {
-            const userData = await dbOps.getUserById(planet.user_id);
-            return {
-              ...planet,
-              owner: userData?.username || 'Unknown',
-              ownerId: planet.user_id
-            };
-          })
-        );
+        const planetsWithOwners = planets.map((planet: any) => ({
+          ...planet,
+          owner: planet.users?.username || 'Unknown',
+          ownerId: planet.user_id
+        }));
         
         setAllPlanets(planetsWithOwners);
       } catch (error) {
@@ -66,7 +75,12 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser }
     
     if (selectedFilter === 'all') return matchesSearch;
     
-    // Simple categorization based on tech stack
+    // Check if planet has the selected category
+    if (planet.categories && planet.categories.includes(selectedFilter)) {
+      return matchesSearch;
+    }
+    
+    // Fallback to old categorization logic for planets without categories
     const hasReact = planet.stack_frameworks.some((f: string) => f.includes('React') || f.includes('Vue') || f.includes('Angular'));
     const hasBackend = planet.stack_frameworks.some((f: string) => f.includes('Express') || f.includes('Django') || f.includes('Spring'));
     const hasMobile = planet.stack_frameworks.some((f: string) => f.includes('React Native') || f.includes('Flutter'));
@@ -88,6 +102,8 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser }
     switch (sortBy) {
       case 'name': return a.name.localeCompare(b.name);
       case 'owner': return a.owner.localeCompare(b.owner);
+      case 'likes': return (b.likes || 0) - (a.likes || 0);
+      case 'views': return (b.views || 0) - (a.views || 0);
       case 'recent': return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       default: return 0;
     }
@@ -212,16 +228,21 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser }
                 onClick={() => setSelectedFilter(filter.id)}
                 className={`px-3 sm:px-4 py-2 rounded-lg font-sora text-sm transition-all duration-300 ${
                   selectedFilter === filter.id
-                    ? 'bg-cyber-blue/20 text-cyber-blue border border-cyber-blue/50'
+                    ? 'border-2'
                     : 'bg-white/5 text-white/70 hover:bg-white/10 hover:text-white'
                 }`}
+                style={{
+                  backgroundColor: selectedFilter === filter.id ? `${filter.color}20` : undefined,
+                  color: selectedFilter === filter.id ? filter.color : undefined,
+                  borderColor: selectedFilter === filter.id ? `${filter.color}50` : 'transparent'
+                }}
                 initial={{ opacity: 0, scale: 0.8, rotateY: -20 }}
                 animate={{ opacity: 1, scale: 1, rotateY: 0 }}
                 transition={{ delay: 0.1 * index, duration: 0.4 }}
                 whileHover={{ 
                   scale: 1.05,
                   rotateY: 5,
-                  boxShadow: '0 5px 15px rgba(0, 255, 255, 0.3)'
+                  boxShadow: `0 5px 15px ${filter.color}30`
                 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -267,7 +288,7 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser }
                     duration: 0.6,
                     type: "spring"
                   }}
-                  onClick={() => onNavigateToUser(planet.ownerId)}
+                  onClick={() => onNavigateToPlanet(planet.id)}
                   className="cursor-pointer"
                 >
                   <GlassPanel 
@@ -357,6 +378,33 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser }
                           by @{planet.owner}
                         </motion.p>
                       </div>
+
+                      {/* Categories */}
+                      {planet.categories && planet.categories.length > 0 && (
+                        <div className="mb-3">
+                          <div className="flex flex-wrap gap-1">
+                            {planet.categories.slice(0, 2).map((category: string, catIndex: number) => (
+                              <motion.span
+                                key={category}
+                                className="px-2 py-1 text-xs rounded-full font-semibold"
+                                style={{
+                                  backgroundColor: `${filters.find(f => f.id === category)?.color || '#ffffff'}20`,
+                                  color: filters.find(f => f.id === category)?.color || '#ffffff'
+                                }}
+                                initial={{ opacity: 0, scale: 0 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.2 + catIndex * 0.1, duration: 0.3 }}
+                                whileHover={{ 
+                                  scale: 1.1,
+                                  boxShadow: `0 0 10px ${filters.find(f => f.id === category)?.color || '#ffffff'}50`
+                                }}
+                              >
+                                {category}
+                              </motion.span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       <div className="mb-3">
                         <div className="flex flex-wrap gap-1">
