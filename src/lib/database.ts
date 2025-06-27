@@ -1,5 +1,4 @@
 import { supabase } from './supabase';
-import { v4 as uuidv4 } from 'uuid';
 
 export const dbOps = {
   // Users
@@ -17,9 +16,9 @@ export const dbOps = {
 
     if (authError) {
       if (authError.message.includes('User already registered') || authError.status === 422) {
-        const { data: existingUser, error: fetchError } = await supabase.auth.admin.getUserByEmail(email);
-        if (fetchError || !existingUser) throw authError;
-        return existingUser.user.id;
+        const { data: existingUserData, error: fetchError } = await supabase.auth.admin.getUserByEmail(email);
+        if (fetchError || !existingUserData?.user?.id) throw authError;
+        return existingUserData.user.id;
       }
       throw authError;
     }
@@ -46,22 +45,22 @@ export const dbOps = {
   async getUserByEmail(email: string) {
     const { data, error } = await supabase.from('users').select('*').eq('email', email).single();
     if (error && error.code !== 'PGRST116') throw error;
-    return data;
+    return data || null;
   },
 
   async getUserByUsername(username: string) {
     const { data, error } = await supabase.from('users').select('*').eq('username', username).single();
     if (error && error.code !== 'PGRST116') throw error;
-    return data;
+    return data || null;
   },
 
   async getUserById(id: string) {
     const { data, error } = await supabase.from('users').select('*').eq('id', id).single();
     if (error && error.code !== 'PGRST116') throw error;
-    return data;
+    return data || null;
   },
 
-  async updateUser(id: string, updates: any) {
+  async updateUser(id: string, updates: Record<string, any>) {
     const { error } = await supabase.from('users').update(updates).eq('id', id);
     if (error) throw error;
   },
@@ -73,7 +72,7 @@ export const dbOps = {
   },
 
   // Projects
-  async createProject(projectData: any) {
+  async createProject(projectData: Record<string, any>) {
     const { data, error } = await supabase
       .from('projects')
       .insert({
@@ -107,46 +106,30 @@ export const dbOps = {
   },
 
   // Dev Planets
-  async createOrUpdatePlanet(planetData: any) {
+  async createOrUpdatePlanet(planetData: Record<string, any>) {
     const { data: existing } = await supabase
       .from('dev_planets')
       .select('id')
       .eq('user_id', planetData.user_id)
       .single();
 
-    if (existing) {
-      const { error } = await supabase
-        .from('dev_planets')
-        .update({
-          name: planetData.name,
-          stack_languages: planetData.stack_languages || [],
-          stack_frameworks: planetData.stack_frameworks || [],
-          stack_tools: planetData.stack_tools || [],
-          stack_databases: planetData.stack_databases || [],
-          color: planetData.color || '#00ffff',
-          size: planetData.size || 1.0,
-          rings: planetData.rings || 1
-        })
-        .eq('user_id', planetData.user_id);
+    const payload = {
+      name: planetData.name,
+      stack_languages: planetData.stack_languages || [],
+      stack_frameworks: planetData.stack_frameworks || [],
+      stack_tools: planetData.stack_tools || [],
+      stack_databases: planetData.stack_databases || [],
+      color: planetData.color || '#00ffff',
+      size: planetData.size || 1.0,
+      rings: planetData.rings || 1
+    };
 
-      if (error) throw error;
-    } else {
-      const { error } = await supabase
-        .from('dev_planets')
-        .insert({
-          user_id: planetData.user_id,
-          name: planetData.name,
-          stack_languages: planetData.stack_languages || [],
-          stack_frameworks: planetData.stack_frameworks || [],
-          stack_tools: planetData.stack_tools || [],
-          stack_databases: planetData.stack_databases || [],
-          color: planetData.color || '#00ffff',
-          size: planetData.size || 1.0,
-          rings: planetData.rings || 1
-        });
+    const query = existing
+      ? supabase.from('dev_planets').update(payload).eq('user_id', planetData.user_id)
+      : supabase.from('dev_planets').insert({ user_id: planetData.user_id, ...payload });
 
-      if (error) throw error;
-    }
+    const { error } = await query;
+    if (error) throw error;
   },
 
   async getPlanetByUserId(userId: string) {
@@ -157,7 +140,7 @@ export const dbOps = {
       .single();
 
     if (error && error.code !== 'PGRST116') throw error;
-    return data;
+    return data || null;
   },
 
   async getAllPlanets() {
@@ -171,7 +154,7 @@ export const dbOps = {
   },
 
   // DevLogs
-  async createDevLog(devlogData: any) {
+  async createDevLog(devlogData: Record<string, any>) {
     const { data, error } = await supabase
       .from('devlogs')
       .insert({
@@ -199,7 +182,7 @@ export const dbOps = {
   },
 
   // Achievements
-  async createAchievement(achievementData: any) {
+  async createAchievement(achievementData: Record<string, any>) {
     try {
       const { data, error } = await supabase
         .from('achievements')
@@ -216,7 +199,7 @@ export const dbOps = {
       if (error) throw error;
       return data.id;
     } catch (error: any) {
-      if (error.code === '23505') return null;
+      if (error.code === '23505') return null; // unique constraint violation
       throw error;
     }
   },
@@ -233,7 +216,7 @@ export const dbOps = {
   },
 
   // Code Battles
-  async createCodeBattle(battleData: any) {
+  async createCodeBattle(battleData: Record<string, any>) {
     const { data, error } = await supabase
       .from('code_battles')
       .insert({
@@ -267,6 +250,7 @@ export const dbOps = {
   }
 };
 
+// Utility function to get table sizes
 export const getDatabaseStats = async () => {
   const stats = {
     users: 0,
@@ -274,12 +258,11 @@ export const getDatabaseStats = async () => {
     planets: 0,
     devlogs: 0,
     achievements: 0,
-    battles: 0,
-    size: 0
+    battles: 0
   };
 
   try {
-    const [usersCount, projectsCount, planetsCount, devlogsCount, achievementsCount, battlesCount] = await Promise.all([
+    const [users, projects, planets, devlogs, achievements, battles] = await Promise.all([
       supabase.from('users').select('*', { count: 'exact', head: true }),
       supabase.from('projects').select('*', { count: 'exact', head: true }),
       supabase.from('dev_planets').select('*', { count: 'exact', head: true }),
@@ -288,12 +271,12 @@ export const getDatabaseStats = async () => {
       supabase.from('code_battles').select('*', { count: 'exact', head: true })
     ]);
 
-    stats.users = usersCount.count || 0;
-    stats.projects = projectsCount.count || 0;
-    stats.planets = planetsCount.count || 0;
-    stats.devlogs = devlogsCount.count || 0;
-    stats.achievements = achievementsCount.count || 0;
-    stats.battles = battlesCount.count || 0;
+    stats.users = users.count || 0;
+    stats.projects = projects.count || 0;
+    stats.planets = planets.count || 0;
+    stats.devlogs = devlogs.count || 0;
+    stats.achievements = achievements.count || 0;
+    stats.battles = battles.count || 0;
   } catch (error) {
     console.error('Failed to get database stats:', error);
   }
