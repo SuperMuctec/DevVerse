@@ -210,6 +210,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       // First, get the user's password hash from our users table
+      console.log(email)
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('id, password_hash')
