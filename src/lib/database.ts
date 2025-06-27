@@ -1,31 +1,25 @@
 import { supabase } from './supabase';
+import { v4 as uuidv4 } from 'uuid';
 
 export const dbOps = {
   // Users
   async createUser(userData: {
     username: string;
     email: string;
-    password: string;
+    password_hash: string;
     avatar?: string;
   }) {
     const email = userData.email.trim().toLowerCase();
     const username = userData.username.trim().toLowerCase();
-    const password = userData.password;
+    const password = userData.password_hash;
 
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password
-    });
+    const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
 
     if (authError) {
-      if (
-        authError.message.includes('User already registered') ||
-        authError.status === 422
-      ) {
-        const { data: existingUserData, error: fetchError } =
-          await supabase.auth.admin.getUserByEmail(email);
-        if (fetchError || !existingUserData?.user?.id) throw authError;
-        return existingUserData.user.id;
+      if (authError.message.includes('User already registered') || authError.status === 422) {
+        const { data: existingUser, error: fetchError } = await supabase.auth.admin.getUserByEmail(email);
+        if (fetchError || !existingUser) throw authError;
+        return existingUser.user.id;
       }
       throw authError;
     }
@@ -39,6 +33,7 @@ export const dbOps = {
         id: userId,
         username,
         email,
+        password_hash: password,
         avatar: userData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`
       })
       .select()
@@ -49,55 +44,36 @@ export const dbOps = {
   },
 
   async getUserByEmail(email: string) {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email)
-      .single();
-
+    const { data, error } = await supabase.from('users').select('*').eq('email', email).single();
     if (error && error.code !== 'PGRST116') throw error;
-    return data || null;
+    return data;
   },
 
   async getUserByUsername(username: string) {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('username', username)
-      .single();
-
+    const { data, error } = await supabase.from('users').select('*').eq('username', username).single();
     if (error && error.code !== 'PGRST116') throw error;
-    return data || null;
+    return data;
   },
 
   async getUserById(id: string) {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', id)
-      .single();
-
+    const { data, error } = await supabase.from('users').select('*').eq('id', id).single();
     if (error && error.code !== 'PGRST116') throw error;
-    return data || null;
+    return data;
   },
 
-  async updateUser(id: string, updates: Record<string, any>) {
+  async updateUser(id: string, updates: any) {
     const { error } = await supabase.from('users').update(updates).eq('id', id);
     if (error) throw error;
   },
 
   async getAllUsers() {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .order('created_at', { ascending: false });
-
+    const { data, error } = await supabase.from('users').select('*').order('created_at', { ascending: false });
     if (error) throw error;
     return data || [];
   },
 
   // Projects
-  async createProject(projectData: Record<string, any>) {
+  async createProject(projectData: any) {
     const { data, error } = await supabase
       .from('projects')
       .insert({
@@ -131,30 +107,46 @@ export const dbOps = {
   },
 
   // Dev Planets
-  async createOrUpdatePlanet(planetData: Record<string, any>) {
+  async createOrUpdatePlanet(planetData: any) {
     const { data: existing } = await supabase
       .from('dev_planets')
       .select('id')
       .eq('user_id', planetData.user_id)
       .single();
 
-    const payload = {
-      name: planetData.name,
-      stack_languages: planetData.stack_languages || [],
-      stack_frameworks: planetData.stack_frameworks || [],
-      stack_tools: planetData.stack_tools || [],
-      stack_databases: planetData.stack_databases || [],
-      color: planetData.color || '#00ffff',
-      size: planetData.size || 1.0,
-      rings: planetData.rings || 1
-    };
+    if (existing) {
+      const { error } = await supabase
+        .from('dev_planets')
+        .update({
+          name: planetData.name,
+          stack_languages: planetData.stack_languages || [],
+          stack_frameworks: planetData.stack_frameworks || [],
+          stack_tools: planetData.stack_tools || [],
+          stack_databases: planetData.stack_databases || [],
+          color: planetData.color || '#00ffff',
+          size: planetData.size || 1.0,
+          rings: planetData.rings || 1
+        })
+        .eq('user_id', planetData.user_id);
 
-    const query = existing
-      ? supabase.from('dev_planets').update(payload).eq('user_id', planetData.user_id)
-      : supabase.from('dev_planets').insert({ user_id: planetData.user_id, ...payload });
+      if (error) throw error;
+    } else {
+      const { error } = await supabase
+        .from('dev_planets')
+        .insert({
+          user_id: planetData.user_id,
+          name: planetData.name,
+          stack_languages: planetData.stack_languages || [],
+          stack_frameworks: planetData.stack_frameworks || [],
+          stack_tools: planetData.stack_tools || [],
+          stack_databases: planetData.stack_databases || [],
+          color: planetData.color || '#00ffff',
+          size: planetData.size || 1.0,
+          rings: planetData.rings || 1
+        });
 
-    const { error } = await query;
-    if (error) throw error;
+      if (error) throw error;
+    }
   },
 
   async getPlanetByUserId(userId: string) {
@@ -165,7 +157,7 @@ export const dbOps = {
       .single();
 
     if (error && error.code !== 'PGRST116') throw error;
-    return data || null;
+    return data;
   },
 
   async getAllPlanets() {
@@ -179,7 +171,7 @@ export const dbOps = {
   },
 
   // DevLogs
-  async createDevLog(devlogData: Record<string, any>) {
+  async createDevLog(devlogData: any) {
     const { data, error } = await supabase
       .from('devlogs')
       .insert({
@@ -207,7 +199,104 @@ export const dbOps = {
   },
 
   // Achievements
-  async createAchievement(achievementData: Record<string, any>) {
+  async createAchievement(achievementData: any) {
     try {
       const { data, error } = await supabase
         .from('achievements')
+        .insert({
+          user_id: achievementData.user_id,
+          achievement_id: achievementData.achievement_id,
+          name: achievementData.name,
+          description: achievementData.description,
+          icon: achievementData.icon
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data.id;
+    } catch (error: any) {
+      if (error.code === '23505') return null;
+      throw error;
+    }
+  },
+
+  async getAchievementsByUserId(userId: string) {
+    const { data, error } = await supabase
+      .from('achievements')
+      .select('*')
+      .eq('user_id', userId)
+      .order('unlocked_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  // Code Battles
+  async createCodeBattle(battleData: any) {
+    const { data, error } = await supabase
+      .from('code_battles')
+      .insert({
+        user_id: battleData.user_id,
+        title: battleData.title,
+        description: battleData.description,
+        difficulty: battleData.difficulty,
+        time_limit: battleData.time_limit,
+        problem_title: battleData.problem_title,
+        problem_description: battleData.problem_description,
+        examples: battleData.examples || [],
+        constraints: battleData.constraints || [],
+        status: battleData.status || 'waiting'
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data.id;
+  },
+
+  async getCodeBattlesByUserId(userId: string) {
+    const { data, error } = await supabase
+      .from('code_battles')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  }
+};
+
+export const getDatabaseStats = async () => {
+  const stats = {
+    users: 0,
+    projects: 0,
+    planets: 0,
+    devlogs: 0,
+    achievements: 0,
+    battles: 0,
+    size: 0
+  };
+
+  try {
+    const [usersCount, projectsCount, planetsCount, devlogsCount, achievementsCount, battlesCount] = await Promise.all([
+      supabase.from('users').select('*', { count: 'exact', head: true }),
+      supabase.from('projects').select('*', { count: 'exact', head: true }),
+      supabase.from('dev_planets').select('*', { count: 'exact', head: true }),
+      supabase.from('devlogs').select('*', { count: 'exact', head: true }),
+      supabase.from('achievements').select('*', { count: 'exact', head: true }),
+      supabase.from('code_battles').select('*', { count: 'exact', head: true })
+    ]);
+
+    stats.users = usersCount.count || 0;
+    stats.projects = projectsCount.count || 0;
+    stats.planets = planetsCount.count || 0;
+    stats.devlogs = devlogsCount.count || 0;
+    stats.achievements = achievementsCount.count || 0;
+    stats.battles = battlesCount.count || 0;
+  } catch (error) {
+    console.error('Failed to get database stats:', error);
+  }
+
+  return stats;
+};
