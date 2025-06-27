@@ -298,9 +298,3 @@ export const getDatabaseStats = async () => {
 
   return stats;
 };
-
-export const initDatabase = async () => true;
-export const saveDatabase = () => {};
-export const exportDatabase = () => { throw new Error('Database export not available with Supabase'); };
-export const downloadDatabase = () => { throw new Error('Database download not available with Supabase'); };
-export const importDatabase = async () => { throw new Error('Database import not available with Supabase'); };

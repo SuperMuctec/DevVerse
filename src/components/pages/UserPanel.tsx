@@ -19,8 +19,6 @@ import {
   Plus,
   ExternalLink,
   Loader,
-  Download,
-  Upload,
   Database,
   HardDrive
 } from 'lucide-react';
@@ -30,7 +28,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { CreateProjectModal } from '../modals/CreateProjectModal';
 import { ProfilePictureModal } from '../modals/ProfilePictureModal';
 import { Project, CreateProjectData } from '../../types';
-import { downloadDatabase, importDatabase, getDatabaseStats } from '../../lib/database';
+import { getDatabaseStats } from '../../lib/database';
 import { toast } from 'react-hot-toast';
 
 const profileSchema = z.object({
@@ -255,53 +253,6 @@ export const UserPanel: React.FC = () => {
     }
 
     toast.success('Project created successfully!');
-  };
-
-  const handleDownloadDatabase = () => {
-    try {
-      const timestamp = new Date().toISOString().split('T')[0];
-      const filename = `devverse_${timestamp}.db`;
-      const success = downloadDatabase(filename);
-      
-      if (success) {
-        toast.success(`Database downloaded as ${filename}! 📁`);
-      } else {
-        toast.error('Failed to download database');
-      }
-    } catch (error) {
-      console.error('Download error:', error);
-      toast.error('Failed to download database');
-    }
-  };
-
-  const handleImportDatabase = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.name.endsWith('.db') && !file.name.endsWith('.sqlite') && !file.name.endsWith('.sqlite3')) {
-      toast.error('Please select a valid SQLite database file (.db, .sqlite, .sqlite3)');
-      return;
-    }
-
-    try {
-      const success = await importDatabase(file);
-      
-      if (success) {
-        toast.success('Database imported successfully! Reloading...');
-        // Reload the page to reflect the new database
-        setTimeout(() => {
-          window.location.reload();
-        }, 1000);
-      } else {
-        toast.error('Failed to import database');
-      }
-    } catch (error) {
-      console.error('Import error:', error);
-      toast.error('Failed to import database');
-    }
-    
-    // Reset the input
-    event.target.value = '';
   };
 
   const formatFileSize = (bytes: number) => {
@@ -791,7 +742,7 @@ export const UserPanel: React.FC = () => {
               <GlassPanel glowColor="#00ffff">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="font-orbitron text-2xl font-bold text-white">
-                    Database Management
+                    Database Statistics
                   </h2>
                   <motion.button
                     onClick={loadDatabaseStats}
@@ -839,77 +790,23 @@ export const UserPanel: React.FC = () => {
                   </div>
                 )}
 
-                {/* Database Size */}
-                {dbStats && (
-                  <div className="bg-white/5 border border-white/10 rounded-lg p-4 mb-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <HardDrive className="w-5 h-5 text-cyber-blue" />
-                        <span className="font-semibold text-white">Database Size</span>
-                      </div>
-                      <span className="text-cyber-blue font-mono">
-                        {formatFileSize(dbStats.size)}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Database Actions */}
-                <div className="space-y-4">
-                  <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-                    <h3 className="font-semibold text-blue-400 mb-2 flex items-center space-x-2">
-                      <Download className="w-4 h-4" />
-                      <span>Export Database</span>
-                    </h3>
-                    <p className="text-white/70 text-sm mb-3">
-                      Download your DevVerse³ database as a .db file to your computer. This creates a backup of all your data including users, projects, planets, and achievements.
-                    </p>
-                    <motion.button
-                      onClick={handleDownloadDatabase}
-                      className="flex items-center space-x-2 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 px-4 py-2 rounded-lg transition-colors"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <Download className="w-4 h-4" />
-                      <span>Download Database</span>
-                    </motion.button>
-                  </div>
-
-                  <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
-                    <h3 className="font-semibold text-green-400 mb-2 flex items-center space-x-2">
-                      <Upload className="w-4 h-4" />
-                      <span>Import Database</span>
-                    </h3>
-                    <p className="text-white/70 text-sm mb-3">
-                      Import a previously exported .db file to restore your data. This will replace your current database entirely.
-                    </p>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="file"
-                        accept=".db,.sqlite,.sqlite3"
-                        onChange={handleImportDatabase}
-                        className="hidden"
-                        id="database-import"
-                      />
-                      <motion.label
-                        htmlFor="database-import"
-                        className="flex items-center space-x-2 bg-green-500/20 hover:bg-green-500/30 text-green-400 px-4 py-2 rounded-lg transition-colors cursor-pointer"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        <Upload className="w-4 h-4" />
-                        <span>Import Database</span>
-                      </motion.label>
-                    </div>
-                  </div>
-
-                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
-                    <h3 className="font-semibold text-yellow-400 mb-2">⚠️ Important Notes</h3>
+                <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                  <h3 className="font-semibold text-blue-400 mb-2 flex items-center space-x-2">
+                    <Database className="w-4 h-4" />
+                    <span>Supabase Database</span>
+                  </h3>
+                  <p className="text-white/70 text-sm mb-3">
+                    Your DevVerse³ data is securely stored in Supabase, a modern PostgreSQL database platform. 
+                    All data is automatically backed up and synchronized across devices.
+                  </p>
+                  <div className="bg-white/5 rounded-lg p-3">
+                    <h4 className="font-semibold text-white mb-2 text-sm">Database Features:</h4>
                     <ul className="text-white/70 text-sm space-y-1">
-                      <li>• Database files are stored locally in your browser</li>
-                      <li>• Importing a database will completely replace your current data</li>
-                      <li>• Always backup your database before making major changes</li>
-                      <li>• Database files are compatible across different browsers</li>
+                      <li>• Real-time synchronization</li>
+                      <li>• Automatic backups</li>
+                      <li>• Row-level security</li>
+                      <li>• PostgreSQL compatibility</li>
+                      <li>• Global edge network</li>
                     </ul>
                   </div>
                 </div>
