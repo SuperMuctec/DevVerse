@@ -157,38 +157,40 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onPageChange }) => 
 
               {/* Mobile Menu Button */}
               <motion.button
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="lg:hidden p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
-                whileHover={{ 
-                  scale: 1.1,
-                  rotateZ: 180
-                }}
-                whileTap={{ scale: 0.9 }}
-              >
-                <AnimatePresence mode="wait">
-                  {isMobileMenuOpen ? (
-                    <motion.div
-                      key="close"
-                      initial={{ rotateZ: -180, opacity: 0 }}
-                      animate={{ rotateZ: 0, opacity: 1 }}
-                      exit={{ rotateZ: 180, opacity: 0 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <X className="w-5 h-5" />
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key="menu"
-                      initial={{ rotateZ: 180, opacity: 0 }}
-                      animate={{ rotateZ: 0, opacity: 1 }}
-                      exit={{ rotateZ: -180, opacity: 0 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <Menu className="w-5 h-5" />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.button>
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        className="lg:hidden p-2 ml-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+        whileHover={{ 
+          scale: 1.1,
+          rotateZ: 180
+        }}
+        whileTap={{ scale: 0.9 }}
+      >
+        <AnimatePresence mode="wait">
+          {isMobileMenuOpen ? (
+            <motion.div
+              key="close"
+              initial={{ rotateZ: -180, opacity: 0 }}
+              animate={{ rotateZ: 0, opacity: 1 }}
+              exit={{ rotateZ: 180, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <X className="w-5 h-5" />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="menu"
+              initial={{ rotateZ: 180, opacity: 0 }}
+              animate={{ rotateZ: 0, opacity: 1 }}
+              exit={{ rotateZ: -180, opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Menu className="w-5 h-5" />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.button>
+
+
             </div>
           </motion.div>
         </div>
