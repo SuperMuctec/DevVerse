@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Plus, Code, Database, PenTool as Tool, Layers, Save, Rocket, Sparkles, Tag } from 'lucide-react';
 import { GlassPanel } from '../ui/GlassPanel';
 import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 import { toast } from 'react-hot-toast';
 
 export const StackBuilder: React.FC = () => {
@@ -34,7 +35,14 @@ export const StackBuilder: React.FC = () => {
   ];
 
   const addToStack = (category: keyof typeof stack, tech: string) => {
-    if (!stack[category].includes(tech)) {
+    if (stack[category].includes(tech)) {
+      // Remove if already selected (toggle off)
+      setStack(prev => ({
+        ...prev,
+        [category]: prev[category].filter(item => item !== tech)
+      }));
+    } else {
+      // Add if not selected (toggle on)
       setStack(prev => ({
         ...prev,
         [category]: [...prev[category], tech]
@@ -51,8 +59,10 @@ export const StackBuilder: React.FC = () => {
 
   const toggleCategory = (categoryId: string) => {
     if (selectedCategories.includes(categoryId)) {
+      // Remove if already selected (toggle off)
       setSelectedCategories(prev => prev.filter(id => id !== categoryId));
     } else if (selectedCategories.length < 2) {
+      // Add if not selected and under limit (toggle on)
       setSelectedCategories(prev => [...prev, categoryId]);
     } else {
       toast.error('You can select maximum 2 categories');
@@ -229,7 +239,7 @@ export const StackBuilder: React.FC = () => {
                 </motion.div>
                 
                 <p className="text-white/70 text-sm mb-4">
-                  Select up to 2 categories that best describe your planet (helps with discovery)
+                  Select up to 2 categories that best describe your planet (helps with discovery). Click again to deselect.
                 </p>
                 
                 <div className="grid grid-cols-1 gap-2">
@@ -337,6 +347,10 @@ export const StackBuilder: React.FC = () => {
                       <Sparkles className="w-4 h-4 text-white/50" />
                     </motion.div>
                   </motion.div>
+                  
+                  <p className="text-white/70 text-sm mb-4">
+                    Click to add/remove technologies. Selected items will be highlighted.
+                  </p>
                   
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {options.map((tech, techIndex) => (
@@ -459,7 +473,8 @@ export const StackBuilder: React.FC = () => {
                         return category ? (
                           <motion.span
                             key={categoryId}
-                            className="px-3 py-1 rounded-full text-sm font-semibold"
+                            onClick={() => toggleCategory(categoryId)}
+                            className="px-3 py-1 rounded-full text-sm font-semibold cursor-pointer"
                             style={{ 
                               backgroundColor: `${category.color}20`,
                               color: category.color,
@@ -477,8 +492,10 @@ export const StackBuilder: React.FC = () => {
                               rotateZ: 5,
                               boxShadow: `0 5px 15px ${category.color}40`
                             }}
+                            whileTap={{ scale: 0.9 }}
+                            title="Click to remove"
                           >
-                            {category.label}
+                            {category.label} ×
                           </motion.span>
                         ) : null;
                       })}
@@ -543,6 +560,7 @@ export const StackBuilder: React.FC = () => {
                             rotateZ: 180,
                             transition: { duration: 0.3 }
                           }}
+                          title="Click to remove"
                         >
                           {item} ×
                         </motion.span>
