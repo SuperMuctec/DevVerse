@@ -3,11 +3,47 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables. Please connect to Supabase first.');
+// Create a fallback client for demo purposes
+let supabase: any;
+
+if (supabaseUrl && supabaseAnonKey) {
+  supabase = createClient(supabaseUrl, supabaseAnonKey);
+} else {
+  console.warn('Supabase environment variables not found. Creating mock client for demo.');
+  
+  // Create a mock Supabase client for demo purposes
+  supabase = {
+    auth: {
+      getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+      signInWithPassword: () => Promise.resolve({ data: null, error: { message: 'Demo mode - database not connected' } }),
+      signUp: () => Promise.resolve({ data: null, error: { message: 'Demo mode - database not connected' } }),
+      signOut: () => Promise.resolve({ error: null }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+      updateUser: () => Promise.resolve({ error: null }),
+    },
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          single: () => Promise.resolve({ data: null, error: { message: 'Demo mode - database not connected' } }),
+          maybeSingle: () => Promise.resolve({ data: null, error: null }),
+        }),
+        order: () => Promise.resolve({ data: [], error: null }),
+      }),
+      insert: () => ({
+        select: () => ({
+          single: () => Promise.resolve({ data: null, error: { message: 'Demo mode - database not connected' } }),
+        }),
+      }),
+      update: () => ({
+        eq: () => Promise.resolve({ error: { message: 'Demo mode - database not connected' } }),
+      }),
+      upsert: () => Promise.resolve({ error: { message: 'Demo mode - database not connected' } }),
+    }),
+    rpc: () => Promise.resolve({ error: { message: 'Demo mode - database not connected' } }),
+  };
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export { supabase };
 
 // Database types
 export interface Database {

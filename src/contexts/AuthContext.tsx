@@ -31,6 +31,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loadUserData = async (userId: string) => {
     try {
+      // Check if Supabase is properly configured
+      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+        console.warn('Supabase not configured, using demo mode');
+        return null;
+      }
+
       // Fetch user data from our users table
       const { data: userData, error } = await supabase
         .from('users')
@@ -110,7 +116,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Check for existing session
     const checkSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        // Check if Supabase is properly configured
+        if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+          console.warn('Supabase environment variables not found. Running in demo mode.');
+          setAuthState({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+          });
+          return;
+        }
+
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Session check error:', error);
+          setAuthState({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+          });
+          return;
+        }
         
         if (session?.user) {
           const user = await loadUserData(session.user.id);
@@ -128,36 +155,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (error) {
         console.error('Session check error:', error);
-        setAuthState(prev => ({ ...prev, isLoading: false }));
-      }
-    };
-
-    checkSession();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state change:', event, session?.user?.id);
-      
-      if (event === 'SIGNED_IN' && session?.user) {
-        // User just signed in, load their data
-        const user = await loadUserData(session.user.id);
-        if (user) {
-          setAuthState({
-            user,
-            isAuthenticated: true,
-            isLoading: false,
-          });
-        }
-      } else if (event === 'SIGNED_OUT') {
         setAuthState({
           user: null,
           isAuthenticated: false,
           isLoading: false,
         });
       }
-    });
+    };
 
-    return () => subscription.unsubscribe();
+    checkSession();
+
+    // Only set up auth listener if Supabase is configured
+    if (import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY) {
+      // Listen for auth changes
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        console.log('Auth state change:', event, session?.user?.id);
+        
+        if (event === 'SIGNED_IN' && session?.user) {
+          // User just signed in, load their data
+          const user = await loadUserData(session.user.id);
+          if (user) {
+            setAuthState({
+              user,
+              isAuthenticated: true,
+              isLoading: false,
+            });
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setAuthState({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+          });
+        }
+      });
+
+      return () => subscription.unsubscribe();
+    }
   }, []);
 
   const calculateLevel = (xp: number) => {
@@ -181,15 +215,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const newLevel = calculateLevel(newXp);
       
       try {
-        // Update XP in database
-        const { error } = await supabase
-          .from('users')
-          .update({ xp: newXp, level: newLevel })
-          .eq('id', authState.user.id);
+        // Only update in database if Supabase is configured
+        if (import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY) {
+          const { error } = await supabase
+            .from('users')
+            .update({ xp: newXp, level: newLevel })
+            .eq('id', authState.user.id);
 
-        if (error) {
-          console.error('Error updating XP:', error);
-          return;
+          if (error) {
+            console.error('Error updating XP:', error);
+            return;
+          }
         }
 
         const updatedUser = { ...authState.user, xp: newXp, level: newLevel };
@@ -209,6 +245,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
+      // Check if Supabase is configured
+      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+        toast.error('Database not configured. Please connect to Supabase.');
+        return false;
+      }
+
       // First, get the user's password hash from our users table
       const { data: userData, error: userError } = await supabase
         .from('users')
@@ -271,6 +313,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = async (username: string, email: string, password: string): Promise<boolean> => {
     try {
+      // Check if Supabase is configured
+      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+        toast.error('Database not configured. Please connect to Supabase.');
+        return false;
+      }
+
       // Check if email or username already exists in our users table
       const { data: existingUser } = await supabase
         .from('users')
@@ -372,7 +420,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
-      await supabase.auth.signOut();
+      if (import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY) {
+        await supabase.auth.signOut();
+      }
       setAuthState({
         user: null,
         isAuthenticated: false,
@@ -388,62 +438,65 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateUser = async (updates: Partial<User>) => {
     if (authState.user) {
       try {
-        // Update user in database
-        const { error } = await supabase
-          .from('users')
-          .update({
-            username: updates.username,
-            email: updates.email,
-            avatar: updates.avatar,
-            bio: updates.bio,
-            location: updates.location,
-            website: updates.website,
-          })
-          .eq('id', authState.user.id);
+        // Only update in database if Supabase is configured
+        if (import.meta.env.VITE_SUPABASE_URL && import.meta.env.VITE_SUPABASE_ANON_KEY) {
+          // Update user in database
+          const { error } = await supabase
+            .from('users')
+            .update({
+              username: updates.username,
+              email: updates.email,
+              avatar: updates.avatar,
+              bio: updates.bio,
+              location: updates.location,
+              website: updates.website,
+            })
+            .eq('id', authState.user.id);
 
-        if (error) {
-          console.error('Error updating user:', error);
-          toast.error('Failed to update profile');
-          return;
-        }
+          if (error) {
+            console.error('Error updating user:', error);
+            toast.error('Failed to update profile');
+            return;
+          }
 
-        // Update planet if provided
-        if (updates.planet) {
-          await supabase
-            .from('dev_planets')
-            .upsert({
-              user_id: authState.user.id,
-              name: updates.planet.name,
-              stack_languages: updates.planet.stack.languages,
-              stack_frameworks: updates.planet.stack.frameworks,
-              stack_tools: updates.planet.stack.tools,
-              stack_databases: updates.planet.stack.databases,
-              color: updates.planet.color,
-              size: updates.planet.size,
-              rings: updates.planet.rings,
-            }, { onConflict: 'user_id' });
-        }
+          // Update planet if provided
+          if (updates.planet) {
+            await supabase
+              .from('dev_planets')
+              .upsert({
+                user_id: authState.user.id,
+                name: updates.planet.name,
+                stack_languages: updates.planet.stack.languages,
+                stack_frameworks: updates.planet.stack.frameworks,
+                stack_tools: updates.planet.stack.tools,
+                stack_databases: updates.planet.stack.databases,
+                color: updates.planet.color,
+                size: updates.planet.size,
+                rings: updates.planet.rings,
+              }, { onConflict: 'user_id' });
+          }
 
-        // Update projects if provided
-        if (updates.projects) {
-          // This is a simplified approach - in a real app you'd handle individual project updates
-          for (const project of updates.projects) {
-            if (!project.id.includes('temp')) { // Only update existing projects
-              await supabase
-                .from('projects')
-                .upsert({
-                  id: project.id,
-                  user_id: authState.user.id,
-                  name: project.name,
-                  description: project.description,
-                  language: project.language,
-                  github_url: project.githubUrl,
-                  homepage: project.homepage,
-                  topics: project.topics,
-                  is_private: project.isPrivate,
-                  stars: project.stars,
-                  forks: project.forks,
-                });
+          // Update projects if provided
+          if (updates.projects) {
+            // This is a simplified approach - in a real app you'd handle individual project updates
+            for (const project of updates.projects) {
+              if (!project.id.includes('temp')) { // Only update existing projects
+                await supabase
+                  .from('projects')
+                  .upsert({
+                    id: project.id,
+                    user_id: authState.user.id,
+                    name: project.name,
+                    description: project.description,
+                    language: project.language,
+                    github_url: project.githubUrl,
+                    homepage: project.homepage,
+                    topics: project.topics,
+                    is_private: project.isPrivate,
+                    stars: project.stars,
+                    forks: project.forks,
+                  });
+              }
             }
           }
         }
