@@ -29,6 +29,83 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isLoading: true,
   });
 
+  const loadUserData = async (userId: string) => {
+    try {
+      // Fetch user data from our users table
+      const { data: userData, error } = await supabase
+        .from('users')
+        .select(`
+          *,
+          projects (*),
+          dev_planets (*),
+          achievements (*)
+        `)
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching user data:', error);
+        return null;
+      }
+
+      if (userData) {
+        // Transform database data to match our User type
+        const user: User = {
+          id: userData.id,
+          username: userData.username,
+          email: userData.email,
+          avatar: userData.avatar,
+          bio: userData.bio,
+          location: userData.location,
+          website: userData.website,
+          xp: userData.xp,
+          level: userData.level,
+          projects: userData.projects || [],
+          followers: 0, // TODO: implement followers system
+          following: 0, // TODO: implement following system
+          joinedAt: new Date(userData.created_at),
+          planet: userData.dev_planets?.[0] ? {
+            id: userData.dev_planets[0].id,
+            name: userData.dev_planets[0].name,
+            owner: userData.username,
+            stack: {
+              languages: userData.dev_planets[0].stack_languages || [],
+              frameworks: userData.dev_planets[0].stack_frameworks || [],
+              tools: userData.dev_planets[0].stack_tools || [],
+              databases: userData.dev_planets[0].stack_databases || [],
+            },
+            position: [0, 0, 0], // Default position
+            color: userData.dev_planets[0].color,
+            size: userData.dev_planets[0].size,
+            rings: userData.dev_planets[0].rings,
+            achievements: userData.achievements || [],
+            likes: userData.dev_planets[0].likes,
+            views: userData.dev_planets[0].views,
+            createdAt: new Date(userData.dev_planets[0].created_at),
+          } : {
+            id: '',
+            name: `${userData.username}'s Planet`,
+            owner: userData.username,
+            stack: { languages: [], frameworks: [], tools: [], databases: [] },
+            position: [0, 0, 0],
+            color: '#00ffff',
+            size: 1.0,
+            rings: 1,
+            achievements: [],
+            likes: 0,
+            views: 0,
+            createdAt: new Date(),
+          }
+        };
+
+        return user;
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    }
+    return null;
+  };
+
   useEffect(() => {
     // Check for existing session
     const checkSession = async () => {
@@ -36,79 +113,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session?.user) {
-          // Fetch user data from our users table
-          const { data: userData, error } = await supabase
-            .from('users')
-            .select(`
-              *,
-              projects (*),
-              dev_planets (*),
-              achievements (*)
-            `)
-            .eq('id', session.user.id)
-            .single();
-
-          if (error) {
-            console.error('Error fetching user data:', error);
-            setAuthState(prev => ({ ...prev, isLoading: false }));
-            return;
-          }
-
-          if (userData) {
-            // Transform database data to match our User type
-            const user: User = {
-              id: userData.id,
-              username: userData.username,
-              email: userData.email,
-              avatar: userData.avatar,
-              bio: userData.bio,
-              location: userData.location,
-              website: userData.website,
-              xp: userData.xp,
-              level: userData.level,
-              projects: userData.projects || [],
-              followers: 0, // TODO: implement followers system
-              following: 0, // TODO: implement following system
-              joinedAt: new Date(userData.created_at),
-              planet: userData.dev_planets?.[0] ? {
-                id: userData.dev_planets[0].id,
-                name: userData.dev_planets[0].name,
-                owner: userData.username,
-                stack: {
-                  languages: userData.dev_planets[0].stack_languages || [],
-                  frameworks: userData.dev_planets[0].stack_frameworks || [],
-                  tools: userData.dev_planets[0].stack_tools || [],
-                  databases: userData.dev_planets[0].stack_databases || [],
-                },
-                position: [0, 0, 0], // Default position
-                color: userData.dev_planets[0].color,
-                size: userData.dev_planets[0].size,
-                rings: userData.dev_planets[0].rings,
-                achievements: userData.achievements || [],
-                likes: userData.dev_planets[0].likes,
-                views: userData.dev_planets[0].views,
-                createdAt: new Date(userData.dev_planets[0].created_at),
-              } : {
-                id: '',
-                name: `${userData.username}'s Planet`,
-                owner: userData.username,
-                stack: { languages: [], frameworks: [], tools: [], databases: [] },
-                position: [0, 0, 0],
-                color: '#00ffff',
-                size: 1.0,
-                rings: 1,
-                achievements: [],
-                likes: 0,
-                views: 0,
-                createdAt: new Date(),
-              }
-            };
-
+          const user = await loadUserData(session.user.id);
+          if (user) {
             setAuthState({
               user,
               isAuthenticated: true,
               isLoading: false,
             });
+          } else {
+            setAuthState(prev => ({ ...prev, isLoading: false }));
           }
         } else {
           setAuthState(prev => ({ ...prev, isLoading: false }));
@@ -123,7 +136,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_OUT') {
+      console.log('Auth state change:', event, session?.user?.id);
+      
+      if (event === 'SIGNED_IN' && session?.user) {
+        // User just signed in, load their data
+        const user = await loadUserData(session.user.id);
+        if (user) {
+          setAuthState({
+            user,
+            isAuthenticated: true,
+            isLoading: false,
+          });
+        }
+      } else if (event === 'SIGNED_OUT') {
         setAuthState({
           user: null,
           isAuthenticated: false,
@@ -234,6 +259,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }, { onConflict: 'user_id,achievement_id' });
       
       toast.success('Welcome back to DevVerse³!');
+      
+      // The auth state change listener will handle setting the user data
       return true;
     } catch (error) {
       console.error('Login error:', error);
@@ -333,6 +360,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       toast.success('Welcome to DevVerse³! Your planet has been created!');
       toast.success('Achievement unlocked: The Beginning! 🎉');
+      
+      // The auth state change listener will handle setting the user data
       return true;
     } catch (error) {
       console.error('Registration error:', error);
