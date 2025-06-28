@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, AuthState } from '../types';
 import { supabase } from '../lib/supabase';
 import { toast } from 'react-hot-toast';
+import bcrypt from 'bcryptjs';
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<boolean>;
@@ -29,7 +30,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
     isAuthenticated: false,
-    isLoading: true,
+    isLoading: false, // Start with false to avoid hanging
   });
 
   // Get notifications context if available
@@ -47,18 +48,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('Loading user data for ID:', userId);
       
-      // Simple, fast query with timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
-      
+      // Only fetch core user data - no joins or complex queries
       const { data: userData, error } = await supabase
         .from('users')
         .select('id, username, email, avatar, bio, location, website, xp, level, created_at')
         .eq('id', userId)
-        .abortSignal(controller.signal)
         .single();
-
-      clearTimeout(timeoutId);
 
       if (error) {
         console.error('Error fetching user data:', error);
@@ -237,25 +232,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // Fast session check with immediate timeout
+    // Simplified session check - no timeout, immediate fallback
     const checkSession = async () => {
       try {
         console.log('Checking for existing session...');
-        
-        // Set a very short timeout for session check
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => {
-          controller.abort();
-          console.log('Session check timed out, proceeding without session');
-          setAuthState({
-            user: null,
-            isAuthenticated: false,
-            isLoading: false,
-          });
-        }, 2000); // Only 2 seconds for session check
-        
+        // Try to get session quickly
         const { data: { session } } = await supabase.auth.getSession();
-        clearTimeout(timeoutId);
         
         if (session?.user) {
           console.log('Found existing session for user:', session.user.id);
@@ -380,29 +362,70 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      console.log('Starting simplified login process for:', email);
+      console.log('Starting login process for:', email);
       
-      // Use Supabase Auth directly - much faster than custom password verification
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password: password,
-      });
+      // Add timeout to database query
+      const queryPromise = supabase
+        .from('users')
+        .select('id, password_hash')
+        .eq('email', email)
+        .maybeSingle();
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database query timeout')), 10000)
+      );
+      
+      console.log('Querying database for user...');
+      const { data: userData, error: userError } = await Promise.race([queryPromise, timeoutPromise]) as any;
 
-      if (error) {
-        console.error('Login error:', error);
-        
-        if (error.message.includes('Invalid login credentials')) {
-          toast.error('Invalid email or password');
-        } else if (error.message.includes('Email not confirmed')) {
-          toast.error('Please confirm your email address');
-        } else {
-          toast.error('Login failed - please try again');
-        }
+      if (userError) {
+        console.error('Database error:', userError);
+        toast.error('Login failed - database error');
         return false;
       }
 
-      if (!data.user) {
-        toast.error('Login failed - no user data');
+      if (!userData) {
+        console.log('User not found for email:', email);
+        toast.error('User not found');
+        return false;
+      }
+
+      console.log('Found user, verifying password...');
+      
+      // Add timeout to password verification
+      const bcryptPromise = bcrypt.compare(password, userData.password_hash);
+      const bcryptTimeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Password verification timeout')), 5000)
+      );
+      
+      const isValidPassword = await Promise.race([bcryptPromise, bcryptTimeoutPromise]) as boolean;
+      
+      if (!isValidPassword) {
+        console.log('Invalid password for user:', email);
+        toast.error('Invalid password');
+        return false;
+      }
+
+      console.log('Password verified, signing in with Supabase Auth...');
+
+      // Now sign in with Supabase Auth using the user's ID-based password
+      const authPassword = `devverse_${userData.id}`;
+      
+      // Add timeout to auth sign in
+      const authPromise = supabase.auth.signInWithPassword({
+        email,
+        password: authPassword,
+      });
+      
+      const authTimeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Auth sign in timeout')), 10000)
+      );
+      
+      const { error: signInError } = await Promise.race([authPromise, authTimeoutPromise]) as any;
+
+      if (signInError) {
+        console.error('Authentication error:', signInError);
+        toast.error('Authentication failed');
         return false;
       }
 
@@ -420,48 +443,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return true;
     } catch (error) {
       console.error('Login error:', error);
-      toast.error('Login failed - unexpected error');
+      if (error instanceof Error) {
+        if (error.message.includes('timeout')) {
+          toast.error('Login timed out - please try again');
+        } else {
+          toast.error('Login failed - unexpected error');
+        }
+      } else {
+        toast.error('Login failed - unexpected error');
+      }
       return false;
     }
   };
 
   const register = async (username: string, email: string, password: string): Promise<boolean> => {
     try {
-      console.log('Starting simplified registration process for:', email);
+      console.log('Starting registration process for:', email);
       
-      // Check if username already exists
+      // Check if email or username already exists in our users table
       const { data: existingUser } = await supabase
         .from('users')
         .select('id')
-        .eq('username', username.trim().toLowerCase())
-        .single();
+        .or(`email.eq.${email},username.eq.${username}`)
+        .maybeSingle();
 
       if (existingUser) {
-        toast.error('Username already exists');
+        toast.error('Email or username already exists');
         return false;
       }
 
-      console.log('Username available, creating Supabase Auth user...');
+      console.log('User doesn\'t exist, creating new user...');
 
-      // Create user with Supabase Auth
+      // Hash password for our database
+      const passwordHash = await bcrypt.hash(password, 10);
+
+      // Generate a temporary user ID for the auth password
+      const tempUserId = crypto.randomUUID();
+      const authPassword = `devverse_${tempUserId}`;
+
+      console.log('Creating Supabase Auth user...');
+
+      // First create user in Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: email.trim().toLowerCase(),
-        password: password,
-        options: {
-          data: {
-            username: username.trim(),
-          }
-        }
+        email,
+        password: authPassword,
       });
 
       if (authError) {
         console.error('Auth creation error:', authError);
-        
-        if (authError.message.includes('User already registered')) {
-          toast.error('Email already registered');
-        } else {
-          toast.error('Registration failed - please try again');
-        }
+        toast.error('Registration failed - auth error');
         return false;
       }
 
@@ -472,18 +502,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('Auth user created, creating database user...');
 
-      // Create user in our database
-      const { error: userError } = await supabase
+      // Now create user in our users table with the auth user's ID
+      const { data: newUser, error: userError } = await supabase
         .from('users')
         .insert({
-          id: authData.user.id,
-          username: username.trim(),
-          email: email.trim().toLowerCase(),
-          password_hash: 'supabase_auth', // Placeholder since we use Supabase Auth
+          id: authData.user.id, // Use the auth user's ID
+          username,
+          email,
+          password_hash: passwordHash,
           avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
-        });
+        })
+        .select()
+        .single();
 
-      if (userError) {
+      if (userError || !newUser) {
         console.error('User creation error:', userError);
         // Clean up auth user if our user creation fails
         await supabase.auth.signOut();
@@ -491,13 +523,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
-      console.log('Database user created, creating default planet...');
+      console.log('Database user created, updating auth password...');
+
+      // Update the auth user's password to use the actual user ID
+      const finalAuthPassword = `devverse_${newUser.id}`;
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: finalAuthPassword,
+      });
+
+      if (updateError) {
+        console.error('Password update error:', updateError);
+        // Continue anyway as the user is created
+      }
+
+      console.log('Creating default planet...');
 
       // Create default planet (don't wait for it)
       supabase
         .from('dev_planets')
         .insert({
-          user_id: authData.user.id,
+          user_id: newUser.id,
           name: `${username}'s Planet`,
         })
         .then(() => console.log('Default planet created'))
@@ -507,7 +552,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       supabase
         .from('achievements')
         .insert({
-          user_id: authData.user.id,
+          user_id: newUser.id,
           achievement_id: 'beginning',
           name: 'The Beginning',
           description: 'User makes an account and Logs in',
