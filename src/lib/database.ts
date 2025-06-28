@@ -41,40 +41,32 @@ export const dbOps = {
   },
 
   async getUserByUsername(username) {
-  console.log('🔵 [DB] Getting user by username:', username);
+  console.log('🔵 [DB] getUserByUsername: Checking username =', username);
 
-  try {
-    const { datac, errorc } = await supabase.from('users').select('*');
-    console.log("📦 All users:", datac);
-    if (errorc) console.error("❌ Error fetching all users:", errorc);
+  // Log all users first to debug
+  const { data: allUsers, error: allUsersError } = await supabase.from('users').select('*');
+  console.log('📦 [DB] All users:', allUsers);
+  if (allUsersError) console.error('❌ [DB] Error fetching all users:', allUsersError);
 
-    const controller = new AbortController();
-    setTimeout(() => controller.abort(), 3000);
+  // This is the real query
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('username', username)
+    .maybeSingle();
 
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('username', username)
-      .maybeSingle({ signal: controller.signal });
+  console.log('🟢 [DB] After query');
+  console.log('📄 [DB] Matching user data:', data);
 
-    console.log("47");
-
-    if (error && error.code !== 'PGRST116') {
-      console.error('❌ [DB] Error getting user by username:', error);
-      throw error;
-    }
-
-    console.log('✅ [DB] User by username result:', data ? 'Found user' : 'No user found');
-    return data;
-
-  } catch (err) {
-    if (err.name === 'AbortError') {
-      console.error('🚫 Supabase query timed out');
-    } else {
-      console.error('🔥 Unexpected error:', err);
-    }
+  if (error && error.code !== 'PGRST116') {
+    console.error('❌ [DB] Error querying username:', error);
+    throw error;
   }
+
+  console.log('✅ [DB] getUserByUsername result:', data ? 'Found' : 'Not found');
+  return data;
 },
+
 
 
   async getUserById(id) {
