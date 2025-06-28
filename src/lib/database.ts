@@ -29,7 +29,7 @@ export const dbOps = {
   async getUserByEmail(email) {
     console.log('🔵 [DB] Getting user by email:', email);
 
-    const { data, error } = await supabase.from('users').select('*').eq('email', email).single();
+    const { data, error } = await supabase.from('users').select('*').eq('email', email).maybeSingle();
     console.log(data)
     if (error && error.code !== 'PGRST116') {
       console.error('❌ [DB] Error getting user by email:', error);
@@ -43,7 +43,7 @@ export const dbOps = {
   async getUserByUsername(username) {
     console.log('🔵 [DB] Getting user by username:', username);
 
-    const { data, error } = await supabase.from('users').select('*').eq('username', username).single();
+    const { data, error } = await supabase.from('users').select('*').eq('username', username).maybeSingle();
     console.log("47")
     if (error && error.code !== 'PGRST116') {
       console.error('❌ [DB] Error getting user by username:', error);
