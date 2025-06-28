@@ -43,7 +43,7 @@ export const dbOps = {
   async getUserByUsername(username) {
     console.log('🔵 [DB] Getting user by username:', username);
 
-    
+    const { data, error } = await supabase.from('users').select('*').eq('username', username).single();
     console.log("47")
     if (error && error.code !== 'PGRST116') {
       console.error('❌ [DB] Error getting user by username:', error);
