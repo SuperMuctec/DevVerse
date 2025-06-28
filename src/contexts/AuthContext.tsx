@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, AuthState } from '../types';
 import { supabase } from '../lib/supabase';
+import { dbOps } from '../lib/database';
 import { toast } from 'react-hot-toast';
 
 interface AuthContextType extends AuthState {
@@ -44,18 +45,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Load only essential user data for fast initialization
   const loadUserData = async (userId: string) => {
+    console.log('🔵 [AUTH] Loading user data for ID:', userId);
+    
     try {
-      // Only fetch core user data - no joins or complex queries
-      const { data: userData, error } = await supabase
-        .from('users')
-        .select('id, username, email, avatar, bio, location, website, xp, level, created_at')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        console.error('Error fetching user data:', error);
-        return null;
-      }
+      // Use the logged database operation
+      const userData = await dbOps.getUserById(userId);
 
       if (userData) {
         // Create minimal user object with only essential data
@@ -78,10 +72,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           following: 0,
         };
 
+        console.log('✅ [AUTH] User data loaded successfully:', user);
         return user;
       }
     } catch (error) {
-      console.error('Error loading user data:', error);
+      console.error('❌ [AUTH] Error loading user data:', error);
     }
     return null;
   };
@@ -90,17 +85,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loadUserProjects = async () => {
     if (!authState.user || authState.user.projects) return;
 
-    try {
-      const { data: projects, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('user_id', authState.user.id)
-        .order('created_at', { ascending: false });
+    console.log('🔵 [AUTH] Loading projects for user:', authState.user.id);
 
-      if (error) {
-        console.error('Error loading projects:', error);
-        return;
-      }
+    try {
+      const projects = await dbOps.getProjectsByUserId(authState.user.id);
 
       const formattedProjects = projects?.map((project: any) => ({
         id: project.id,
@@ -118,12 +106,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         owner: authState.user.username,
       })) || [];
 
+      console.log('✅ [AUTH] Projects loaded successfully, count:', formattedProjects.length);
+
       setAuthState(prev => ({
         ...prev,
         user: prev.user ? { ...prev.user, projects: formattedProjects } : null
       }));
     } catch (error) {
-      console.error('Error loading projects:', error);
+      console.error('❌ [AUTH] Error loading projects:', error);
     }
   };
 
@@ -131,19 +121,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loadUserPlanet = async () => {
     if (!authState.user || authState.user.planet) return;
 
+    console.log('🔵 [AUTH] Loading planet for user:', authState.user.id);
+
     try {
-      const { data: planetData, error } = await supabase
-        .from('dev_planets')
-        .select('*')
-        .eq('user_id', authState.user.id)
-        .single();
+      const planetData = await dbOps.getPlanetByUserId(authState.user.id);
 
       let planet;
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error loading planet:', error);
-        return;
-      }
-
       if (planetData) {
         planet = {
           id: planetData.id,
@@ -165,6 +148,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           createdAt: new Date(planetData.created_at),
           categories: planetData.categories || [],
         };
+        console.log('✅ [AUTH] Planet loaded successfully:', planet);
       } else {
         // Create default planet if none exists
         planet = {
@@ -182,6 +166,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           createdAt: new Date(),
           categories: [],
         };
+        console.log('✅ [AUTH] Default planet created:', planet);
       }
 
       setAuthState(prev => ({
@@ -189,7 +174,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user: prev.user ? { ...prev.user, planet } : null
       }));
     } catch (error) {
-      console.error('Error loading planet:', error);
+      console.error('❌ [AUTH] Error loading planet:', error);
     }
   };
 
@@ -197,17 +182,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const loadUserAchievements = async () => {
     if (!authState.user || authState.user.achievements) return;
 
-    try {
-      const { data: achievements, error } = await supabase
-        .from('achievements')
-        .select('*')
-        .eq('user_id', authState.user.id)
-        .order('unlocked_at', { ascending: false });
+    console.log('🔵 [AUTH] Loading achievements for user:', authState.user.id);
 
-      if (error) {
-        console.error('Error loading achievements:', error);
-        return;
-      }
+    try {
+      const achievements = await dbOps.getAchievementsByUserId(authState.user.id);
 
       const formattedAchievements = achievements?.map((achievement: any) => ({
         id: achievement.achievement_id,
@@ -218,18 +196,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         unlockedAt: new Date(achievement.unlocked_at),
       })) || [];
 
+      console.log('✅ [AUTH] Achievements loaded successfully, count:', formattedAchievements.length);
+
       setAuthState(prev => ({
         ...prev,
         user: prev.user ? { ...prev.user, achievements: formattedAchievements } : null
       }));
     } catch (error) {
-      console.error('Error loading achievements:', error);
+      console.error('❌ [AUTH] Error loading achievements:', error);
     }
   };
 
   useEffect(() => {
     // Check for existing session with timeout and proper error handling
     const checkSession = async () => {
+      console.log('🔵 [AUTH] Checking existing session...');
+      
       try {
         // Set a timeout to prevent hanging - reduced to 1 second
         const sessionPromise = supabase.auth.getSession();
@@ -240,6 +222,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any;
         
         if (session?.user) {
+          console.log('✅ [AUTH] Found existing session for user:', session.user.id);
           const user = await loadUserData(session.user.id);
           if (user) {
             setAuthState({
@@ -248,21 +231,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               isLoading: false,
             });
           } else {
+            console.log('⚠️ [AUTH] Session found but user data not loaded');
             setAuthState(prev => ({ ...prev, isLoading: false }));
           }
         } else {
           // No previous session found
-          console.log('No previous session found');
+          console.log('ℹ️ [AUTH] No previous session found');
           setAuthState(prev => ({ ...prev, isLoading: false }));
         }
       } catch (error) {
-        console.error('Session check error:', error);
+        console.error('❌ [AUTH] Session check error:', error);
         
         // Notify user about session check failure
         if (error instanceof Error && error.message === 'Session check timeout') {
-          console.log('Session check timed out - no previous session found');
+          console.log('⚠️ [AUTH] Session check timed out - no previous session found');
         } else {
-          console.log('Session check failed - no previous session found');
+          console.log('⚠️ [AUTH] Session check failed - no previous session found');
         }
         
         // Set as not authenticated regardless of error type
@@ -278,7 +262,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state change:', event, session?.user?.id);
+      console.log('🔵 [AUTH] Auth state change:', event, session?.user?.id);
       
       if (event === 'SIGNED_IN' && session?.user) {
         // User just signed in, load their data
@@ -291,6 +275,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
         }
       } else if (event === 'SIGNED_OUT') {
+        console.log('ℹ️ [AUTH] User signed out');
         setAuthState({
           user: null,
           isAuthenticated: false,
@@ -318,24 +303,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const addXP = async (amount: number) => {
     if (authState.user) {
+      console.log('🔵 [AUTH] Adding XP:', amount, 'to user:', authState.user.id);
+      
       const oldLevel = calculateLevel(authState.user.xp);
       const newXp = authState.user.xp + amount;
       const newLevel = calculateLevel(newXp);
       
       try {
-        // Update XP in database
-        const { error } = await supabase
-          .from('users')
-          .update({ xp: newXp, level: newLevel })
-          .eq('id', authState.user.id);
-
-        if (error) {
-          console.error('Error updating XP:', error);
-          return;
-        }
+        // Update XP in database using logged operation
+        await dbOps.updateUser(authState.user.id, { xp: newXp, level: newLevel });
 
         const updatedUser = { ...authState.user, xp: newXp, level: newLevel };
         setAuthState(prev => ({ ...prev, user: updatedUser }));
+        
+        console.log('✅ [AUTH] XP updated successfully. Old XP:', authState.user.xp, 'New XP:', newXp);
         
         // Add notification for XP gain
         if (addNotification) {
@@ -347,6 +328,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         
         if (newLevel > oldLevel) {
+          console.log('🎉 [AUTH] Level up! Old level:', oldLevel, 'New level:', newLevel);
           // Add notification for level up
           if (addNotification) {
             addNotification({
@@ -357,13 +339,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         }
       } catch (error) {
-        console.error('Error adding XP:', error);
+        console.error('❌ [AUTH] Error adding XP:', error);
         toast.error('Failed to update XP');
       }
     }
   };
 
   const login = async (email: string, password: string): Promise<boolean> => {
+    console.log('🔵 [AUTH] Attempting login for email:', email);
+    
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
@@ -371,10 +355,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
-        console.error('Login error:', error);
+        console.error('❌ [AUTH] Login error:', error);
         toast.error('Invalid email or password');
         return false;
       }
+
+      console.log('✅ [AUTH] Login successful');
 
       // Add welcome notification
       if (addNotification) {
@@ -387,34 +373,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       return true;
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('❌ [AUTH] Login error:', error);
       toast.error('Login failed');
       return false;
     }
   };
 
   const register = async (username: string, email: string, password: string): Promise<boolean> => {
+    console.log('🔵 [AUTH] Attempting registration for username:', username, 'email:', email);
+    
     try {
-      // Check if username already exists in our users table
-      const { data: existingUser } = await supabase
-        .from('users')
-        .select('id')
-        .eq('username', username)
-        .maybeSingle();
+      // Check if username already exists using logged database operation
+      const existingUser = await dbOps.getUserByUsername(username);
 
       if (existingUser) {
+        console.log('⚠️ [AUTH] Username already exists:', username);
         toast.error('Username already exists');
         return false;
       }
 
       // Create user in Supabase Auth
+      console.log('🔵 [AUTH] Creating auth user...');
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
       });
 
       if (authError) {
-        console.error('Auth creation error:', authError);
+        console.error('❌ [AUTH] Auth creation error:', authError);
         if (authError.message.includes('already registered')) {
           toast.error('Email already exists');
         } else {
@@ -424,44 +410,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (!authData.user) {
+        console.error('❌ [AUTH] No user data returned from auth signup');
         toast.error('Registration failed');
         return false;
       }
 
-      // Create user profile in our users table
-      const { error: userError } = await supabase
-        .from('users')
-        .insert({
+      console.log('✅ [AUTH] Auth user created with ID:', authData.user.id);
+
+      // Create user profile in our users table using logged database operation
+      try {
+        await dbOps.createUser({
           id: authData.user.id,
           username,
           email,
           avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
         });
-
-      if (userError) {
-        console.error('User creation error:', userError);
+        console.log('✅ [AUTH] User profile created successfully');
+      } catch (userError) {
+        console.error('❌ [AUTH] User profile creation error:', userError);
         toast.error('Registration failed');
         return false;
       }
 
-      // Create default planet
-      await supabase
-        .from('dev_planets')
-        .insert({
+      // Create default planet using logged database operation
+      try {
+        await dbOps.createOrUpdatePlanet({
           user_id: authData.user.id,
           name: `${username}'s Planet`,
         });
+        console.log('✅ [AUTH] Default planet created successfully');
+      } catch (planetError) {
+        console.error('❌ [AUTH] Planet creation error:', planetError);
+        // Continue anyway as the user is created
+      }
 
-      // Award achievement for registering
-      await supabase
-        .from('achievements')
-        .insert({
+      // Award achievement for registering using logged database operation
+      try {
+        await dbOps.createAchievement({
           user_id: authData.user.id,
           achievement_id: 'beginning',
           name: 'The Beginning',
           description: 'User makes an account and Logs in',
           icon: 'user',
         });
+        console.log('✅ [AUTH] Beginning achievement created successfully');
+      } catch (achievementError) {
+        console.error('❌ [AUTH] Achievement creation error:', achievementError);
+        // Continue anyway as the user is created
+      }
       
       // Add welcome notifications
       if (addNotification) {
@@ -478,15 +474,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }
       
+      console.log('✅ [AUTH] Registration completed successfully');
       return true;
     } catch (error) {
-      console.error('Registration error:', error);
+      console.error('❌ [AUTH] Registration error:', error);
       toast.error('Registration failed');
       return false;
     }
   };
 
   const logout = async () => {
+    console.log('🔵 [AUTH] Attempting logout...');
+    
     try {
       await supabase.auth.signOut();
       setAuthState({
@@ -494,6 +493,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: false,
         isLoading: false,
       });
+      
+      console.log('✅ [AUTH] Logout successful');
       
       // Add logout notification
       if (addNotification) {
@@ -504,59 +505,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('❌ [AUTH] Logout error:', error);
       toast.error('Logout failed');
     }
   };
 
   const updateUser = async (updates: Partial<User>) => {
     if (authState.user) {
+      console.log('🔵 [AUTH] Updating user:', authState.user.id, 'with updates:', updates);
+      
       try {
-        // Update user in database
-        const { error } = await supabase
-          .from('users')
-          .update({
-            username: updates.username,
-            email: updates.email,
-            avatar: updates.avatar,
-            bio: updates.bio,
-            location: updates.location,
-            website: updates.website,
-          })
-          .eq('id', authState.user.id);
-
-        if (error) {
-          console.error('Error updating user:', error);
-          toast.error('Failed to update profile');
-          return;
-        }
+        // Update user in database using logged operation
+        await dbOps.updateUser(authState.user.id, {
+          username: updates.username,
+          email: updates.email,
+          avatar: updates.avatar,
+          bio: updates.bio,
+          location: updates.location,
+          website: updates.website,
+        });
 
         // Update planet if provided
         if (updates.planet) {
-          await supabase
-            .from('dev_planets')
-            .upsert({
-              user_id: authState.user.id,
-              name: updates.planet.name,
-              stack_languages: updates.planet.stack.languages,
-              stack_frameworks: updates.planet.stack.frameworks,
-              stack_tools: updates.planet.stack.tools,
-              stack_databases: updates.planet.stack.databases,
-              color: updates.planet.color,
-              size: updates.planet.size,
-              rings: updates.planet.rings,
-              categories: updates.planet.categories,
-            }, { onConflict: 'user_id' });
+          console.log('🔵 [AUTH] Updating planet data...');
+          await dbOps.createOrUpdatePlanet({
+            user_id: authState.user.id,
+            name: updates.planet.name,
+            stack_languages: updates.planet.stack.languages,
+            stack_frameworks: updates.planet.stack.frameworks,
+            stack_tools: updates.planet.stack.tools,
+            stack_databases: updates.planet.stack.databases,
+            color: updates.planet.color,
+            size: updates.planet.size,
+            rings: updates.planet.rings,
+            categories: updates.planet.categories,
+          });
+          console.log('✅ [AUTH] Planet updated successfully');
         }
 
         // Update projects if provided
         if (updates.projects) {
+          console.log('🔵 [AUTH] Updating projects...');
           // This is a simplified approach - in a real app you'd handle individual project updates
           for (const project of updates.projects) {
             if (!project.id.includes('temp')) { // Only update existing projects
-              await supabase
-                .from('projects')
-                .upsert({
+              try {
+                await dbOps.createProject({
                   id: project.id,
                   user_id: authState.user.id,
                   name: project.name,
@@ -569,12 +563,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   stars: project.stars,
                   forks: project.forks,
                 });
+              } catch (projectError) {
+                console.error('❌ [AUTH] Error updating project:', project.id, projectError);
+              }
             }
           }
+          console.log('✅ [AUTH] Projects updated successfully');
         }
 
         const updatedUser = { ...authState.user, ...updates };
         setAuthState(prev => ({ ...prev, user: updatedUser }));
+        
+        console.log('✅ [AUTH] User updated successfully');
         
         // Add update notification
         if (addNotification) {
@@ -585,7 +585,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
         }
       } catch (error) {
-        console.error('Error updating user:', error);
+        console.error('❌ [AUTH] Error updating user:', error);
         toast.error('Failed to update profile');
       }
     }
