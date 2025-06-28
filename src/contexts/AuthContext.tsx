@@ -11,6 +11,10 @@ interface AuthContextType extends AuthState {
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
   addXP: (amount: number) => void;
+  // New methods for on-demand loading
+  loadUserProjects: () => Promise<void>;
+  loadUserPlanet: () => Promise<void>;
+  loadUserAchievements: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,17 +43,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Notifications context not available yet
   }
 
+  // Load only essential user data for fast initialization
   const loadUserData = async (userId: string) => {
     try {
-      // Fetch user data from our users table
+      // Only fetch core user data - no joins or complex queries
       const { data: userData, error } = await supabase
         .from('users')
-        .select(`
-          *,
-          projects (*),
-          dev_planets (*),
-          achievements (*)
-        `)
+        .select('id, username, email, avatar, bio, location, website, xp, level, created_at')
         .eq('id', userId)
         .single();
 
@@ -59,7 +59,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (userData) {
-        // Transform database data to match our User type
+        // Create minimal user object with only essential data
         const user: User = {
           id: userData.id,
           username: userData.username,
@@ -68,44 +68,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           bio: userData.bio,
           location: userData.location,
           website: userData.website,
-          xp: userData.xp,
-          level: userData.level,
-          projects: userData.projects || [],
-          followers: 0, // TODO: implement followers system
-          following: 0, // TODO: implement following system
+          xp: userData.xp || 0,
+          level: userData.level || 1,
           joinedAt: new Date(userData.created_at),
-          planet: userData.dev_planets?.[0] ? {
-            id: userData.dev_planets[0].id,
-            name: userData.dev_planets[0].name,
-            owner: userData.username,
-            stack: {
-              languages: userData.dev_planets[0].stack_languages || [],
-              frameworks: userData.dev_planets[0].stack_frameworks || [],
-              tools: userData.dev_planets[0].stack_tools || [],
-              databases: userData.dev_planets[0].stack_databases || [],
-            },
-            position: [0, 0, 0], // Default position
-            color: userData.dev_planets[0].color,
-            size: userData.dev_planets[0].size,
-            rings: userData.dev_planets[0].rings,
-            achievements: userData.achievements || [],
-            likes: userData.dev_planets[0].likes,
-            views: userData.dev_planets[0].views,
-            createdAt: new Date(userData.dev_planets[0].created_at),
-          } : {
-            id: '',
-            name: `${userData.username}'s Planet`,
-            owner: userData.username,
-            stack: { languages: [], frameworks: [], tools: [], databases: [] },
-            position: [0, 0, 0],
-            color: '#00ffff',
-            size: 1.0,
-            rings: 1,
-            achievements: [],
-            likes: 0,
-            views: 0,
-            createdAt: new Date(),
-          }
+          // These will be loaded on-demand
+          projects: undefined,
+          planet: undefined,
+          achievements: undefined,
+          followers: 0,
+          following: 0,
         };
 
         return user;
@@ -114,6 +85,147 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Error loading user data:', error);
     }
     return null;
+  };
+
+  // Load user projects on-demand
+  const loadUserProjects = async () => {
+    if (!authState.user || authState.user.projects) return;
+
+    try {
+      const { data: projects, error } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('user_id', authState.user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading projects:', error);
+        return;
+      }
+
+      const formattedProjects = projects?.map((project: any) => ({
+        id: project.id,
+        name: project.name,
+        description: project.description,
+        language: project.language,
+        githubUrl: project.github_url,
+        homepage: project.homepage,
+        topics: project.topics || [],
+        isPrivate: Boolean(project.is_private),
+        stars: project.stars || 0,
+        forks: project.forks || 0,
+        createdAt: new Date(project.created_at),
+        updatedAt: new Date(project.updated_at),
+        owner: authState.user.username,
+      })) || [];
+
+      setAuthState(prev => ({
+        ...prev,
+        user: prev.user ? { ...prev.user, projects: formattedProjects } : null
+      }));
+    } catch (error) {
+      console.error('Error loading projects:', error);
+    }
+  };
+
+  // Load user planet on-demand
+  const loadUserPlanet = async () => {
+    if (!authState.user || authState.user.planet) return;
+
+    try {
+      const { data: planetData, error } = await supabase
+        .from('dev_planets')
+        .select('*')
+        .eq('user_id', authState.user.id)
+        .single();
+
+      let planet;
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error loading planet:', error);
+        return;
+      }
+
+      if (planetData) {
+        planet = {
+          id: planetData.id,
+          name: planetData.name,
+          owner: authState.user.username,
+          stack: {
+            languages: planetData.stack_languages || [],
+            frameworks: planetData.stack_frameworks || [],
+            tools: planetData.stack_tools || [],
+            databases: planetData.stack_databases || [],
+          },
+          position: [0, 0, 0] as [number, number, number],
+          color: planetData.color || '#00ffff',
+          size: planetData.size || 1.0,
+          rings: planetData.rings || 1,
+          achievements: [],
+          likes: planetData.likes || 0,
+          views: planetData.views || 0,
+          createdAt: new Date(planetData.created_at),
+          categories: planetData.categories || [],
+        };
+      } else {
+        // Create default planet if none exists
+        planet = {
+          id: '',
+          name: `${authState.user.username}'s Planet`,
+          owner: authState.user.username,
+          stack: { languages: [], frameworks: [], tools: [], databases: [] },
+          position: [0, 0, 0] as [number, number, number],
+          color: '#00ffff',
+          size: 1.0,
+          rings: 1,
+          achievements: [],
+          likes: 0,
+          views: 0,
+          createdAt: new Date(),
+          categories: [],
+        };
+      }
+
+      setAuthState(prev => ({
+        ...prev,
+        user: prev.user ? { ...prev.user, planet } : null
+      }));
+    } catch (error) {
+      console.error('Error loading planet:', error);
+    }
+  };
+
+  // Load user achievements on-demand
+  const loadUserAchievements = async () => {
+    if (!authState.user || authState.user.achievements) return;
+
+    try {
+      const { data: achievements, error } = await supabase
+        .from('achievements')
+        .select('*')
+        .eq('user_id', authState.user.id)
+        .order('unlocked_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading achievements:', error);
+        return;
+      }
+
+      const formattedAchievements = achievements?.map((achievement: any) => ({
+        id: achievement.achievement_id,
+        name: achievement.name,
+        description: achievement.description,
+        icon: achievement.icon,
+        rarity: 'common' as const, // Default rarity
+        unlockedAt: new Date(achievement.unlocked_at),
+      })) || [];
+
+      setAuthState(prev => ({
+        ...prev,
+        user: prev.user ? { ...prev.user, achievements: formattedAchievements } : null
+      }));
+    } catch (error) {
+      console.error('Error loading achievements:', error);
+    }
   };
 
   useEffect(() => {
@@ -232,71 +344,70 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const login = async (email: string, password: string): Promise<boolean> => {
-  try {
-    const tempUserId = crypto.randomUUID();
-    const fakePassword = `devverse_${tempUserId}`;
+    try {
+      const tempUserId = crypto.randomUUID();
+      const fakePassword = `devverse_${tempUserId}`;
 
-    // Sign in with Supabase Auth first (just to get the JWT/email context)
-    const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
+      // Sign in with Supabase Auth first (just to get the JWT/email context)
+      const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password: fakePassword, // This will fail (expected)
+      });
+
+      // Ignore error — we just want the JWT to exist now
+    } catch (e) {
+      // expected to fail
+    }
+
+    // Now you're authenticated (with email in JWT), the RLS policy works
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id, password_hash')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (userError) {
+      console.error('Database error:', userError);
+      toast.error('Login failed');
+      return false;
+    }
+
+    if (!userData) {
+      toast.error('User not found');
+      return false;
+    }
+
+    // Verify password
+    const isValidPassword = await bcrypt.compare(password, userData.password_hash);
+    if (!isValidPassword) {
+      toast.error('Invalid password');
+      return false;
+    }
+
+    // Now log in for real
+    const realPassword = `devverse_${userData.id}`;
+    const { error: finalSignInError } = await supabase.auth.signInWithPassword({
       email,
-      password: fakePassword, // This will fail (expected)
+      password: realPassword,
     });
 
-    // Ignore error — we just want the JWT to exist now
-  } catch (e) {
-    // expected to fail
-  }
+    if (finalSignInError) {
+      console.error('Final login error:', finalSignInError);
+      toast.error('Authentication failed');
+      return false;
+    }
 
-  // Now you're authenticated (with email in JWT), the RLS policy works
-  const { data: userData, error: userError } = await supabase
-    .from('users')
-    .select('id, password_hash')
-    .eq('email', email)
-    .maybeSingle();
+    // Add welcome notification
+    if (addNotification) {
+      addNotification({
+        title: 'Welcome back!',
+        message: 'Successfully logged into DevVerse³ 🚀',
+        type: 'success'
+      });
+    }
 
-  if (userError) {
-    console.error('Database error:', userError);
-    toast.error('Login failed');
-    return false;
-  }
-
-  if (!userData) {
-    toast.error('User not found');
-    return false;
-  }
-
-  // Verify password
-  const isValidPassword = await bcrypt.compare(password, userData.password_hash);
-  if (!isValidPassword) {
-    toast.error('Invalid password');
-    return false;
-  }
-
-  // Now log in for real
-  const realPassword = `devverse_${userData.id}`;
-  const { error: finalSignInError } = await supabase.auth.signInWithPassword({
-    email,
-    password: realPassword,
-  });
-
-  if (finalSignInError) {
-    console.error('Final login error:', finalSignInError);
-    toast.error('Authentication failed');
-    return false;
-  }
-
-  // Add welcome notification
-  if (addNotification) {
-    addNotification({
-      title: 'Welcome back!',
-      message: 'Successfully logged into DevVerse³ 🚀',
-      type: 'success'
-    });
-  }
-
-  return true;
-};
-
+    return true;
+  };
 
   const register = async (username: string, email: string, password: string): Promise<boolean> => {
     try {
@@ -470,6 +581,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               color: updates.planet.color,
               size: updates.planet.size,
               rings: updates.planet.rings,
+              categories: updates.planet.categories,
             }, { onConflict: 'user_id' });
         }
 
@@ -524,6 +636,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         updateUser,
         addXP,
+        loadUserProjects,
+        loadUserPlanet,
+        loadUserAchievements,
       }}
     >
       {children}

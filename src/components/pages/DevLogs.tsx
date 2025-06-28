@@ -16,7 +16,7 @@ export const DevLogs: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
 
-  // Load devlogs from database
+  // Load devlogs from database on component mount
   useEffect(() => {
     const loadDevLogs = async () => {
       try {

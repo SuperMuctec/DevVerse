@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Code, Database, PenTool as Tool, Layers, Save, Rocket, Sparkles, Tag } from 'lucide-react';
 import { GlassPanel } from '../ui/GlassPanel';
@@ -7,17 +7,42 @@ import { supabase } from '../../lib/supabase';
 import { toast } from 'react-hot-toast';
 
 export const StackBuilder: React.FC = () => {
-  const { user, updateUser } = useAuth();
-  const [planetName, setPlanetName] = useState(user?.planet?.name || '');
+  const { user, updateUser, loadUserPlanet } = useAuth();
+  const [planetName, setPlanetName] = useState('');
   const [stack, setStack] = useState({
-    languages: user?.planet?.stack?.languages || [],
-    frameworks: user?.planet?.stack?.frameworks || [],
-    tools: user?.planet?.stack?.tools || [],
-    databases: user?.planet?.stack?.databases || []
+    languages: [],
+    frameworks: [],
+    tools: [],
+    databases: []
   });
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(
-    user?.planet?.categories || []
-  );
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load planet data when component mounts
+  useEffect(() => {
+    const loadPlanetData = async () => {
+      if (user && !user.planet) {
+        await loadUserPlanet();
+      }
+      setIsLoading(false);
+    };
+
+    loadPlanetData();
+  }, [user, loadUserPlanet]);
+
+  // Update form when planet data is loaded
+  useEffect(() => {
+    if (user?.planet) {
+      setPlanetName(user.planet.name || '');
+      setStack({
+        languages: user.planet.stack?.languages || [],
+        frameworks: user.planet.stack?.frameworks || [],
+        tools: user.planet.stack?.tools || [],
+        databases: user.planet.stack?.databases || []
+      });
+      setSelectedCategories(user.planet.categories || []);
+    }
+  }, [user?.planet]);
 
   const techOptions = {
     languages: ['TypeScript', 'JavaScript', 'Python', 'Rust', 'Go', 'Java', 'C++', 'C#', 'PHP', 'Ruby', 'Swift', 'Kotlin'],
@@ -75,48 +100,58 @@ export const StackBuilder: React.FC = () => {
       return;
     }
 
-    if (user?.planet) {
-      try {
-        const updatedPlanet = {
-          ...user.planet,
+    if (!user) return;
+
+    try {
+      const planetData = {
+        name: planetName,
+        stack: {
+          languages: stack.languages,
+          frameworks: stack.frameworks,
+          tools: stack.tools,
+          databases: stack.databases,
+        },
+        categories: selectedCategories,
+        color: user.planet?.color || '#00ffff',
+        size: user.planet?.size || 1.0,
+        rings: user.planet?.rings || 1,
+      };
+
+      // Update planet in database
+      await supabase
+        .from('dev_planets')
+        .upsert({
+          user_id: user.id,
           name: planetName,
-          stack: stack,
-          categories: selectedCategories
-        };
-        updateUser({ planet: updatedPlanet });
-        
-        await supabase
-          .from('dev_planets')
-          .insert({
-            user_id: user.id,
-            name: planetName,
-            stack_languages: stack.languages,
-            stack_frameworks: stack.frameworks,
-            stack_tools: stack.tools,
-            stack_databases: stack.databases,
-            categories: selectedCategories,
-            color: user.planet.color,
-            size: user.planet.size,
-            rings: user.planet.rings,
-          });
+          stack_languages: stack.languages,
+          stack_frameworks: stack.frameworks,
+          stack_tools: stack.tools,
+          stack_databases: stack.databases,
+          categories: selectedCategories,
+          color: user.planet?.color || '#00ffff',
+          size: user.planet?.size || 1.0,
+          rings: user.planet?.rings || 1,
+        }, { onConflict: 'user_id' });
 
-        // Award achievement for creating first planet
-        await supabase
-          .from('achievements')
-          .upsert({
-            user_id: user.id,
-            achievement_id: 'god',
-            name: 'A God',
-            description: 'User Creates their first planet',
-            icon: 'planet',
-          }, { onConflict: 'user_id,achievement_id' });
+      // Update user context
+      updateUser({ planet: { ...user.planet, ...planetData } });
 
-        toast.success('Planet deployed successfully! 🚀');
-        toast.success('Achievement unlocked: A God! 🌍');
-      } catch (error) {
-        console.error('Error deploying planet:', error);
-        toast.error('Failed to deploy planet');
-      }
+      // Award achievement for creating first planet
+      await supabase
+        .from('achievements')
+        .upsert({
+          user_id: user.id,
+          achievement_id: 'god',
+          name: 'A God',
+          description: 'User Creates their first planet',
+          icon: 'planet',
+        }, { onConflict: 'user_id,achievement_id' });
+
+      toast.success('Planet deployed successfully! 🚀');
+      toast.success('Achievement unlocked: A God! 🌍');
+    } catch (error) {
+      console.error('Error deploying planet:', error);
+      toast.error('Failed to deploy planet');
     }
   };
 
@@ -139,6 +174,19 @@ export const StackBuilder: React.FC = () => {
       default: return '#ffffff';
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen pt-20 sm:pt-44 px-4">
+        <div className="max-w-7xl mx-auto py-8">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-cyber-blue border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-white/70">Loading Stack Builder...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen pt-20 sm:pt-44 px-4">

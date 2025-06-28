@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment } from '@react-three/drei';
 import { motion } from 'framer-motion';
@@ -6,19 +6,63 @@ import { DevPlanet3D } from '../ui/DevPlanet3D';
 import { GlassPanel } from '../ui/GlassPanel';
 import { FloatingElements } from '../ui/FloatingElements';
 import { AnimatedBackground } from '../ui/AnimatedBackground';
+import { supabase } from '../../lib/supabase';
 
 interface GalaxyViewProps {
   onNavigate: (page: string) => void;
 }
 
 export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
-  // Get user-created planets from localStorage
-  const getUserPlanets = () => {
-    const users = JSON.parse(localStorage.getItem('devverse_users') || '[]');
-    return users.map((user: any) => user.planet).filter(Boolean);
-  };
+  const [planets, setPlanets] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const userPlanets = getUserPlanets();
+  // Load planets from database
+  useEffect(() => {
+    const loadPlanets = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('dev_planets')
+          .select('*')
+          .limit(10); // Limit to 10 planets for performance
+
+        if (error) {
+          console.error('Error loading planets:', error);
+          return;
+        }
+
+        // Format planets for 3D rendering
+        const formattedPlanets = data.map((planet, index) => ({
+          id: planet.id,
+          name: planet.name,
+          owner: 'User',
+          stack: {
+            languages: planet.stack_languages || [],
+            frameworks: planet.stack_frameworks || [],
+            tools: planet.stack_tools || [],
+            databases: planet.stack_databases || [],
+          },
+          position: [
+            Math.cos(index * (Math.PI * 2) / data.length) * 10,
+            (Math.random() - 0.5) * 5,
+            Math.sin(index * (Math.PI * 2) / data.length) * 10
+          ],
+          color: planet.color || '#00ffff',
+          size: planet.size || 1.0,
+          rings: planet.rings || 1,
+          likes: planet.likes || 0,
+          views: planet.views || 0,
+        }));
+
+        setPlanets(formattedPlanets);
+      } catch (error) {
+        console.error('Error loading planets:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadPlanets();
+  }, []);
 
   return (
     <div className="min-h-screen pt-16 sm:pt-20 lg:pt-44 overflow-hidden">
@@ -39,7 +83,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
               <ambientLight intensity={0.2} />
               <pointLight position={[10, 10, 10]} intensity={1} />
               
-              {userPlanets.map((planet) => (
+              {!isLoading && planets.map((planet) => (
                 <DevPlanet3D
                   key={planet.id}
                   planet={planet}
@@ -223,7 +267,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
                   }}
                   transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                 >
-                  {userPlanets.length}
+                  {planets.length}
                 </motion.div>
                 <div className="text-white/70 font-sora text-sm sm:text-base">Active Planets</div>
               </motion.div>
@@ -258,7 +302,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
                   }}
                   transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
                 >
-                  {userPlanets.reduce((total, planet) => total + planet.stack.languages.length + planet.stack.frameworks.length, 0)}
+                  {planets.reduce((total, planet) => total + planet.stack.languages.length + planet.stack.frameworks.length, 0)}
                 </motion.div>
                 <div className="text-white/70 font-sora text-sm sm:text-base">Tech Stacks</div>
               </motion.div>

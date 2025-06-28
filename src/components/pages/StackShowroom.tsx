@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Filter, TrendingUp, User, Heart, Star } from 'lucide-react';
 import { GlassPanel } from '../ui/GlassPanel';
-import { dbOps } from '../../lib/database';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
@@ -43,7 +42,7 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser, 
     return filter ? filter.label : categoryId.charAt(0).toUpperCase() + categoryId.slice(1);
   };
 
-  // Load planets from database
+  // Load planets from database on component mount
   useEffect(() => {
     const loadPlanets = async () => {
       try {

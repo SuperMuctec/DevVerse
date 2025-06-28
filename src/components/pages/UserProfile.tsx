@@ -17,7 +17,7 @@ import {
 import { GlassPanel } from '../ui/GlassPanel';
 import { LanguageChart } from '../ui/PieChart';
 import { dbOps } from '../../lib/database';
-import { User as UserType } from '../../types';
+import { User as UserType, Project } from '../../types';
 
 interface UserProfileProps {
   userId: string;
@@ -28,20 +28,7 @@ interface GitHubLanguages {
   [key: string]: number;
 }
 
-interface ProjectWithLanguages {
-  id: string;
-  name: string;
-  description: string;
-  language: string;
-  stars: number;
-  forks: number;
-  isPrivate: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-  owner: string;
-  topics: string[];
-  githubUrl: string;
-  homepage?: string;
+interface ProjectWithLanguages extends Project {
   languages?: GitHubLanguages;
   languagesLoading?: boolean;
 }
@@ -49,92 +36,66 @@ interface ProjectWithLanguages {
 export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
   const [user, setUser] = useState<UserType | null>(null);
   const [projectsWithLanguages, setProjectsWithLanguages] = useState<ProjectWithLanguages[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Get user data from database
-  const getUserData = async (): Promise<UserType | null> => {
-    try {
-      const userData = await dbOps.getUserById(userId);
-      if (!userData) return null;
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        setIsLoading(true);
+        // First load basic user data
+        const userData = await dbOps.getUserById(userId);
+        if (!userData) {
+          setIsLoading(false);
+          return;
+        }
 
-      const [projects, planet, achievements] = await Promise.all([
-        dbOps.getProjectsByUserId(userId),
-        dbOps.getPlanetByUserId(userId),
-        dbOps.getAchievementsByUserId(userId)
-      ]);
+        // Create basic user object
+        const user: UserType = {
+          id: userData.id,
+          username: userData.username,
+          email: userData.email,
+          avatar: userData.avatar,
+          bio: userData.bio,
+          location: userData.location,
+          website: userData.website,
+          xp: userData.xp || 0,
+          level: userData.level || 1,
+          joinedAt: new Date(userData.created_at),
+        };
+        
+        setUser(user);
 
-      return {
-        id: userData.id,
-        username: userData.username,
-        email: userData.email,
-        avatar: userData.avatar,
-        bio: userData.bio,
-        location: userData.location,
-        website: userData.website,
-        xp: userData.xp,
-        level: userData.level,
-        projects: projects.map((p: any) => ({
+        // Load projects separately
+        const projects = await dbOps.getProjectsByUserId(userId);
+        const formattedProjects = projects.map((p: any) => ({
           id: p.id,
           name: p.name,
           description: p.description,
           language: p.language,
           githubUrl: p.github_url,
           homepage: p.homepage,
-          topics: p.topics,
+          topics: p.topics || [],
           isPrivate: Boolean(p.is_private),
-          stars: p.stars,
-          forks: p.forks,
+          stars: p.stars || 0,
+          forks: p.forks || 0,
           createdAt: new Date(p.created_at),
           updatedAt: new Date(p.updated_at),
-          owner: userData.username
-        })),
-        followers: 0,
-        following: 0,
-        joinedAt: new Date(userData.created_at),
-        planet: planet ? {
-          id: planet.id,
-          name: planet.name,
-          owner: userData.username,
-          stack: {
-            languages: planet.stack_languages,
-            frameworks: planet.stack_frameworks,
-            tools: planet.stack_tools,
-            databases: planet.stack_databases,
-          },
-          position: [0, 0, 0],
-          color: planet.color,
-          size: planet.size,
-          rings: planet.rings,
-          achievements: achievements,
-          likes: planet.likes,
-          views: planet.views,
-          createdAt: new Date(planet.created_at),
-        } : {
-          id: '',
-          name: `${userData.username}'s Planet`,
-          owner: userData.username,
-          stack: { languages: [], frameworks: [], tools: [], databases: [] },
-          position: [0, 0, 0],
-          color: '#00ffff',
-          size: 1.0,
-          rings: 1,
-          achievements: [],
-          likes: 0,
-          views: 0,
-          createdAt: new Date(),
-        }
-      };
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-      return null;
-    }
-  };
+          owner: user.username
+        }));
 
-  // Load user data on mount
-  useEffect(() => {
-    const loadUserData = async () => {
-      const userData = await getUserData();
-      setUser(userData);
+        // Update user with projects
+        setUser(prev => prev ? { ...prev, projects: formattedProjects } : null);
+        
+        // Load GitHub language data for projects
+        loadProjectLanguages(formattedProjects);
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      } finally {
+        setIsLoading(false);
+      }
     };
+
     loadUserData();
   }, [userId]);
 
@@ -164,37 +125,33 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
   };
 
   // Load projects with language data
-  useEffect(() => {
-    if (user?.projects && user.projects.length > 0) {
-      const loadProjectLanguages = async () => {
-        const projectsWithLangs = await Promise.all(
-          user.projects.map(async (project) => {
-            const projectWithLang: ProjectWithLanguages = { 
-              ...project, 
-              languagesLoading: true 
-            };
-            
-            try {
-              const languages = await fetchGitHubLanguages(project.githubUrl);
-              projectWithLang.languages = languages || undefined;
-            } catch (error) {
-              console.error(`Error loading languages for ${project.name}:`, error);
-            } finally {
-              projectWithLang.languagesLoading = false;
-            }
-            
-            return projectWithLang;
-          })
-        );
-        
-        setProjectsWithLanguages(projectsWithLangs);
-      };
-
-      loadProjectLanguages();
+  const loadProjectLanguages = async (projects: Project[]) => {
+    if (projects.length > 0) {
+      const projectsWithLangs = await Promise.all(
+        projects.map(async (project) => {
+          const projectWithLang: ProjectWithLanguages = { 
+            ...project, 
+            languagesLoading: true 
+          };
+          
+          try {
+            const languages = await fetchGitHubLanguages(project.githubUrl);
+            projectWithLang.languages = languages || undefined;
+          } catch (error) {
+            console.error(`Error loading languages for ${project.name}:`, error);
+          } finally {
+            projectWithLang.languagesLoading = false;
+          }
+          
+          return projectWithLang;
+        })
+      );
+      
+      setProjectsWithLanguages(projectsWithLangs);
     } else {
       setProjectsWithLanguages([]);
     }
-  }, [user?.projects]);
+  };
 
   // Calculate user level based on XP
   const calculateLevel = (xp: number) => {
@@ -237,6 +194,19 @@ export const UserProfile: React.FC<UserProfileProps> = ({ userId, onBack }) => {
     };
     return colors[language] || '#ffffff';
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen pt-44 px-4">
+        <div className="max-w-4xl mx-auto py-8">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-cyber-blue border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-white/70">Loading user profile...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
     return (

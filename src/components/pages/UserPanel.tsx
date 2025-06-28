@@ -68,7 +68,8 @@ export const UserPanel: React.FC = () => {
   const [projectsWithLanguages, setProjectsWithLanguages] = useState<ProjectWithLanguages[]>([]);
   const [dbStats, setDbStats] = useState<any>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
-  const { user, updateUser, addXP } = useAuth();
+  const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+  const { user, updateUser, addXP, loadUserProjects } = useAuth();
 
   const profileForm = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -84,6 +85,14 @@ export const UserPanel: React.FC = () => {
   const passwordForm = useForm<PasswordFormData>({
     resolver: zodResolver(passwordSchema),
   });
+
+  // Load projects when projects tab is accessed
+  useEffect(() => {
+    if (activeTab === 'projects' && user && !user.projects && !isLoadingProjects) {
+      setIsLoadingProjects(true);
+      loadUserProjects().finally(() => setIsLoadingProjects(false));
+    }
+  }, [activeTab, user, loadUserProjects, isLoadingProjects]);
 
   // Load database stats when database tab is active
   useEffect(() => {
@@ -135,7 +144,7 @@ export const UserPanel: React.FC = () => {
     if (user?.projects && user.projects.length > 0) {
       const loadProjectLanguages = async () => {
         const projectsWithLangs = await Promise.all(
-          user.projects.map(async (project) => {
+          user.projects!.map(async (project) => {
             const projectWithLang: ProjectWithLanguages = { 
               ...project, 
               languagesLoading: true 
@@ -516,7 +525,7 @@ export const UserPanel: React.FC = () => {
               <GlassPanel glowColor="#00ff00">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="font-orbitron text-2xl font-bold text-white">
-                    Your Projects ({projectsWithLanguages.length})
+                    Your Projects ({user?.projects?.length || 0})
                   </h2>
                   <motion.button
                     onClick={() => setShowCreateProject(true)}
@@ -529,118 +538,125 @@ export const UserPanel: React.FC = () => {
                   </motion.button>
                 </div>
 
-                <div className="space-y-4">
-                  {projectsWithLanguages.length > 0 ? (
-                    projectsWithLanguages.map((project, index) => (
-                      <motion.div
-                        key={project.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 }}
-                        className="bg-white/5 border border-white/10 rounded-lg p-6 hover:bg-white/10 transition-colors group"
-                      >
-                        <div className="flex items-start justify-between mb-3">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-3 mb-2">
-                              <motion.h3 
-                                className="font-orbitron text-lg font-bold text-white group-hover:text-cyber-green transition-colors cursor-pointer"
-                                whileHover={{ scale: 1.02 }}
-                                onClick={() => window.open(project.githubUrl, '_blank')}
+                {isLoadingProjects ? (
+                  <div className="text-center py-12">
+                    <Loader className="w-8 h-8 animate-spin mx-auto mb-4 text-cyber-green" />
+                    <p className="text-white/70">Loading projects...</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {projectsWithLanguages.length > 0 ? (
+                      projectsWithLanguages.map((project, index) => (
+                        <motion.div
+                          key={project.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          className="bg-white/5 border border-white/10 rounded-lg p-6 hover:bg-white/10 transition-colors group"
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1">
+                              <div className="flex items-center space-x-3 mb-2">
+                                <motion.h3 
+                                  className="font-orbitron text-lg font-bold text-white group-hover:text-cyber-green transition-colors cursor-pointer"
+                                  whileHover={{ scale: 1.02 }}
+                                  onClick={() => window.open(project.githubUrl, '_blank')}
+                                >
+                                  {project.name}
+                                </motion.h3>
+                                <motion.button
+                                  onClick={() => window.open(project.githubUrl, '_blank')}
+                                  className="p-1 text-white/50 hover:text-cyber-green transition-colors"
+                                  whileHover={{ scale: 1.2, rotate: 15 }}
+                                  whileTap={{ scale: 0.9 }}
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                </motion.button>
+                                {project.isPrivate && (
+                                  <span className="px-2 py-1 bg-white/20 text-white/70 text-xs rounded-full">
+                                    Private
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-white/70 text-sm mb-3">
+                                {project.description}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center space-x-4 text-sm text-white/60">
+                              <div className="flex items-center space-x-1">
+                                <div
+                                  className="w-3 h-3 rounded-full"
+                                  style={{ backgroundColor: getLanguageColor(project.language) }}
+                                />
+                                <span>{project.language}</span>
+                              </div>
+                              <div className="flex items-center space-x-1">
+                                <Star className="w-4 h-4" />
+                                <span>{project.stars}</span>
+                              </div>
+                              <div className="flex items-center space-x-1">
+                                <GitFork className="w-4 h-4" />
+                                <span>{project.forks}</span>
+                              </div>
+                              <div className="flex items-center space-x-1">
+                                <Calendar className="w-4 h-4" />
+                                <span>Updated {new Date(project.updatedAt).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* GitHub Language Chart */}
+                          {project.languagesLoading ? (
+                            <div className="flex items-center space-x-2 text-white/50 p-4 bg-white/5 rounded-lg border border-white/10">
+                              <Loader className="w-4 h-4 animate-spin" />
+                              <span className="text-sm">Loading language data...</span>
+                            </div>
+                          ) : project.languages ? (
+                            <LanguageChart 
+                              data={project.languages}
+                              title="Language Distribution"
+                              size={80}
+                              maxLegendItems={4}
+                              className="mb-4"
+                            />
+                          ) : (
+                            <div className="text-sm text-white/50 flex items-center space-x-2 p-4 bg-white/5 rounded-lg border border-white/10 mb-4">
+                              <Code className="w-4 h-4" />
+                              <span>Language data unavailable</span>
+                            </div>
+                          )}
+
+                          <div className="flex flex-wrap gap-2">
+                            {project.topics.map((topic) => (
+                              <span
+                                key={topic}
+                                className="px-2 py-1 bg-cyber-blue/20 text-cyber-blue text-xs rounded-full"
                               >
-                                {project.name}
-                              </motion.h3>
-                              <motion.button
-                                onClick={() => window.open(project.githubUrl, '_blank')}
-                                className="p-1 text-white/50 hover:text-cyber-green transition-colors"
-                                whileHover={{ scale: 1.2, rotate: 15 }}
-                                whileTap={{ scale: 0.9 }}
-                              >
-                                <ExternalLink className="w-4 h-4" />
-                              </motion.button>
-                              {project.isPrivate && (
-                                <span className="px-2 py-1 bg-white/20 text-white/70 text-xs rounded-full">
-                                  Private
-                                </span>
-                              )}
-                            </div>
-                            <p className="text-white/70 text-sm mb-3">
-                              {project.description}
-                            </p>
+                                {topic}
+                              </span>
+                            ))}
                           </div>
-                        </div>
-
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center space-x-4 text-sm text-white/60">
-                            <div className="flex items-center space-x-1">
-                              <div
-                                className="w-3 h-3 rounded-full"
-                                style={{ backgroundColor: getLanguageColor(project.language) }}
-                              />
-                              <span>{project.language}</span>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              <Star className="w-4 h-4" />
-                              <span>{project.stars}</span>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              <GitFork className="w-4 h-4" />
-                              <span>{project.forks}</span>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              <Calendar className="w-4 h-4" />
-                              <span>Updated {new Date(project.updatedAt).toLocaleDateString()}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* GitHub Language Chart */}
-                        {project.languagesLoading ? (
-                          <div className="flex items-center space-x-2 text-white/50 p-4 bg-white/5 rounded-lg border border-white/10">
-                            <Loader className="w-4 h-4 animate-spin" />
-                            <span className="text-sm">Loading language data...</span>
-                          </div>
-                        ) : project.languages ? (
-                          <LanguageChart 
-                            data={project.languages}
-                            title="Language Distribution"
-                            size={80}
-                            maxLegendItems={4}
-                            className="mb-4"
-                          />
-                        ) : (
-                          <div className="text-sm text-white/50 flex items-center space-x-2 p-4 bg-white/5 rounded-lg border border-white/10 mb-4">
-                            <Code className="w-4 h-4" />
-                            <span>Language data unavailable</span>
-                          </div>
-                        )}
-
-                        <div className="flex flex-wrap gap-2">
-                          {project.topics.map((topic) => (
-                            <span
-                              key={topic}
-                              className="px-2 py-1 bg-cyber-blue/20 text-cyber-blue text-xs rounded-full"
-                            >
-                              {topic}
-                            </span>
-                          ))}
-                        </div>
-                      </motion.div>
-                    ))
-                  ) : (
-                    <div className="text-center py-12">
-                      <Code className="w-16 h-16 text-white/30 mx-auto mb-4" />
-                      <p className="text-white/70 mb-4">No projects yet</p>
-                      <motion.button
-                        onClick={() => setShowCreateProject(true)}
-                        className="bg-gradient-to-r from-cyber-green to-cyber-blue px-6 py-3 rounded-lg font-semibold text-white hover:scale-105 transition-transform"
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        Create Your First Project
-                      </motion.button>
-                    </div>
-                  )}
-                </div>
+                        </motion.div>
+                      ))
+                    ) : (
+                      <div className="text-center py-12">
+                        <Code className="w-16 h-16 text-white/30 mx-auto mb-4" />
+                        <p className="text-white/70 mb-4">No projects yet</p>
+                        <motion.button
+                          onClick={() => setShowCreateProject(true)}
+                          className="bg-gradient-to-r from-cyber-green to-cyber-blue px-6 py-3 rounded-lg font-semibold text-white hover:scale-105 transition-transform"
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                        >
+                          Create Your First Project
+                        </motion.button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </GlassPanel>
             )}
 

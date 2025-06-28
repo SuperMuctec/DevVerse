@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Star, Award, Crown, Zap, FileText, User, Code, Edit, ArrowLeft, Sparkles, Target } from 'lucide-react';
 import { GlassPanel } from '../ui/GlassPanel';
 import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 
 interface AchievementDetailProps {
   achievement: any;
@@ -259,16 +260,46 @@ const AchievementDetail: React.FC<AchievementDetailProps> = ({ achievement, onBa
 };
 
 export const Nebula: React.FC = () => {
-  const { user } = useAuth();
+  const { user, loadUserAchievements } = useAuth();
   const [selectedAchievement, setSelectedAchievement] = useState<any>(null);
+  const [achievements, setAchievements] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Get user achievements
-  const getUserAchievements = () => {
-    if (!user) return [];
-    return JSON.parse(localStorage.getItem(`achievements_${user.id}`) || '[]');
-  };
-
-  const userAchievements = getUserAchievements();
+  // Load achievements from database
+  useEffect(() => {
+    const loadAchievements = async () => {
+      if (user) {
+        setIsLoading(true);
+        try {
+          // Load user achievements if not already loaded
+          if (!user.achievements) {
+            await loadUserAchievements();
+          }
+          
+          // Get achievements from database
+          const { data, error } = await supabase
+            .from('achievements')
+            .select('*')
+            .eq('user_id', user.id);
+            
+          if (error) {
+            console.error('Error loading achievements:', error);
+            return;
+          }
+          
+          setAchievements(data || []);
+        } catch (error) {
+          console.error('Error loading achievements:', error);
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        setIsLoading(false);
+      }
+    };
+    
+    loadAchievements();
+  }, [user, loadUserAchievements]);
 
   const allAchievements = [
     {
@@ -342,13 +373,26 @@ export const Nebula: React.FC = () => {
   };
 
   const isUnlocked = (achievementId: string) => {
-    return userAchievements.some((a: any) => a.id === achievementId);
+    return achievements.some((a: any) => a.achievement_id === achievementId);
   };
 
   const getUnlockedDate = (achievementId: string) => {
-    const achievement = userAchievements.find((a: any) => a.id === achievementId);
-    return achievement ? new Date(achievement.unlockedAt).toLocaleDateString() : null;
+    const achievement = achievements.find((a: any) => a.achievement_id === achievementId);
+    return achievement ? new Date(achievement.unlocked_at).toLocaleDateString() : null;
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen pt-20 px-4">
+        <div className="max-w-4xl mx-auto py-8">
+          <div className="text-center">
+            <div className="w-16 h-16 border-4 border-cyber-blue border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-white/70">Loading achievements...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (selectedAchievement) {
     return (
@@ -415,9 +459,9 @@ export const Nebula: React.FC = () => {
         {/* Achievement Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-8 sm:mb-12">
           {[
-            { icon: Trophy, value: userAchievements.length, label: 'Achievements Unlocked', color: '#00ffff' },
-            { icon: Star, value: Math.round((userAchievements.length / allAchievements.length) * 100), label: 'Completion Rate', color: '#ff00ff', suffix: '%' },
-            { icon: Award, value: allAchievements.length - userAchievements.length, label: 'Remaining', color: '#ffff00' }
+            { icon: Trophy, value: achievements.length, label: 'Achievements Unlocked', color: '#00ffff' },
+            { icon: Star, value: Math.round((achievements.length / allAchievements.length) * 100), label: 'Completion Rate', color: '#ff00ff', suffix: '%' },
+            { icon: Award, value: allAchievements.length - achievements.length, label: 'Remaining', color: '#ffff00' }
           ].map((stat, index) => (
             <motion.div
               key={index}
@@ -615,7 +659,7 @@ export const Nebula: React.FC = () => {
           })}
         </div>
 
-        {userAchievements.length === 0 && (
+        {achievements.length === 0 && (
           <motion.div 
             className="text-center py-12"
             initial={{ opacity: 0, scale: 0.8 }}

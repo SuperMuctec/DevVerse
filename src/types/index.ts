@@ -12,6 +12,7 @@ export interface DevPlanet {
   likes: number;
   views: number;
   createdAt: Date;
+  categories?: string[];
 }
 
 export interface TechStack {
@@ -45,16 +46,18 @@ export interface User {
   username: string;
   email: string;
   avatar?: string;
-  planet: DevPlanet;
   level: number;
   xp: number;
-  projects: Project[];
-  followers: number;
-  following: number;
   bio?: string;
   location?: string;
   website?: string;
   joinedAt: Date;
+  // These will be loaded on-demand
+  projects?: Project[];
+  planet?: DevPlanet;
+  achievements?: Achievement[];
+  followers?: number;
+  following?: number;
 }
 
 export interface Project {

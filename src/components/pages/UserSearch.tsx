@@ -61,8 +61,7 @@ export const UserSearch: React.FC<UserSearchProps> = ({ onNavigateToUser }) => {
               website,
               xp,
               level,
-              created_at,
-              projects (*)
+              created_at
             `)
             .or(`username.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,bio.ilike.%${searchTerm}%`)
             .limit(20);
@@ -361,7 +360,7 @@ export const UserSearch: React.FC<UserSearchProps> = ({ onNavigateToUser }) => {
                             whileHover={{ scale: 1.1, color: '#ffff00' }}
                           >
                             <Star className="w-4 h-4" />
-                            <span>{user.projects?.length || 0} projects</span>
+                            <span>Projects</span>
                           </motion.div>
                           {user.location && (
                             <motion.div 
