@@ -46,6 +46,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Load only essential user data for fast initialization
   const loadUserData = async (userId: string) => {
     try {
+      console.log('Loading user data for ID:', userId);
+      
       // Only fetch core user data - no joins or complex queries
       const { data: userData, error } = await supabase
         .from('users')
@@ -59,6 +61,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (userData) {
+        console.log('User data loaded successfully');
         // Create minimal user object with only essential data
         const user: User = {
           id: userData.id,
@@ -232,6 +235,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Simplified session check - no timeout, immediate fallback
     const checkSession = async () => {
       try {
+        console.log('Checking for existing session...');
         // Try to get session quickly
         const { data: { session } } = await supabase.auth.getSession();
         
@@ -360,12 +364,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('Starting login process for:', email);
       
-      // First, fetch the user data from our users table to verify credentials
-      const { data: userData, error: userError } = await supabase
+      // Add timeout to database query
+      const queryPromise = supabase
         .from('users')
         .select('id, password_hash')
         .eq('email', email)
         .maybeSingle();
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database query timeout')), 10000)
+      );
+      
+      console.log('Querying database for user...');
+      const { data: userData, error: userError } = await Promise.race([queryPromise, timeoutPromise]) as any;
 
       if (userError) {
         console.error('Database error:', userError);
@@ -381,8 +392,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('Found user, verifying password...');
       
-      // Verify password
-      const isValidPassword = await bcrypt.compare(password, userData.password_hash);
+      // Add timeout to password verification
+      const bcryptPromise = bcrypt.compare(password, userData.password_hash);
+      const bcryptTimeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Password verification timeout')), 5000)
+      );
+      
+      const isValidPassword = await Promise.race([bcryptPromise, bcryptTimeoutPromise]) as boolean;
+      
       if (!isValidPassword) {
         console.log('Invalid password for user:', email);
         toast.error('Invalid password');
@@ -393,10 +410,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Now sign in with Supabase Auth using the user's ID-based password
       const authPassword = `devverse_${userData.id}`;
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      
+      // Add timeout to auth sign in
+      const authPromise = supabase.auth.signInWithPassword({
         email,
         password: authPassword,
       });
+      
+      const authTimeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Auth sign in timeout')), 10000)
+      );
+      
+      const { error: signInError } = await Promise.race([authPromise, authTimeoutPromise]) as any;
 
       if (signInError) {
         console.error('Authentication error:', signInError);
@@ -418,7 +443,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return true;
     } catch (error) {
       console.error('Login error:', error);
-      toast.error('Login failed - unexpected error');
+      if (error instanceof Error) {
+        if (error.message.includes('timeout')) {
+          toast.error('Login timed out - please try again');
+        } else {
+          toast.error('Login failed - unexpected error');
+        }
+      } else {
+        toast.error('Login failed - unexpected error');
+      }
       return false;
     }
   };

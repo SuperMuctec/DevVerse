@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { Eye, EyeOff, Mail, Lock, Rocket } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { GlassPanel } from '../ui/GlassPanel';
+import { toast } from 'react-hot-toast';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -48,6 +49,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
       // If successful, the auth context will handle the state change
     } catch (error) {
       console.error('Login submission error:', error);
+      toast.error('Login failed - please try again');
     } finally {
       setIsLoading(false);
     }
@@ -245,7 +247,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
                 } : {}}
                 transition={{ duration: 0.5 }}
               >
-                {isLoading ? 'Launching...' : 'Launch Into DevVerse³'}
+                {isLoading ? (
+                  <div className="flex items-center justify-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Launching...</span>
+                  </div>
+                ) : (
+                  'Launch Into DevVerse³'
+                )}
               </motion.button>
             </form>
 
