@@ -2,26 +2,55 @@ import { supabase } from './supabase';
 import { v4 as uuidv4 } from 'uuid';
 
 export const dbOps = {
+  // Test database connection
+  async testConnection() {
+    console.log('🔵 [DB] Testing database connection...');
+    
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('count', { count: 'exact', head: true });
+      
+      if (error) {
+        console.error('❌ [DB] Connection test failed:', error);
+        return false;
+      }
+      
+      console.log('✅ [DB] Connection test successful, users count:', data);
+      return true;
+    } catch (error) {
+      console.error('❌ [DB] Connection test error:', error);
+      return false;
+    }
+  },
+
   // Users
   async createUser(userData) {
     console.log('🔵 [DB] Creating user with data:', userData);
     console.log('🔵 [DB] Full userData object:', JSON.stringify(userData, null, 2));
 
     try {
-      // First, let's check what the users table structure looks like
-      const { data: tableInfo, error: tableError } = await supabase
+      // Test connection first
+      const connectionOk = await this.testConnection();
+      if (!connectionOk) {
+        throw new Error('Database connection failed');
+      }
+
+      // Try a simple select first to test RLS
+      console.log('🔵 [DB] Testing RLS with simple select...');
+      const { data: testData, error: testError } = await supabase
         .from('users')
-        .select('*')
+        .select('id')
         .limit(1);
       
-      console.log('🔵 [DB] Users table structure check:', { tableInfo, tableError });
+      console.log('🔵 [DB] RLS test result:', { testData, testError });
 
       // Now try to insert the user
       const insertData = {
         id: userData.id,
         username: userData.username,
         email: userData.email,
-        password_hash: userData.password_hash || 'supabase_auth_managed', // Use a clear placeholder
+        password_hash: userData.password_hash || 'supabase_auth_managed',
         avatar: userData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.username}`,
         bio: userData.bio || null,
         location: userData.location || null,
@@ -46,11 +75,6 @@ export const dbOps = {
           details: error.details,
           hint: error.hint
         });
-        
-        // Try to get more info about the table structure
-        const { data: columns } = await supabase.rpc('get_table_columns', { table_name: 'users' }).catch(() => ({ data: null }));
-        console.log('🔵 [DB] Table columns info:', columns);
-        
         throw error;
       }
 

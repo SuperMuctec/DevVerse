@@ -7,7 +7,37 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables. Please connect to Supabase first.');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+console.log('🔵 [SUPABASE] Initializing with URL:', supabaseUrl);
+console.log('🔵 [SUPABASE] Using anon key:', supabaseAnonKey ? 'Present' : 'Missing');
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false
+  },
+  db: {
+    schema: 'public'
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'devverse-app'
+    }
+  }
+});
+
+// Test database connection
+supabase.from('users').select('count', { count: 'exact', head: true })
+  .then(({ count, error }) => {
+    if (error) {
+      console.error('❌ [SUPABASE] Database connection test failed:', error);
+    } else {
+      console.log('✅ [SUPABASE] Database connection successful, users count:', count);
+    }
+  })
+  .catch(err => {
+    console.error('❌ [SUPABASE] Database connection error:', err);
+  });
 
 // Database types
 export interface Database {
