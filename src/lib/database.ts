@@ -8,32 +8,29 @@ export const dbOps = {
     password_hash: string;
     avatar?: string;
   }) {
-    const email = userData.email.trim().toLowerCase();
-    const username = userData.username.trim().toLowerCase();
-    const password = userData.password_hash;
-
-    const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
-
-    if (authError) {
-      if (authError.message.includes('User already registered') || authError.status === 422) {
-        const { data: existingUser, error: fetchError } = await supabase.auth.admin.getUserByEmail(email);
-        if (fetchError || !existingUser) throw authError;
-        return existingUser.user.id;
+    // Simplified - just use Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: userData.email,
+      password: userData.password_hash,
+      options: {
+        data: {
+          username: userData.username,
+        }
       }
-      throw authError;
-    }
+    });
 
-    const userId = authData?.user?.id;
-    if (!userId) throw new Error('Could not retrieve user ID from Supabase Auth');
+    if (authError) throw authError;
+    if (!authData.user) throw new Error('No user data returned');
 
+    // Create user record
     const { data, error } = await supabase
       .from('users')
       .insert({
-        id: userId,
-        username,
-        email,
-        password_hash: password,
-        avatar: userData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`
+        id: authData.user.id,
+        username: userData.username,
+        email: userData.email,
+        password_hash: 'supabase_auth',
+        avatar: userData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.username}`
       })
       .select()
       .single();
