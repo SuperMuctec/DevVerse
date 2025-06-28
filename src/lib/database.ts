@@ -310,8 +310,8 @@ export const dbOps = {
           .from('users')
           .select('*')
           .eq('id', id)
-          .single(),
-        5000
+          .maybeSingle(),
+        10000
       );
 
       if (error && error.code !== 'PGRST116') {
