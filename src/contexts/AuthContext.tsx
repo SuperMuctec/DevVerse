@@ -358,6 +358,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
+      console.log('Starting login process for:', email);
+      
       // First, fetch the user data from our users table to verify credentials
       const { data: userData, error: userError } = await supabase
         .from('users')
@@ -367,21 +369,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (userError) {
         console.error('Database error:', userError);
-        toast.error('Login failed');
+        toast.error('Login failed - database error');
         return false;
       }
 
       if (!userData) {
+        console.log('User not found for email:', email);
         toast.error('User not found');
         return false;
       }
 
+      console.log('Found user, verifying password...');
+      
       // Verify password
       const isValidPassword = await bcrypt.compare(password, userData.password_hash);
       if (!isValidPassword) {
+        console.log('Invalid password for user:', email);
         toast.error('Invalid password');
         return false;
       }
+
+      console.log('Password verified, signing in with Supabase Auth...');
 
       // Now sign in with Supabase Auth using the user's ID-based password
       const authPassword = `devverse_${userData.id}`;
@@ -396,6 +404,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
+      console.log('Login successful!');
+
       // Add welcome notification
       if (addNotification) {
         addNotification({
@@ -408,13 +418,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return true;
     } catch (error) {
       console.error('Login error:', error);
-      toast.error('Login failed');
+      toast.error('Login failed - unexpected error');
       return false;
     }
   };
 
   const register = async (username: string, email: string, password: string): Promise<boolean> => {
     try {
+      console.log('Starting registration process for:', email);
+      
       // Check if email or username already exists in our users table
       const { data: existingUser } = await supabase
         .from('users')
@@ -427,12 +439,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
+      console.log('User doesn\'t exist, creating new user...');
+
       // Hash password for our database
       const passwordHash = await bcrypt.hash(password, 10);
 
       // Generate a temporary user ID for the auth password
       const tempUserId = crypto.randomUUID();
       const authPassword = `devverse_${tempUserId}`;
+
+      console.log('Creating Supabase Auth user...');
 
       // First create user in Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -442,14 +458,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (authError) {
         console.error('Auth creation error:', authError);
-        toast.error('Registration failed');
+        toast.error('Registration failed - auth error');
         return false;
       }
 
       if (!authData.user) {
-        toast.error('Registration failed');
+        toast.error('Registration failed - no user data');
         return false;
       }
+
+      console.log('Auth user created, creating database user...');
 
       // Now create user in our users table with the auth user's ID
       const { data: newUser, error: userError } = await supabase
@@ -468,9 +486,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('User creation error:', userError);
         // Clean up auth user if our user creation fails
         await supabase.auth.signOut();
-        toast.error('Registration failed');
+        toast.error('Registration failed - database error');
         return false;
       }
+
+      console.log('Database user created, updating auth password...');
 
       // Update the auth user's password to use the actual user ID
       const finalAuthPassword = `devverse_${newUser.id}`;
@@ -483,16 +503,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Continue anyway as the user is created
       }
 
-      // Create default planet
-      await supabase
+      console.log('Creating default planet...');
+
+      // Create default planet (don't wait for it)
+      supabase
         .from('dev_planets')
         .insert({
           user_id: newUser.id,
           name: `${username}'s Planet`,
-        });
+        })
+        .then(() => console.log('Default planet created'))
+        .catch(err => console.error('Failed to create default planet:', err));
 
-      // Award achievement for registering
-      await supabase
+      // Award achievement for registering (don't wait for it)
+      supabase
         .from('achievements')
         .insert({
           user_id: newUser.id,
@@ -500,7 +524,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           name: 'The Beginning',
           description: 'User makes an account and Logs in',
           icon: 'user',
-        });
+        })
+        .then(() => console.log('Achievement awarded'))
+        .catch(err => console.error('Failed to award achievement:', err));
       
       // Add welcome notifications
       if (addNotification) {
@@ -517,11 +543,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }
       
+      console.log('Registration successful!');
       // The auth state change listener will handle setting the user data
       return true;
     } catch (error) {
       console.error('Registration error:', error);
-      toast.error('Registration failed');
+      toast.error('Registration failed - unexpected error');
       return false;
     }
   };
