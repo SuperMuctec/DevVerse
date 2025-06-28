@@ -243,12 +243,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               isLoading: false,
             });
           } else {
-            setAuthState(prev => ({ ...prev, isLoading: false }));
+            setAuthState({
+              user: null,
+              isAuthenticated: false,
+              isLoading: false,
+            });
           }
         } else {
           // No previous session found
           console.log('No previous session found');
-          setAuthState(prev => ({ ...prev, isLoading: false }));
+          setAuthState({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+          });
         }
       } catch (error) {
         console.error('Session check error:', error);
