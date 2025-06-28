@@ -52,24 +52,24 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
     try {
       console.log('🧪 [TEST] Starting comprehensive database test...');
       
-      // Test 1: Basic database insert
-      console.log('🧪 [TEST] Test 1: Basic database insert');
-      const insertResult = await dbOps.testDatabaseInsert();
+      // Test 1: Simple database insert (no auth check)
+      console.log('🧪 [TEST] Test 1: Simple database insert');
+      const simpleResult = await dbOps.testSimpleInsert();
       
       const debug = {
-        test1_insert: insertResult,
-        test2_anonymous: null,
+        test1_simple: simpleResult,
+        test2_records: null,
         test3_auth: null,
-        test4_records: null
+        test4_connection: null
       };
       
-      if (insertResult.success) {
-        toast.success('✅ Test 1: Database insert successful!');
+      if (simpleResult.success) {
+        toast.success('✅ Test 1: Simple insert successful!');
         
         // Test 2: Get records
         console.log('🧪 [TEST] Test 2: Getting test records');
         const recordsResult = await dbOps.getTestRecords();
-        debug.test4_records = recordsResult;
+        debug.test2_records = recordsResult;
         
         if (recordsResult.success) {
           setTestResults(recordsResult.data || []);
@@ -78,17 +78,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
           toast.error(`❌ Test 2: Failed to get records: ${recordsResult.error}`);
         }
       } else {
-        toast.error(`❌ Test 1: Database insert failed: ${insertResult.error}`);
+        toast.error(`❌ Test 1: Simple insert failed: ${simpleResult.error}`);
         
-        // Test 3: Try anonymous access
-        console.log('🧪 [TEST] Test 3: Testing anonymous access');
-        const anonResult = await dbOps.testAnonymousAccess();
-        debug.test2_anonymous = anonResult;
+        // Test 3: Test connection
+        console.log('🧪 [TEST] Test 3: Testing connection');
+        const connectionResult = await dbOps.testConnection();
+        debug.test4_connection = { success: connectionResult };
         
-        if (anonResult.success) {
-          toast.info('ℹ️ Test 3: Anonymous access works');
-        } else {
-          toast.error(`❌ Test 3: Anonymous access failed: ${anonResult.error}`);
+        if (connectionResult) {
+          toast.info('ℹ️ Test 3: Database connection works');
           
           // Test 4: Try with authentication
           console.log('🧪 [TEST] Test 4: Testing with authentication');
@@ -100,6 +98,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
           } else {
             toast.error(`❌ Test 4: Authenticated access failed: ${authResult.error}`);
           }
+        } else {
+          toast.error('❌ Test 3: Database connection failed');
         }
       }
       

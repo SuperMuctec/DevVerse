@@ -223,7 +223,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }, 2000); // 2 second hard timeout
 
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const sessionResponse = await supabase.auth.getSession();
+        const session = sessionResponse.data.session;
+        const error = sessionResponse.error;
         
         // Clear timeout since we got a response
         clearTimeout(timeoutId);

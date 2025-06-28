@@ -7,8 +7,11 @@ export const dbOps = {
     console.log('🔵 [DB] Testing database insert...');
     
     try {
-      // First, check authentication state
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      // First, check authentication state with correct syntax
+      const sessionResponse = await supabase.auth.getSession();
+      const session = sessionResponse.data.session;
+      const sessionError = sessionResponse.error;
+      
       console.log('🔍 [DB] Current session:', session ? 'Authenticated' : 'Not authenticated');
       console.log('🔍 [DB] Session error:', sessionError);
       console.log('🔍 [DB] User ID:', session?.user?.id);
@@ -58,24 +61,28 @@ export const dbOps = {
     }
   },
 
-  // Test with anonymous access
-  async testAnonymousAccess() {
-    console.log('🔵 [DB] Testing anonymous access...');
+  // Simple test without authentication
+  async testSimpleInsert() {
+    console.log('🔵 [DB] Testing simple insert without auth check...');
     
     try {
-      // Sign out first to test anonymous access
-      await supabase.auth.signOut();
+      const testMessage = `Simple test at ${new Date().toISOString()}`;
       
       const { data, error } = await supabase
         .from('test')
-        .select('*')
-        .limit(1);
+        .insert({ message: testMessage })
+        .select()
+        .single();
       
-      console.log('🔍 [DB] Anonymous access result:', { data, error });
+      if (error) {
+        console.error('❌ [DB] Simple insert failed:', error);
+        return { success: false, error: error.message, details: error };
+      }
       
-      return { success: !error, data, error: error?.message };
+      console.log('✅ [DB] Simple insert successful:', data);
+      return { success: true, data };
     } catch (error) {
-      console.error('❌ [DB] Anonymous access error:', error);
+      console.error('❌ [DB] Simple insert error:', error);
       return { success: false, error: error.message };
     }
   },
@@ -110,7 +117,7 @@ export const dbOps = {
       }
       
       // Now try the database operation
-      const insertResult = await this.testDatabaseInsert();
+      const insertResult = await this.testSimpleInsert();
       return insertResult;
       
     } catch (error) {
