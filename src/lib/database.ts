@@ -5,32 +5,61 @@ export const dbOps = {
   // Users
   async createUser(userData) {
     console.log('🔵 [DB] Creating user with data:', userData);
+    console.log('🔵 [DB] Full userData object:', JSON.stringify(userData, null, 2));
 
-    const { data, error } = await supabase
-      .from('users')
-      .insert({
+    try {
+      // First, let's check what the users table structure looks like
+      const { data: tableInfo, error: tableError } = await supabase
+        .from('users')
+        .select('*')
+        .limit(1);
+      
+      console.log('🔵 [DB] Users table structure check:', { tableInfo, tableError });
+
+      // Now try to insert the user
+      const insertData = {
         id: userData.id,
         username: userData.username,
         email: userData.email,
-        password_hash: 'supabase_auth', // Placeholder since we use Supabase Auth
-        avatar: userData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.username}`
-      })
-      .select()
-      .single();
+        password_hash: userData.password_hash || 'supabase_auth_managed', // Use a clear placeholder
+        avatar: userData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.username}`,
+        bio: userData.bio || null,
+        location: userData.location || null,
+        website: userData.website || null,
+        xp: userData.xp || 0,
+        level: userData.level || 1
+      };
 
-    if (error) {
-      console.error('❌ [DB] Error creating user:', error);
-      console.error('❌ [DB] Error details:', {
-        code: error.code,
-        message: error.message,
-        details: error.details,
-        hint: error.hint
-      });
+      console.log('🔵 [DB] Attempting to insert:', JSON.stringify(insertData, null, 2));
+
+      const { data, error } = await supabase
+        .from('users')
+        .insert(insertData)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ [DB] Error creating user:', error);
+        console.error('❌ [DB] Error details:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
+        
+        // Try to get more info about the table structure
+        const { data: columns } = await supabase.rpc('get_table_columns', { table_name: 'users' }).catch(() => ({ data: null }));
+        console.log('🔵 [DB] Table columns info:', columns);
+        
+        throw error;
+      }
+
+      console.log('✅ [DB] User created successfully:', data);
+      return data.id;
+    } catch (error) {
+      console.error('❌ [DB] Unexpected error in createUser:', error);
       throw error;
     }
-
-    console.log('✅ [DB] User created successfully:', data);
-    return data.id;
   },
 
   async getUserByEmail(email) {
