@@ -26,6 +26,24 @@ export const useAuth = () => {
   return context;
 };
 
+// Simple password hashing function (for demonstration only)
+// In production, use bcrypt, argon2, or scrypt
+const hashPassword = async (password: string): Promise<string> => {
+  // Create a simple hash using Web Crypto API
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password + 'devverse_salt_2024'); // Add salt
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashHex;
+};
+
+// Simple password verification function
+const verifyPassword = async (password: string, hash: string): Promise<boolean> => {
+  const passwordHash = await hashPassword(password);
+  return passwordHash === hash;
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
@@ -390,14 +408,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('🔵 [AUTH] Attempting login for email:', email);
     
     try {
+      // First, try to get user from our database to verify password hash
+      const userData = await dbOps.getUserByEmail(email);
+      
+      if (!userData) {
+        console.log('⚠️ [AUTH] User not found in database');
+        toast.error('Invalid email or password');
+        return false;
+      }
+
+      // Verify password against stored hash
+      const isPasswordValid = await verifyPassword(password, userData.password_hash);
+      
+      if (!isPasswordValid) {
+        console.log('⚠️ [AUTH] Password verification failed');
+        toast.error('Invalid email or password');
+        return false;
+      }
+
+      console.log('✅ [AUTH] Password verified, attempting Supabase auth...');
+
+      // Now try Supabase auth (this might fail if password was changed in our system)
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
-        console.error('❌ [AUTH] Login error:', error);
-        toast.error('Invalid email or password');
+        console.warn('⚠️ [AUTH] Supabase auth failed, but our password check passed:', error);
+        // In this case, we could either:
+        // 1. Update Supabase auth password to match our hash
+        // 2. Create a custom session
+        // For now, we'll treat it as a login failure
+        toast.error('Authentication service error');
         return false;
       }
 
@@ -424,6 +467,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('🔵 [AUTH] Attempting registration for username:', username, 'email:', email);
     
     try {
+      // Generate password hash
+      console.log('🔵 [AUTH] Generating password hash...');
+      const passwordHash = await hashPassword(password);
+      console.log('✅ [AUTH] Password hash generated');
+
       // Skip username check to avoid hanging - let the database handle uniqueness
       console.log('🔵 [AUTH] Skipping username check for faster registration...');
 
@@ -453,15 +501,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('✅ [AUTH] Auth user created with ID:', authData.user.id);
 
-      // Create user profile in our users table
+      // Create user profile in our users table with password hash
       try {
         await dbOps.createUser({
           id: authData.user.id,
           username,
           email,
+          password_hash: passwordHash, // Store the hashed password
           avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
         });
-        console.log('✅ [AUTH] User profile created successfully');
+        console.log('✅ [AUTH] User profile created successfully with password hash');
       } catch (userError: any) {
         console.error('❌ [AUTH] User profile creation error:', userError);
         
