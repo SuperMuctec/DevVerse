@@ -345,68 +345,59 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      const tempUserId = crypto.randomUUID();
-      const fakePassword = `devverse_${tempUserId}`;
+      // First, fetch the user data from our users table to verify credentials
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('id, password_hash')
+        .eq('email', email)
+        .maybeSingle();
 
-      // Sign in with Supabase Auth first (just to get the JWT/email context)
-      const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
+      if (userError) {
+        console.error('Database error:', userError);
+        toast.error('Login failed');
+        return false;
+      }
+
+      if (!userData) {
+        toast.error('User not found');
+        return false;
+      }
+
+      // Verify password
+      const isValidPassword = await bcrypt.compare(password, userData.password_hash);
+      if (!isValidPassword) {
+        toast.error('Invalid password');
+        return false;
+      }
+
+      // Now sign in with Supabase Auth using the user's ID-based password
+      const authPassword = `devverse_${userData.id}`;
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
-        password: fakePassword, // This will fail (expected)
+        password: authPassword,
       });
 
-      // Ignore error — we just want the JWT to exist now
-    } catch (e) {
-      // expected to fail
-    }
+      if (signInError) {
+        console.error('Authentication error:', signInError);
+        toast.error('Authentication failed');
+        return false;
+      }
 
-    // Now you're authenticated (with email in JWT), the RLS policy works
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('id, password_hash')
-      .eq('email', email)
-      .maybeSingle();
+      // Add welcome notification
+      if (addNotification) {
+        addNotification({
+          title: 'Welcome back!',
+          message: 'Successfully logged into DevVerse³ 🚀',
+          type: 'success'
+        });
+      }
 
-    if (userError) {
-      console.error('Database error:', userError);
+      return true;
+    } catch (error) {
+      console.error('Login error:', error);
       toast.error('Login failed');
       return false;
     }
-
-    if (!userData) {
-      toast.error('User not found');
-      return false;
-    }
-
-    // Verify password
-    const isValidPassword = await bcrypt.compare(password, userData.password_hash);
-    if (!isValidPassword) {
-      toast.error('Invalid password');
-      return false;
-    }
-
-    // Now log in for real
-    const realPassword = `devverse_${userData.id}`;
-    const { error: finalSignInError } = await supabase.auth.signInWithPassword({
-      email,
-      password: realPassword,
-    });
-
-    if (finalSignInError) {
-      console.error('Final login error:', finalSignInError);
-      toast.error('Authentication failed');
-      return false;
-    }
-
-    // Add welcome notification
-    if (addNotification) {
-      addNotification({
-        title: 'Welcome back!',
-        message: 'Successfully logged into DevVerse³ 🚀',
-        type: 'success'
-      });
-    }
-
-    return true;
   };
 
   const register = async (username: string, email: string, password: string): Promise<boolean> => {
