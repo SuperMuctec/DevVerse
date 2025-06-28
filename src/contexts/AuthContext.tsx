@@ -399,7 +399,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Add timeout to username check to prevent hanging
       const usernameCheckPromise = dbOps.getUserByUsername(username);
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Username check timeout')), 5000)
+        setTimeout(() => reject(new Error('Username check timeout')), 3000)
       );
 
       let existingUser;
@@ -457,35 +457,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
-      // Create default planet using logged database operation with error handling
-      try {
-        console.log('🔵 [AUTH] Creating default planet...');
-        await dbOps.createOrUpdatePlanet({
-          user_id: authData.user.id,
-          name: `${username}'s Planet`,
-        });
-        console.log('✅ [AUTH] Default planet created successfully');
-      } catch (planetError) {
-        console.warn('⚠️ [AUTH] Planet creation warning:', planetError);
-        // Don't fail registration if planet creation fails
-        // The planet can be created later when the user visits the builder
-      }
+      // Create default planet and achievement in background (don't block registration)
+      const backgroundTasks = async () => {
+        // Create default planet with timeout
+        try {
+          console.log('🔵 [AUTH] Creating default planet...');
+          const planetPromise = dbOps.createOrUpdatePlanet({
+            user_id: authData.user.id,
+            name: `${username}'s Planet`,
+          });
+          
+          const planetTimeout = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Planet creation timeout')), 5000)
+          );
 
-      // Award achievement for registering using logged database operation
-      try {
-        console.log('🔵 [AUTH] Creating beginning achievement...');
-        await dbOps.createAchievement({
-          user_id: authData.user.id,
-          achievement_id: 'beginning',
-          name: 'The Beginning',
-          description: 'User makes an account and Logs in',
-          icon: 'user',
-        });
-        console.log('✅ [AUTH] Beginning achievement created successfully');
-      } catch (achievementError) {
-        console.warn('⚠️ [AUTH] Achievement creation warning:', achievementError);
-        // Don't fail registration if achievement creation fails
-      }
+          await Promise.race([planetPromise, planetTimeout]);
+          console.log('✅ [AUTH] Default planet created successfully');
+        } catch (planetError) {
+          console.warn('⚠️ [AUTH] Planet creation warning:', planetError);
+          // Planet will be created later when user visits the builder
+        }
+
+        // Award achievement with timeout
+        try {
+          console.log('🔵 [AUTH] Creating beginning achievement...');
+          const achievementPromise = dbOps.createAchievement({
+            user_id: authData.user.id,
+            achievement_id: 'beginning',
+            name: 'The Beginning',
+            description: 'User makes an account and Logs in',
+            icon: 'user',
+          });
+
+          const achievementTimeout = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Achievement creation timeout')), 5000)
+          );
+
+          await Promise.race([achievementPromise, achievementTimeout]);
+          console.log('✅ [AUTH] Beginning achievement created successfully');
+        } catch (achievementError) {
+          console.warn('⚠️ [AUTH] Achievement creation warning:', achievementError);
+          // Achievement can be awarded later
+        }
+      };
+
+      // Run background tasks without blocking registration completion
+      backgroundTasks().catch(() => {
+        // Ignore background task failures
+      });
       
       // Add welcome notifications
       if (addNotification) {
@@ -496,9 +515,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         
         addNotification({
-          title: 'Achievement Unlocked!',
-          message: 'The Beginning - You\'ve joined the galaxy! 🎉',
-          type: 'success'
+          title: 'Getting Started',
+          message: 'Visit the Builder to create your dev planet! 🚀',
+          type: 'info'
         });
       }
       
