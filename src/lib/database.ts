@@ -12,6 +12,7 @@ export const dbOps = {
         id: userData.id,
         username: userData.username,
         email: userData.email,
+        password_hash: 'managed_by_supabase_auth', // Placeholder since auth is handled by Supabase Auth
         avatar: userData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.username}`
       })
       .select()
@@ -69,9 +70,9 @@ export const dbOps = {
       .from('users')
       .select('*')
       .eq('id', id)
-      .single();
+      .maybeSingle();
 
-    if (error && error.code !== 'PGRST116') {
+    if (error) {
       console.error('❌ [DB] Error getting user by ID:', error);
       throw error;
     }
