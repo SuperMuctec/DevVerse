@@ -27,10 +27,7 @@ export const AIHintSystem: React.FC<AIHintSystemProps> = ({
   const generateAIHint = async () => {
     setIsGenerating(true);
     
-    // Simulate AI processing time
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Generate contextual hints based on problem and difficulty
+    // Removed artificial delay - generate immediately
     const hints = getContextualHints(problemTitle, problemDescription, difficulty, language);
     const randomHint = hints[Math.floor(Math.random() * hints.length)];
     
