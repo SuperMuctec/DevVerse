@@ -573,6 +573,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           });
           console.log('✅ [AUTH] Beginning achievement created successfully');
           
+          // Award XP for the beginning achievement
+          if (authState.user) {
+            addXP(50);
+          }
+          
           if (addNotification) {
             addNotification({
               title: 'Achievement Unlocked!',

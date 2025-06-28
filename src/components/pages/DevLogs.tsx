@@ -6,6 +6,7 @@ import { CreateDevLogModal } from '../modals/CreateDevLogModal';
 import { CreateDevLogData, DevLog } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { dbOps } from '../../lib/database';
 import { toast } from 'react-hot-toast';
 
 export const DevLogs: React.FC = () => {
@@ -14,7 +15,7 @@ export const DevLogs: React.FC = () => {
   const [sortBy, setSortBy] = useState('recent');
   const [devLogs, setDevLogs] = useState<DevLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, addXP } = useAuth();
 
   // Load devlogs from database on component mount
   useEffect(() => {
@@ -99,15 +100,16 @@ export const DevLogs: React.FC = () => {
       }
 
       // Award achievement for first devlog
-      await supabase
-        .from('achievements')
-        .upsert({
-          user_id: user.id,
-          achievement_id: 'journalist',
-          name: 'Journalist',
-          description: 'User writes their first devlog',
-          icon: 'file-text',
-        }, { onConflict: 'user_id,achievement_id' });
+      await dbOps.createAchievement({
+        user_id: user.id,
+        achievement_id: 'journalist',
+        name: 'Journalist',
+        description: 'User writes their first devlog',
+        icon: 'file-text',
+      });
+
+      // Award XP for the journalist achievement
+      addXP(50);
 
       toast.success('DevLog published successfully!');
       toast.success('Achievement unlocked: Journalist! 📝');

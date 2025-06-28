@@ -27,7 +27,7 @@ export const CodeArena: React.FC = () => {
   const [codeHistory, setCodeHistory] = useState<{[key: string]: {[key: string]: string}}>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isHintUsed, setIsHintUsed] = useState(false);
-  const { user } = useAuth();
+  const { user, addXP } = useAuth();
 
   // Load user challenges and stats
   useEffect(() => {
@@ -164,6 +164,9 @@ export const CodeArena: React.FC = () => {
         description: 'User completes their first code arena',
         icon: 'sword',
       });
+
+      // Award XP for the warrior achievement
+      addXP(50);
 
       toast.success('Challenge created successfully!');
       toast.success('Achievement unlocked: A Warrior! ⚔️');

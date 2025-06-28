@@ -29,6 +29,7 @@ import { CreateProjectModal } from '../modals/CreateProjectModal';
 import { ProfilePictureModal } from '../modals/ProfilePictureModal';
 import { Project, CreateProjectData } from '../../types';
 import { getDatabaseStats } from '../../lib/database';
+import { dbOps } from '../../lib/database';
 import { toast } from 'react-hot-toast';
 
 const profileSchema = z.object({
@@ -191,24 +192,28 @@ export const UserPanel: React.FC = () => {
   const { level, currentLevelXp, requiredXp } = calculateLevel(userXp);
   const progressPercentage = (currentLevelXp / requiredXp) * 100;
 
-  const onProfileSubmit = (data: ProfileFormData) => {
+  const onProfileSubmit = async (data: ProfileFormData) => {
     updateUser(data);
     setIsEditing(false);
     
-    // Award achievement for writing bio
-    if (data.bio && data.bio.trim() && user) {
-      const achievements = JSON.parse(localStorage.getItem(`achievements_${user.id}`) || '[]');
-      if (!achievements.some((a: any) => a.id === 'biography')) {
-        const newAchievement = {
-          id: 'biography',
+    // Check if this is the first time adding a bio
+    if (data.bio && data.bio.trim() && user && (!user.bio || user.bio.trim() === '')) {
+      try {
+        // Award achievement for writing bio
+        await dbOps.createAchievement({
+          user_id: user.id,
+          achievement_id: 'biography',
           name: 'Biography',
           description: 'User writes their Bio in their profile page',
           icon: 'edit',
-          unlockedAt: new Date()
-        };
-        achievements.push(newAchievement);
-        localStorage.setItem(`achievements_${user.id}`, JSON.stringify(achievements));
+        });
+        
+        // Award XP for the biography achievement
+        addXP(50);
+        
         toast.success('Achievement unlocked: Biography! ✍️');
+      } catch (error) {
+        console.error('Failed to create achievement:', error);
       }
     }
     
@@ -246,19 +251,24 @@ export const UserPanel: React.FC = () => {
     const randomXP = Math.floor(Math.random() * 901) + 100; // 100-1000 XP
     addXP(randomXP);
 
-    // Award achievement for first project
-    const achievements = JSON.parse(localStorage.getItem(`achievements_${user.id}`) || '[]');
-    if (!achievements.some((a: any) => a.id === 'creator')) {
-      const newAchievement = {
-        id: 'creator',
+    // Check if this is the first project
+    const isFirstProject = !user.projects || user.projects.length === 0;
+    
+    if (isFirstProject) {
+      // Award achievement for first project
+      dbOps.createAchievement({
+        user_id: user.id,
+        achievement_id: 'creator',
         name: 'Creator',
         description: 'User makes their first project from their user page',
         icon: 'code',
-        unlockedAt: new Date()
-      };
-      achievements.push(newAchievement);
-      localStorage.setItem(`achievements_${user.id}`, JSON.stringify(achievements));
-      toast.success('Achievement unlocked: Creator! 💻');
+      }).then(() => {
+        // Award additional XP for the creator achievement
+        addXP(50);
+        toast.success('Achievement unlocked: Creator! 💻');
+      }).catch(error => {
+        console.error('Failed to create achievement:', error);
+      });
     }
 
     toast.success('Project created successfully!');

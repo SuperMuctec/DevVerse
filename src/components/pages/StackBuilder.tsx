@@ -4,10 +4,11 @@ import { Plus, Code, Database, PenTool as Tool, Layers, Save, Rocket, Sparkles, 
 import { GlassPanel } from '../ui/GlassPanel';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
+import { dbOps } from '../../lib/database';
 import { toast } from 'react-hot-toast';
 
 export const StackBuilder: React.FC = () => {
-  const { user, updateUser, loadUserPlanet } = useAuth();
+  const { user, updateUser, loadUserPlanet, addXP } = useAuth();
   const [planetName, setPlanetName] = useState('');
   const [stack, setStack] = useState({
     languages: [],
@@ -136,19 +137,27 @@ export const StackBuilder: React.FC = () => {
       // Update user context
       updateUser({ planet: { ...user.planet, ...planetData } });
 
-      // Award achievement for creating first planet
-      await supabase
-        .from('achievements')
-        .upsert({
+      // Check if this is the first time creating a planet
+      const isFirstPlanet = !user.planet || !user.planet.id;
+
+      if (isFirstPlanet) {
+        // Award achievement for creating first planet
+        await dbOps.createAchievement({
           user_id: user.id,
           achievement_id: 'god',
           name: 'A God',
           description: 'User Creates their first planet',
           icon: 'planet',
-        }, { onConflict: 'user_id,achievement_id' });
+        });
 
-      toast.success('Planet deployed successfully! 🚀');
-      toast.success('Achievement unlocked: A God! 🌍');
+        // Award XP for the god achievement
+        addXP(50);
+
+        toast.success('Planet deployed successfully! 🚀');
+        toast.success('Achievement unlocked: A God! 🌍');
+      } else {
+        toast.success('Planet updated successfully! 🚀');
+      }
     } catch (error) {
       console.error('Error deploying planet:', error);
       toast.error('Failed to deploy planet');
