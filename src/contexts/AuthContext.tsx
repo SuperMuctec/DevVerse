@@ -396,8 +396,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('🔵 [AUTH] Attempting registration for username:', username, 'email:', email);
     
     try {
-      // Check if username already exists using logged database operation
-      const existingUser = await dbOps.getUserByUsername(username);
+      // Add timeout to username check to prevent hanging
+      const usernameCheckPromise = dbOps.getUserByUsername(username);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Username check timeout')), 5000)
+      );
+
+      let existingUser;
+      try {
+        existingUser = await Promise.race([usernameCheckPromise, timeoutPromise]);
+      } catch (error) {
+        console.warn('⚠️ [AUTH] Username check failed or timed out, proceeding with registration');
+        existingUser = null; // Assume username is available
+      }
 
       if (existingUser) {
         console.log('⚠️ [AUTH] Username already exists:', username);

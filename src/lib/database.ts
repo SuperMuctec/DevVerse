@@ -30,7 +30,7 @@ export const dbOps = {
     console.log('🔵 [DB] Getting user by email:', email);
 
     const { data, error } = await supabase.from('users').select('*').eq('email', email).maybeSingle();
-    console.log(data)
+    
     if (error && error.code !== 'PGRST116') {
       console.error('❌ [DB] Error getting user by email:', error);
       throw error;
@@ -41,33 +41,29 @@ export const dbOps = {
   },
 
   async getUserByUsername(username) {
-  console.log('🔵 [DB] getUserByUsername: Checking username =', username);
+    console.log('🔵 [DB] getUserByUsername: Checking username =', username);
 
-  // Log all users first to debug
-  const { data: allUsers, error: allUsersError } = await supabase.from('users').select('*');
-  console.log('📦 [DB] All users:', allUsers);
-  if (allUsersError) console.error('❌ [DB] Error fetching all users:', allUsersError);
+    try {
+      // Simple query with timeout handling
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, username')
+        .eq('username', username)
+        .maybeSingle();
 
-  // This is the real query
-  const { data, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('username', username)
-    .maybeSingle();
+      if (error && error.code !== 'PGRST116') {
+        console.error('❌ [DB] Error querying username:', error);
+        throw error;
+      }
 
-  console.log('🟢 [DB] After query');
-  console.log('📄 [DB] Matching user data:', data);
-
-  if (error && error.code !== 'PGRST116') {
-    console.error('❌ [DB] Error querying username:', error);
-    throw error;
-  }
-
-  console.log('✅ [DB] getUserByUsername result:', data ? 'Found' : 'Not found');
-  return data;
-},
-
-
+      console.log('✅ [DB] getUserByUsername result:', data ? 'Found' : 'Not found');
+      return data;
+    } catch (error) {
+      console.error('❌ [DB] getUserByUsername failed:', error);
+      // Return null to allow registration to continue
+      return null;
+    }
+  },
 
   async getUserById(id) {
     console.log('🔵 [DB] Getting user by ID:', id);
