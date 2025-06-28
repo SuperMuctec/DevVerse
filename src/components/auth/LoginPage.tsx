@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Eye, EyeOff, Mail, Lock, Rocket, Database } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, Rocket, Database, TestTube, Shield, Wifi } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { GlassPanel } from '../ui/GlassPanel';
 import { dbOps } from '../../lib/database';
@@ -25,6 +25,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isTestingDB, setIsTestingDB] = useState(false);
   const [testResults, setTestResults] = useState<any[]>([]);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
   const { login } = useAuth();
 
   const {
@@ -46,24 +47,68 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
 
   const handleTestDatabase = async () => {
     setIsTestingDB(true);
+    setDebugInfo(null);
+    
     try {
-      // Test database insert
+      console.log('🧪 [TEST] Starting comprehensive database test...');
+      
+      // Test 1: Basic database insert
+      console.log('🧪 [TEST] Test 1: Basic database insert');
       const insertResult = await dbOps.testDatabaseInsert();
       
+      const debug = {
+        test1_insert: insertResult,
+        test2_anonymous: null,
+        test3_auth: null,
+        test4_records: null
+      };
+      
       if (insertResult.success) {
-        toast.success('✅ Database insert successful!');
+        toast.success('✅ Test 1: Database insert successful!');
         
-        // Get all test records to show
+        // Test 2: Get records
+        console.log('🧪 [TEST] Test 2: Getting test records');
         const recordsResult = await dbOps.getTestRecords();
+        debug.test4_records = recordsResult;
+        
         if (recordsResult.success) {
           setTestResults(recordsResult.data || []);
+          toast.success('✅ Test 2: Records retrieved successfully!');
+        } else {
+          toast.error(`❌ Test 2: Failed to get records: ${recordsResult.error}`);
         }
       } else {
-        toast.error(`❌ Database insert failed: ${insertResult.error}`);
+        toast.error(`❌ Test 1: Database insert failed: ${insertResult.error}`);
+        
+        // Test 3: Try anonymous access
+        console.log('🧪 [TEST] Test 3: Testing anonymous access');
+        const anonResult = await dbOps.testAnonymousAccess();
+        debug.test2_anonymous = anonResult;
+        
+        if (anonResult.success) {
+          toast.info('ℹ️ Test 3: Anonymous access works');
+        } else {
+          toast.error(`❌ Test 3: Anonymous access failed: ${anonResult.error}`);
+          
+          // Test 4: Try with authentication
+          console.log('🧪 [TEST] Test 4: Testing with authentication');
+          const authResult = await dbOps.testWithAuth();
+          debug.test3_auth = authResult;
+          
+          if (authResult.success) {
+            toast.success('✅ Test 4: Authenticated access works!');
+          } else {
+            toast.error(`❌ Test 4: Authenticated access failed: ${authResult.error}`);
+          }
+        }
       }
+      
+      setDebugInfo(debug);
+      
     } catch (error) {
-      console.error('Database test error:', error);
+      console.error('🧪 [TEST] Database test error:', error);
       toast.error('❌ Database test failed');
+      setDebugInfo({ error: error.message });
     } finally {
       setIsTestingDB(false);
     }
@@ -260,33 +305,60 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
                 {isLoading ? 'Launching...' : 'Launch Into DevVerse³'}
               </motion.button>
 
-              {/* Test Database Button */}
-              <motion.button
-                type="button"
-                onClick={handleTestDatabase}
-                disabled={isTestingDB}
-                className="w-full bg-gradient-to-r from-green-500 to-blue-500 py-3 rounded-lg font-orbitron font-bold text-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                whileHover={{
-                  scale: 1.02,
-                  boxShadow: '0 0 30px rgba(0, 255, 0, 0.5)',
-                  rotateX: 5
-                }}
-                whileTap={{ scale: 0.98 }}
+              {/* Database Test Buttons */}
+              <div className="space-y-3 pt-4 border-t border-white/10">
+                <motion.button
+                  type="button"
+                  onClick={handleTestDatabase}
+                  disabled={isTestingDB}
+                  className="w-full bg-gradient-to-r from-green-500 to-blue-500 py-3 rounded-lg font-orbitron font-bold text-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                  whileHover={{
+                    scale: 1.02,
+                    boxShadow: '0 0 30px rgba(0, 255, 0, 0.5)',
+                    rotateX: 5
+                  }}
+                  whileTap={{ scale: 0.98 }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 1.2, duration: 0.6 }}
+                >
+                  <div className="flex items-center justify-center space-x-2">
+                    <motion.div
+                      animate={isTestingDB ? { rotateZ: 360 } : {}}
+                      transition={{ duration: 1, repeat: isTestingDB ? Infinity : 0, ease: "linear" }}
+                    >
+                      <TestTube className="w-5 h-5" />
+                    </motion.div>
+                    <span>{isTestingDB ? 'Running Tests...' : 'Run Database Tests'}</span>
+                  </div>
+                </motion.button>
+              </div>
+            </form>
+
+            {/* Debug Information */}
+            {debugInfo && (
+              <motion.div
+                className="mt-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 1.2, duration: 0.6 }}
+                transition={{ duration: 0.5 }}
               >
-                <div className="flex items-center justify-center space-x-2">
-                  <motion.div
-                    animate={isTestingDB ? { rotateZ: 360 } : {}}
-                    transition={{ duration: 1, repeat: isTestingDB ? Infinity : 0, ease: "linear" }}
-                  >
-                    <Database className="w-5 h-5" />
-                  </motion.div>
-                  <span>{isTestingDB ? 'Testing Database...' : 'Test Database Connection'}</span>
+                <h3 className="font-semibold text-blue-400 mb-2 flex items-center space-x-2">
+                  <Shield className="w-4 h-4" />
+                  <span>Debug Information</span>
+                </h3>
+                <div className="space-y-2 text-xs font-mono">
+                  {Object.entries(debugInfo).map(([key, value]) => (
+                    <div key={key} className="bg-white/5 p-2 rounded">
+                      <div className="text-blue-300 font-semibold">{key}:</div>
+                      <div className="text-white/70 pl-2">
+                        {typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value)}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </motion.button>
-            </form>
+              </motion.div>
+            )}
 
             {/* Test Results */}
             {testResults.length > 0 && (
