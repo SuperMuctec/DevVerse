@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { v4 as uuidv4 } from 'uuid';
 
 export const dbOps = {
   // Users
@@ -43,48 +44,30 @@ export const dbOps = {
   },
 
   async getUserByEmail(email: string) {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email)
-      .single();
+    const { data, error } = await supabase.from('users').select('*').eq('email', email).single();
     if (error && error.code !== 'PGRST116') throw error;
     return data;
   },
 
   async getUserByUsername(username: string) {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('username', username)
-      .single();
+    const { data, error } = await supabase.from('users').select('*').eq('username', username).single();
     if (error && error.code !== 'PGRST116') throw error;
     return data;
   },
 
   async getUserById(id: string) {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', id)
-      .single();
+    const { data, error } = await supabase.from('users').select('*').eq('id', id).single();
     if (error && error.code !== 'PGRST116') throw error;
     return data;
   },
 
   async updateUser(id: string, updates: any) {
-    const { error } = await supabase
-      .from('users')
-      .update(updates)
-      .eq('id', id);
+    const { error } = await supabase.from('users').update(updates).eq('id', id);
     if (error) throw error;
   },
 
   async getAllUsers() {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('users').select('*').order('created_at', { ascending: false });
     if (error) throw error;
     return data || [];
   },
@@ -296,8 +279,7 @@ export const getDatabaseStats = async () => {
   };
 
   try {
-    // Use Promise.allSettled to prevent one failed query from blocking others
-    const results = await Promise.allSettled([
+    const [usersCount, projectsCount, planetsCount, devlogsCount, achievementsCount, battlesCount] = await Promise.all([
       supabase.from('users').select('*', { count: 'exact', head: true }),
       supabase.from('projects').select('*', { count: 'exact', head: true }),
       supabase.from('dev_planets').select('*', { count: 'exact', head: true }),
@@ -306,14 +288,12 @@ export const getDatabaseStats = async () => {
       supabase.from('code_battles').select('*', { count: 'exact', head: true })
     ]);
 
-    // Extract counts from successful queries
-    if (results[0].status === 'fulfilled') stats.users = results[0].value.count || 0;
-    if (results[1].status === 'fulfilled') stats.projects = results[1].value.count || 0;
-    if (results[2].status === 'fulfilled') stats.planets = results[2].value.count || 0;
-    if (results[3].status === 'fulfilled') stats.devlogs = results[3].value.count || 0;
-    if (results[4].status === 'fulfilled') stats.achievements = results[4].value.count || 0;
-    if (results[5].status === 'fulfilled') stats.battles = results[5].value.count || 0;
-
+    stats.users = usersCount.count || 0;
+    stats.projects = projectsCount.count || 0;
+    stats.planets = planetsCount.count || 0;
+    stats.devlogs = devlogsCount.count || 0;
+    stats.achievements = achievementsCount.count || 0;
+    stats.battles = battlesCount.count || 0;
   } catch (error) {
     console.error('Failed to get database stats:', error);
   }
