@@ -208,43 +208,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // Check for existing session with reduced timeout and better error handling
+    // Simple session check without complex timeout handling
     const checkSession = async () => {
       console.log('🔵 [AUTH] Checking existing session...');
       
       try {
-        // Clear any stale session data first
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (currentSession?.user) {
-          console.log('✅ [AUTH] Found existing session for user:', currentSession.user.id);
-          const user = await loadUserData(currentSession.user.id);
+        if (session?.user) {
+          console.log('✅ [AUTH] Found existing session for user:', session.user.id);
+          const user = await loadUserData(session.user.id);
           if (user) {
             setAuthState({
               user,
               isAuthenticated: true,
               isLoading: false,
             });
-          } else {
-            console.log('⚠️ [AUTH] Session found but user data not loaded');
-            setAuthState(prev => ({ ...prev, isLoading: false }));
+            return;
           }
-        } else {
-          // No previous session found
-          console.log('ℹ️ [AUTH] No previous session found');
-          setAuthState(prev => ({ ...prev, isLoading: false }));
         }
+        
+        // No session or failed to load user data
+        console.log('ℹ️ [AUTH] No valid session found');
+        setAuthState({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+        });
       } catch (error) {
         console.log('ℹ️ [AUTH] Session check failed - starting fresh');
-        
-        // Clear any problematic session data
-        try {
-          await supabase.auth.signOut();
-        } catch (signOutError) {
-          // Ignore signout errors
-        }
-        
-        // Set as not authenticated regardless of error type
         setAuthState({
           user: null,
           isAuthenticated: false,
@@ -253,25 +245,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
 
-    // Add a maximum timeout for the entire session check
-    const sessionCheckWithTimeout = async () => {
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Session check timeout')), 3000)
-      );
-
-      try {
-        await Promise.race([checkSession(), timeoutPromise]);
-      } catch (error) {
-        console.log('ℹ️ [AUTH] Session check timed out - proceeding without session');
-        setAuthState({
-          user: null,
-          isAuthenticated: false,
-          isLoading: false,
-        });
-      }
-    };
-
-    sessionCheckWithTimeout();
+    checkSession();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -396,27 +370,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('🔵 [AUTH] Attempting registration for username:', username, 'email:', email);
     
     try {
-      // Add timeout to username check to prevent hanging
-      const usernameCheckPromise = dbOps.getUserByUsername(username);
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Username check timeout')), 3000)
-      );
+      // Skip username check to avoid hanging - let the database handle uniqueness
+      console.log('🔵 [AUTH] Skipping username check for faster registration...');
 
-      let existingUser;
-      try {
-        existingUser = await Promise.race([usernameCheckPromise, timeoutPromise]);
-      } catch (error) {
-        console.warn('⚠️ [AUTH] Username check failed or timed out, proceeding with registration');
-        existingUser = null; // Assume username is available
-      }
-
-      if (existingUser) {
-        console.log('⚠️ [AUTH] Username already exists:', username);
-        toast.error('Username already exists');
-        return false;
-      }
-
-      // Create user in Supabase Auth
+      // Create user in Supabase Auth first
       console.log('🔵 [AUTH] Creating auth user...');
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
@@ -425,7 +382,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (authError) {
         if (authError.message.includes('already registered')) {
-          console.warn('⚠️ [AUTH] Auth creation warning: User already registered');
+          console.warn('⚠️ [AUTH] Email already exists');
           toast.error('Email already exists');
         } else {
           console.error('❌ [AUTH] Auth creation error:', authError);
@@ -442,7 +399,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('✅ [AUTH] Auth user created with ID:', authData.user.id);
 
-      // Create user profile in our users table using logged database operation
+      // Create user profile in our users table
       try {
         await dbOps.createUser({
           id: authData.user.id,
@@ -451,62 +408,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
         });
         console.log('✅ [AUTH] User profile created successfully');
-      } catch (userError) {
+      } catch (userError: any) {
         console.error('❌ [AUTH] User profile creation error:', userError);
-        toast.error('Registration failed');
+        
+        // Check if it's a username conflict
+        if (userError.message?.includes('duplicate') || userError.message?.includes('unique')) {
+          toast.error('Username already exists');
+        } else {
+          toast.error('Registration failed');
+        }
+        
+        // Clean up auth user if profile creation failed
+        try {
+          await supabase.auth.signOut();
+        } catch (cleanupError) {
+          console.error('Failed to cleanup auth user:', cleanupError);
+        }
+        
         return false;
       }
 
-      // Create default planet and achievement in background (don't block registration)
-      const backgroundTasks = async () => {
-        // Create default planet with timeout
-        try {
-          console.log('🔵 [AUTH] Creating default planet...');
-          const planetPromise = dbOps.createOrUpdatePlanet({
-            user_id: authData.user.id,
-            name: `${username}'s Planet`,
-          });
-          
-          const planetTimeout = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Planet creation timeout')), 5000)
-          );
-
-          await Promise.race([planetPromise, planetTimeout]);
-          console.log('✅ [AUTH] Default planet created successfully');
-        } catch (planetError) {
-          console.warn('⚠️ [AUTH] Planet creation warning:', planetError);
-          // Planet will be created later when user visits the builder
-        }
-
-        // Award achievement with timeout
-        try {
-          console.log('🔵 [AUTH] Creating beginning achievement...');
-          const achievementPromise = dbOps.createAchievement({
-            user_id: authData.user.id,
-            achievement_id: 'beginning',
-            name: 'The Beginning',
-            description: 'User makes an account and Logs in',
-            icon: 'user',
-          });
-
-          const achievementTimeout = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Achievement creation timeout')), 5000)
-          );
-
-          await Promise.race([achievementPromise, achievementTimeout]);
-          console.log('✅ [AUTH] Beginning achievement created successfully');
-        } catch (achievementError) {
-          console.warn('⚠️ [AUTH] Achievement creation warning:', achievementError);
-          // Achievement can be awarded later
-        }
-      };
-
-      // Run background tasks without blocking registration completion
-      backgroundTasks().catch(() => {
-        // Ignore background task failures
-      });
+      // Registration successful - show immediate success
+      console.log('✅ [AUTH] Registration completed successfully');
       
-      // Add welcome notifications
+      // Add welcome notifications immediately
       if (addNotification) {
         addNotification({
           title: 'Welcome to DevVerse³!',
@@ -520,8 +445,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           type: 'info'
         });
       }
+
+      // Create planet and achievement in the background (don't wait for them)
+      setTimeout(async () => {
+        try {
+          console.log('🔵 [AUTH] Creating default planet in background...');
+          await dbOps.createOrUpdatePlanet({
+            user_id: authData.user.id,
+            name: `${username}'s Planet`,
+          });
+          console.log('✅ [AUTH] Default planet created successfully');
+        } catch (planetError) {
+          console.warn('⚠️ [AUTH] Planet creation failed (will be created later):', planetError);
+        }
+
+        try {
+          console.log('🔵 [AUTH] Creating beginning achievement in background...');
+          await dbOps.createAchievement({
+            user_id: authData.user.id,
+            achievement_id: 'beginning',
+            name: 'The Beginning',
+            description: 'User makes an account and Logs in',
+            icon: 'user',
+          });
+          console.log('✅ [AUTH] Beginning achievement created successfully');
+          
+          if (addNotification) {
+            addNotification({
+              title: 'Achievement Unlocked!',
+              message: 'The Beginning - You\'ve joined the galaxy! 🎉',
+              type: 'success'
+            });
+          }
+        } catch (achievementError) {
+          console.warn('⚠️ [AUTH] Achievement creation failed (will be awarded later):', achievementError);
+        }
+      }, 100); // Small delay to ensure registration completes first
       
-      console.log('✅ [AUTH] Registration completed successfully');
       return true;
     } catch (error) {
       console.error('❌ [AUTH] Registration error:', error);
