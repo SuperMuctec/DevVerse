@@ -4,37 +4,18 @@ import { v4 as uuidv4 } from 'uuid';
 export const dbOps = {
   // Users
   async createUser(userData: {
+    id: string;
     username: string;
     email: string;
-    password_hash: string;
     avatar?: string;
   }) {
-    const email = userData.email.trim().toLowerCase();
-    const username = userData.username.trim().toLowerCase();
-    const password = userData.password_hash;
-
-    const { data: authData, error: authError } = await supabase.auth.signUp({ email, password });
-
-    if (authError) {
-      if (authError.message.includes('User already registered') || authError.status === 422) {
-        const { data: existingUser, error: fetchError } = await supabase.auth.admin.getUserByEmail(email);
-        if (fetchError || !existingUser) throw authError;
-        return existingUser.user.id;
-      }
-      throw authError;
-    }
-
-    const userId = authData?.user?.id;
-    if (!userId) throw new Error('Could not retrieve user ID from Supabase Auth');
-
     const { data, error } = await supabase
       .from('users')
       .insert({
-        id: userId,
-        username,
-        email,
-        password_hash: password,
-        avatar: userData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`
+        id: userData.id,
+        username: userData.username,
+        email: userData.email,
+        avatar: userData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.username}`
       })
       .select()
       .single();

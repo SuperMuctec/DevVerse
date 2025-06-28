@@ -2,7 +2,6 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, AuthState } from '../types';
 import { supabase } from '../lib/supabase';
 import { toast } from 'react-hot-toast';
-import bcrypt from 'bcryptjs';
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<boolean>;
@@ -366,41 +365,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // First, fetch the user data from our users table to verify credentials
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('id, password_hash')
-        .eq('email', email)
-        .maybeSingle();
-
-      if (userError) {
-        console.error('Database error:', userError);
-        toast.error('Login failed');
-        return false;
-      }
-
-      if (!userData) {
-        toast.error('User not found');
-        return false;
-      }
-
-      // Verify password
-      const isValidPassword = await bcrypt.compare(password, userData.password_hash);
-      if (!isValidPassword) {
-        toast.error('Invalid password');
-        return false;
-      }
-
-      // Now sign in with Supabase Auth using the user's ID-based password
-      const authPassword = `devverse_${userData.id}`;
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
-        password: authPassword,
+        password,
       });
 
-      if (signInError) {
-        console.error('Authentication error:', signInError);
-        toast.error('Authentication failed');
+      if (error) {
+        console.error('Login error:', error);
+        toast.error('Invalid email or password');
         return false;
       }
 
@@ -423,34 +395,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = async (username: string, email: string, password: string): Promise<boolean> => {
     try {
-      // Check if email or username already exists in our users table
+      // Check if username already exists in our users table
       const { data: existingUser } = await supabase
         .from('users')
         .select('id')
-        .or(`email.eq.${email},username.eq.${username}`)
+        .eq('username', username)
         .maybeSingle();
 
       if (existingUser) {
-        toast.error('Email or username already exists');
+        toast.error('Username already exists');
         return false;
       }
 
-      // Hash password for our database
-      const passwordHash = await bcrypt.hash(password, 10);
-
-      // Generate a temporary user ID for the auth password
-      const tempUserId = crypto.randomUUID();
-      const authPassword = `devverse_${tempUserId}`;
-
-      // First create user in Supabase Auth
+      // Create user in Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
-        password: authPassword,
+        password,
       });
 
       if (authError) {
         console.error('Auth creation error:', authError);
-        toast.error('Registration failed');
+        if (authError.message.includes('already registered')) {
+          toast.error('Email already exists');
+        } else {
+          toast.error('Registration failed');
+        }
         return false;
       }
 
@@ -459,43 +428,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
-      // Now create user in our users table with the auth user's ID
-      const { data: newUser, error: userError } = await supabase
+      // Create user profile in our users table
+      const { error: userError } = await supabase
         .from('users')
         .insert({
-          id: authData.user.id, // Use the auth user's ID
+          id: authData.user.id,
           username,
           email,
-          password_hash: passwordHash,
           avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
-        })
-        .select()
-        .single();
+        });
 
-      if (userError || !newUser) {
+      if (userError) {
         console.error('User creation error:', userError);
-        // Clean up auth user if our user creation fails
-        await supabase.auth.signOut();
         toast.error('Registration failed');
         return false;
-      }
-
-      // Update the auth user's password to use the actual user ID
-      const finalAuthPassword = `devverse_${newUser.id}`;
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: finalAuthPassword,
-      });
-
-      if (updateError) {
-        console.error('Password update error:', updateError);
-        // Continue anyway as the user is created
       }
 
       // Create default planet
       await supabase
         .from('dev_planets')
         .insert({
-          user_id: newUser.id,
+          user_id: authData.user.id,
           name: `${username}'s Planet`,
         });
 
@@ -503,7 +456,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await supabase
         .from('achievements')
         .insert({
-          user_id: newUser.id,
+          user_id: authData.user.id,
           achievement_id: 'beginning',
           name: 'The Beginning',
           description: 'User makes an account and Logs in',
@@ -525,7 +478,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }
       
-      // The auth state change listener will handle setting the user data
       return true;
     } catch (error) {
       console.error('Registration error:', error);

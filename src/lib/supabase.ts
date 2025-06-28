@@ -18,7 +18,6 @@ export interface Database {
           id: string;
           username: string;
           email: string;
-          password_hash: string;
           avatar: string | null;
           bio: string | null;
           location: string | null;
@@ -32,7 +31,6 @@ export interface Database {
           id?: string;
           username: string;
           email: string;
-          password_hash: string;
           avatar?: string | null;
           bio?: string | null;
           location?: string | null;
@@ -46,7 +44,6 @@ export interface Database {
           id?: string;
           username?: string;
           email?: string;
-          password_hash?: string;
           avatar?: string | null;
           bio?: string | null;
           location?: string | null;
