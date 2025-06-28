@@ -1,14 +1,24 @@
 import { supabase } from './supabase';
 import { v4 as uuidv4 } from 'uuid';
 
+// Utility function to add timeout to any promise
+const withTimeout = <T>(promise: Promise<T>, timeoutMs: number = 5000): Promise<T> => {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => 
+      setTimeout(() => reject(new Error(`Operation timed out after ${timeoutMs}ms`)), timeoutMs)
+    )
+  ]);
+};
+
 export const dbOps = {
   // Test database connection with comprehensive auth debugging
   async testDatabaseInsert() {
     console.log('🔵 [DB] Testing database insert...');
     
     try {
-      // First, check authentication state with correct syntax
-      const sessionResponse = await supabase.auth.getSession();
+      // First, check authentication state with timeout
+      const sessionResponse = await withTimeout(supabase.auth.getSession(), 3000);
       const session = sessionResponse.data.session;
       const sessionError = sessionResponse.error;
       
@@ -17,11 +27,12 @@ export const dbOps = {
       console.log('🔍 [DB] User ID:', session?.user?.id);
       console.log('🔍 [DB] Access token present:', !!session?.access_token);
       
-      // Check if we can access the table at all
+      // Check if we can access the table at all with timeout
       console.log('🔍 [DB] Testing table access...');
-      const { data: testAccess, error: accessError } = await supabase
-        .from('test')
-        .select('count', { count: 'exact', head: true });
+      const { data: testAccess, error: accessError } = await withTimeout(
+        supabase.from('test').select('count', { count: 'exact', head: true }),
+        3000
+      );
       
       console.log('🔍 [DB] Table access result:', { count: testAccess, error: accessError });
       
@@ -30,17 +41,20 @@ export const dbOps = {
         return { success: false, error: `Table access failed: ${accessError.message}` };
       }
       
-      // Try to insert a record
+      // Try to insert a record with timeout
       const testMessage = `Test record created at ${new Date().toISOString()}`;
       console.log('🔍 [DB] Attempting insert with message:', testMessage);
       
-      const { data, error } = await supabase
-        .from('test')
-        .insert({
-          message: testMessage
-        })
-        .select()
-        .single();
+      const { data, error } = await withTimeout(
+        supabase
+          .from('test')
+          .insert({
+            message: testMessage
+          })
+          .select()
+          .single(),
+        5000
+      );
       
       if (error) {
         console.error('❌ [DB] Test insert failed:', error);
@@ -55,7 +69,7 @@ export const dbOps = {
       
       console.log('✅ [DB] Test insert successful:', data);
       return { success: true, data };
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ [DB] Test insert error:', error);
       return { success: false, error: error.message };
     }
@@ -68,11 +82,14 @@ export const dbOps = {
     try {
       const testMessage = `Simple test at ${new Date().toISOString()}`;
       
-      const { data, error } = await supabase
-        .from('test')
-        .insert({ message: testMessage })
-        .select()
-        .single();
+      const { data, error } = await withTimeout(
+        supabase
+          .from('test')
+          .insert({ message: testMessage })
+          .select()
+          .single(),
+        5000
+      );
       
       if (error) {
         console.error('❌ [DB] Simple insert failed:', error);
@@ -81,7 +98,7 @@ export const dbOps = {
       
       console.log('✅ [DB] Simple insert successful:', data);
       return { success: true, data };
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ [DB] Simple insert error:', error);
       return { success: false, error: error.message };
     }
@@ -92,22 +109,28 @@ export const dbOps = {
     console.log('🔵 [DB] Testing with manual authentication...');
     
     try {
-      // Try to sign in
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+      // Try to sign in with timeout
+      const { data: authData, error: authError } = await withTimeout(
+        supabase.auth.signInWithPassword({
+          email,
+          password
+        }),
+        5000
+      );
       
       console.log('🔍 [DB] Auth result:', { user: authData.user?.id, error: authError });
       
       if (authError) {
         console.log('🔍 [DB] Auth failed, trying to create test user...');
         
-        // Try to create a test user
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password
-        });
+        // Try to create a test user with timeout
+        const { data: signUpData, error: signUpError } = await withTimeout(
+          supabase.auth.signUp({
+            email,
+            password
+          }),
+          5000
+        );
         
         console.log('🔍 [DB] SignUp result:', { user: signUpData.user?.id, error: signUpError });
         
@@ -120,7 +143,7 @@ export const dbOps = {
       const insertResult = await this.testSimpleInsert();
       return insertResult;
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ [DB] Auth test error:', error);
       return { success: false, error: error.message };
     }
@@ -131,11 +154,14 @@ export const dbOps = {
     console.log('🔵 [DB] Getting test records...');
     
     try {
-      const { data, error } = await supabase
-        .from('test')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(10);
+      const { data, error } = await withTimeout(
+        supabase
+          .from('test')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(10),
+        5000
+      );
       
       if (error) {
         console.error('❌ [DB] Error getting test records:', error);
@@ -144,7 +170,7 @@ export const dbOps = {
       
       console.log('✅ [DB] Test records retrieved:', data);
       return { success: true, data };
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ [DB] Test records error:', error);
       return { success: false, error: error.message };
     }
@@ -155,9 +181,12 @@ export const dbOps = {
     console.log('🔵 [DB] Testing database connection...');
     
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('count', { count: 'exact', head: true });
+      const { data, error } = await withTimeout(
+        supabase
+          .from('users')
+          .select('count', { count: 'exact', head: true }),
+        3000
+      );
       
       if (error) {
         console.error('❌ [DB] Connection test failed:', error);
@@ -173,9 +202,8 @@ export const dbOps = {
   },
 
   // Users - Updated for WebContainer compatibility
-  async createUser(userData) {
+  async createUser(userData: any) {
     console.log('🔵 [DB] Creating user with data:', userData);
-    console.log('🔵 [DB] Full userData object:', JSON.stringify(userData, null, 2));
 
     try {
       // Prepare insert data with all required fields
@@ -194,24 +222,21 @@ export const dbOps = {
 
       console.log('🔵 [DB] Attempting to insert:', JSON.stringify(insertData, null, 2));
 
-      // Use upsert instead of insert to handle potential conflicts
-      const { data, error } = await supabase
-        .from('users')
-        .upsert(insertData, { 
-          onConflict: 'id',
-          ignoreDuplicates: false 
-        })
-        .select()
-        .single();
+      // Use upsert with timeout
+      const { data, error } = await withTimeout(
+        supabase
+          .from('users')
+          .upsert(insertData, { 
+            onConflict: 'id',
+            ignoreDuplicates: false 
+          })
+          .select()
+          .single(),
+        10000
+      );
 
       if (error) {
         console.error('❌ [DB] Error creating user:', error);
-        console.error('❌ [DB] Error details:', {
-          code: error.code,
-          message: error.message,
-          details: error.details,
-          hint: error.hint
-        });
         throw error;
       }
 
@@ -223,15 +248,18 @@ export const dbOps = {
     }
   },
 
-  async getUserByEmail(email) {
+  async getUserByEmail(email: string) {
     console.log('🔵 [DB] Getting user by email:', email);
 
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', email)
-        .maybeSingle();
+      const { data, error } = await withTimeout(
+        supabase
+          .from('users')
+          .select('*')
+          .eq('email', email)
+          .maybeSingle(),
+        5000
+      );
       
       if (error && error.code !== 'PGRST116') {
         console.error('❌ [DB] Error getting user by email:', error);
@@ -246,21 +274,18 @@ export const dbOps = {
     }
   },
 
-  async getUserByUsername(username) {
+  async getUserByUsername(username: string) {
     console.log('🔵 [DB] getUserByUsername: Checking username =', username);
 
     try {
-      // Use a more robust query with timeout handling
-      const { data, error } = await Promise.race([
+      const { data, error } = await withTimeout(
         supabase
           .from('users')
           .select('id, username')
           .eq('username', username)
           .maybeSingle(),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Query timeout')), 5000)
-        )
-      ]) as any;
+        5000
+      );
 
       if (error && error.code !== 'PGRST116') {
         console.error('❌ [DB] Error querying username:', error);
@@ -276,15 +301,18 @@ export const dbOps = {
     }
   },
 
-  async getUserById(id) {
+  async getUserById(id: string) {
     console.log('🔵 [DB] Getting user by ID:', id);
 
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', id)
-        .single();
+      const { data, error } = await withTimeout(
+        supabase
+          .from('users')
+          .select('*')
+          .eq('id', id)
+          .single(),
+        5000
+      );
 
       if (error && error.code !== 'PGRST116') {
         console.error('❌ [DB] Error getting user by ID:', error);
@@ -299,14 +327,17 @@ export const dbOps = {
     }
   },
 
-  async updateUser(id, updates) {
+  async updateUser(id: string, updates: any) {
     console.log('🔵 [DB] Updating user with ID:', id);
 
     try {
-      const { error } = await supabase
-        .from('users')
-        .update(updates)
-        .eq('id', id);
+      const { error } = await withTimeout(
+        supabase
+          .from('users')
+          .update(updates)
+          .eq('id', id),
+        5000
+      );
 
       if (error) {
         console.error('❌ [DB] Error updating user:', error);
@@ -324,10 +355,13 @@ export const dbOps = {
     console.log('🔵 [DB] Getting all users');
 
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data, error } = await withTimeout(
+        supabase
+          .from('users')
+          .select('*')
+          .order('created_at', { ascending: false }),
+        5000
+      );
 
       if (error) {
         console.error('❌ [DB] Error getting all users:', error);
@@ -343,27 +377,30 @@ export const dbOps = {
   },
 
   // Projects
-  async createProject(projectData) {
+  async createProject(projectData: any) {
     console.log('🔵 [DB] Creating project with data:', projectData);
 
     try {
-      const { data, error } = await supabase
-        .from('projects')
-        .insert({
-          id: projectData.id || uuidv4(),
-          user_id: projectData.user_id,
-          name: projectData.name,
-          description: projectData.description,
-          language: projectData.language,
-          github_url: projectData.github_url,
-          homepage: projectData.homepage,
-          topics: projectData.topics || [],
-          is_private: projectData.is_private || false,
-          stars: projectData.stars || 0,
-          forks: projectData.forks || 0,
-        })
-        .select()
-        .single();
+      const { data, error } = await withTimeout(
+        supabase
+          .from('projects')
+          .insert({
+            id: projectData.id || uuidv4(),
+            user_id: projectData.user_id,
+            name: projectData.name,
+            description: projectData.description,
+            language: projectData.language,
+            github_url: projectData.github_url,
+            homepage: projectData.homepage,
+            topics: projectData.topics || [],
+            is_private: projectData.is_private || false,
+            stars: projectData.stars || 0,
+            forks: projectData.forks || 0,
+          })
+          .select()
+          .single(),
+        5000
+      );
 
       if (error) {
         console.error('❌ [DB] Error creating project:', error);
@@ -378,15 +415,18 @@ export const dbOps = {
     }
   },
 
-  async getProjectsByUserId(userId) {
+  async getProjectsByUserId(userId: string) {
     console.log('🔵 [DB] Getting projects for user ID:', userId);
 
     try {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+      const { data, error } = await withTimeout(
+        supabase
+          .from('projects')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false }),
+        5000
+      );
 
       if (error) {
         console.error('❌ [DB] Error getting projects:', error);
@@ -401,14 +441,17 @@ export const dbOps = {
     }
   },
 
-  async updateProject(id, updates) {
+  async updateProject(id: string, updates: any) {
     console.log('🔵 [DB] Updating project with ID:', id);
 
     try {
-      const { error } = await supabase
-        .from('projects')
-        .update(updates)
-        .eq('id', id);
+      const { error } = await withTimeout(
+        supabase
+          .from('projects')
+          .update(updates)
+          .eq('id', id),
+        5000
+      );
 
       if (error) {
         console.error('❌ [DB] Error updating project:', error);
@@ -422,14 +465,17 @@ export const dbOps = {
     }
   },
 
-  async deleteProject(id) {
+  async deleteProject(id: string) {
     console.log('🔵 [DB] Deleting project with ID:', id);
 
     try {
-      const { error } = await supabase
-        .from('projects')
-        .delete()
-        .eq('id', id);
+      const { error } = await withTimeout(
+        supabase
+          .from('projects')
+          .delete()
+          .eq('id', id),
+        5000
+      );
 
       if (error) {
         console.error('❌ [DB] Error deleting project:', error);
@@ -444,31 +490,34 @@ export const dbOps = {
   },
 
   // Dev Planets
-  async createOrUpdatePlanet(planetData) {
+  async createOrUpdatePlanet(planetData: any) {
     console.log('🔵 [DB] Creating or updating planet with data:', planetData);
 
     try {
-      const { data, error } = await supabase
-        .from('dev_planets')
-        .upsert({
-          user_id: planetData.user_id,
-          name: planetData.name || `${planetData.user_id}'s Planet`,
-          stack_languages: planetData.stack_languages || [],
-          stack_frameworks: planetData.stack_frameworks || [],
-          stack_tools: planetData.stack_tools || [],
-          stack_databases: planetData.stack_databases || [],
-          color: planetData.color || '#00ffff',
-          size: planetData.size || 1.0,
-          rings: planetData.rings || 1,
-          likes: planetData.likes || 0,
-          views: planetData.views || 0,
-          categories: planetData.categories || [],
-        }, { 
-          onConflict: 'user_id',
-          ignoreDuplicates: false 
-        })
-        .select()
-        .single();
+      const { data, error } = await withTimeout(
+        supabase
+          .from('dev_planets')
+          .upsert({
+            user_id: planetData.user_id,
+            name: planetData.name || `${planetData.user_id}'s Planet`,
+            stack_languages: planetData.stack_languages || [],
+            stack_frameworks: planetData.stack_frameworks || [],
+            stack_tools: planetData.stack_tools || [],
+            stack_databases: planetData.stack_databases || [],
+            color: planetData.color || '#00ffff',
+            size: planetData.size || 1.0,
+            rings: planetData.rings || 1,
+            likes: planetData.likes || 0,
+            views: planetData.views || 0,
+            categories: planetData.categories || [],
+          }, { 
+            onConflict: 'user_id',
+            ignoreDuplicates: false 
+          })
+          .select()
+          .single(),
+        5000
+      );
 
       if (error) {
         console.error('❌ [DB] Error creating/updating planet:', error);
@@ -483,15 +532,18 @@ export const dbOps = {
     }
   },
 
-  async getPlanetByUserId(userId) {
+  async getPlanetByUserId(userId: string) {
     console.log('🔵 [DB] Getting planet for user ID:', userId);
 
     try {
-      const { data, error } = await supabase
-        .from('dev_planets')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
+      const { data, error } = await withTimeout(
+        supabase
+          .from('dev_planets')
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle(),
+        5000
+      );
 
       if (error && error.code !== 'PGRST116') {
         console.error('❌ [DB] Error getting planet:', error);
@@ -510,10 +562,13 @@ export const dbOps = {
     console.log('🔵 [DB] Getting all planets');
 
     try {
-      const { data, error } = await supabase
-        .from('dev_planets')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data, error } = await withTimeout(
+        supabase
+          .from('dev_planets')
+          .select('*')
+          .order('created_at', { ascending: false }),
+        5000
+      );
 
       if (error) {
         console.error('❌ [DB] Error getting all planets:', error);
@@ -528,14 +583,17 @@ export const dbOps = {
     }
   },
 
-  async updatePlanet(id, updates) {
+  async updatePlanet(id: string, updates: any) {
     console.log('🔵 [DB] Updating planet with ID:', id);
 
     try {
-      const { error } = await supabase
-        .from('dev_planets')
-        .update(updates)
-        .eq('id', id);
+      const { error } = await withTimeout(
+        supabase
+          .from('dev_planets')
+          .update(updates)
+          .eq('id', id),
+        5000
+      );
 
       if (error) {
         console.error('❌ [DB] Error updating planet:', error);
@@ -550,21 +608,24 @@ export const dbOps = {
   },
 
   // DevLogs
-  async createDevLog(devLogData) {
+  async createDevLog(devLogData: any) {
     console.log('🔵 [DB] Creating devlog with data:', devLogData);
 
     try {
-      const { data, error } = await supabase
-        .from('devlogs')
-        .insert({
-          user_id: devLogData.user_id,
-          title: devLogData.title,
-          content: devLogData.content,
-          tags: devLogData.tags || [],
-          likes: devLogData.likes || 0,
-        })
-        .select()
-        .single();
+      const { data, error } = await withTimeout(
+        supabase
+          .from('devlogs')
+          .insert({
+            user_id: devLogData.user_id,
+            title: devLogData.title,
+            content: devLogData.content,
+            tags: devLogData.tags || [],
+            likes: devLogData.likes || 0,
+          })
+          .select()
+          .single(),
+        5000
+      );
 
       if (error) {
         console.error('❌ [DB] Error creating devlog:', error);
@@ -579,15 +640,18 @@ export const dbOps = {
     }
   },
 
-  async getDevLogsByUserId(userId) {
+  async getDevLogsByUserId(userId: string) {
     console.log('🔵 [DB] Getting devlogs for user ID:', userId);
 
     try {
-      const { data, error } = await supabase
-        .from('devlogs')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+      const { data, error } = await withTimeout(
+        supabase
+          .from('devlogs')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false }),
+        5000
+      );
 
       if (error) {
         console.error('❌ [DB] Error getting devlogs:', error);
@@ -606,10 +670,13 @@ export const dbOps = {
     console.log('🔵 [DB] Getting all devlogs');
 
     try {
-      const { data, error } = await supabase
-        .from('devlogs')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data, error } = await withTimeout(
+        supabase
+          .from('devlogs')
+          .select('*')
+          .order('created_at', { ascending: false }),
+        5000
+      );
 
       if (error) {
         console.error('❌ [DB] Error getting all devlogs:', error);
@@ -624,14 +691,17 @@ export const dbOps = {
     }
   },
 
-  async updateDevLog(id, updates) {
+  async updateDevLog(id: string, updates: any) {
     console.log('🔵 [DB] Updating devlog with ID:', id);
 
     try {
-      const { error } = await supabase
-        .from('devlogs')
-        .update(updates)
-        .eq('id', id);
+      const { error } = await withTimeout(
+        supabase
+          .from('devlogs')
+          .update(updates)
+          .eq('id', id),
+        5000
+      );
 
       if (error) {
         console.error('❌ [DB] Error updating devlog:', error);
@@ -645,14 +715,17 @@ export const dbOps = {
     }
   },
 
-  async deleteDevLog(id) {
+  async deleteDevLog(id: string) {
     console.log('🔵 [DB] Deleting devlog with ID:', id);
 
     try {
-      const { error } = await supabase
-        .from('devlogs')
-        .delete()
-        .eq('id', id);
+      const { error } = await withTimeout(
+        supabase
+          .from('devlogs')
+          .delete()
+          .eq('id', id),
+        5000
+      );
 
       if (error) {
         console.error('❌ [DB] Error deleting devlog:', error);
@@ -667,21 +740,24 @@ export const dbOps = {
   },
 
   // Achievements
-  async createAchievement(achievementData) {
+  async createAchievement(achievementData: any) {
     console.log('🔵 [DB] Creating achievement with data:', achievementData);
 
     try {
-      const { data, error } = await supabase
-        .from('achievements')
-        .insert({
-          user_id: achievementData.user_id,
-          achievement_id: achievementData.achievement_id,
-          name: achievementData.name,
-          description: achievementData.description,
-          icon: achievementData.icon,
-        })
-        .select()
-        .single();
+      const { data, error } = await withTimeout(
+        supabase
+          .from('achievements')
+          .insert({
+            user_id: achievementData.user_id,
+            achievement_id: achievementData.achievement_id,
+            name: achievementData.name,
+            description: achievementData.description,
+            icon: achievementData.icon,
+          })
+          .select()
+          .single(),
+        5000
+      );
 
       if (error) {
         console.error('❌ [DB] Error creating achievement:', error);
@@ -696,15 +772,18 @@ export const dbOps = {
     }
   },
 
-  async getAchievementsByUserId(userId) {
+  async getAchievementsByUserId(userId: string) {
     console.log('🔵 [DB] Getting achievements for user ID:', userId);
 
     try {
-      const { data, error } = await supabase
-        .from('achievements')
-        .select('*')
-        .eq('user_id', userId)
-        .order('unlocked_at', { ascending: false });
+      const { data, error } = await withTimeout(
+        supabase
+          .from('achievements')
+          .select('*')
+          .eq('user_id', userId)
+          .order('unlocked_at', { ascending: false }),
+        5000
+      );
 
       if (error) {
         console.error('❌ [DB] Error getting achievements:', error);
@@ -719,14 +798,17 @@ export const dbOps = {
     }
   },
 
-  async deleteAchievement(id) {
+  async deleteAchievement(id: string) {
     console.log('🔵 [DB] Deleting achievement with ID:', id);
 
     try {
-      const { error } = await supabase
-        .from('achievements')
-        .delete()
-        .eq('id', id);
+      const { error } = await withTimeout(
+        supabase
+          .from('achievements')
+          .delete()
+          .eq('id', id),
+        5000
+      );
 
       if (error) {
         console.error('❌ [DB] Error deleting achievement:', error);
@@ -741,26 +823,29 @@ export const dbOps = {
   },
 
   // Code Battles
-  async createCodeBattle(battleData) {
+  async createCodeBattle(battleData: any) {
     console.log('🔵 [DB] Creating code battle with data:', battleData);
 
     try {
-      const { data, error } = await supabase
-        .from('code_battles')
-        .insert({
-          user_id: battleData.user_id,
-          title: battleData.title,
-          description: battleData.description,
-          difficulty: battleData.difficulty,
-          time_limit: battleData.time_limit,
-          problem_title: battleData.problem_title,
-          problem_description: battleData.problem_description,
-          examples: battleData.examples || [],
-          constraints: battleData.constraints || [],
-          status: battleData.status || 'waiting',
-        })
-        .select()
-        .single();
+      const { data, error } = await withTimeout(
+        supabase
+          .from('code_battles')
+          .insert({
+            user_id: battleData.user_id,
+            title: battleData.title,
+            description: battleData.description,
+            difficulty: battleData.difficulty,
+            time_limit: battleData.time_limit,
+            problem_title: battleData.problem_title,
+            problem_description: battleData.problem_description,
+            examples: battleData.examples || [],
+            constraints: battleData.constraints || [],
+            status: battleData.status || 'waiting',
+          })
+          .select()
+          .single(),
+        5000
+      );
 
       if (error) {
         console.error('❌ [DB] Error creating code battle:', error);
@@ -775,15 +860,18 @@ export const dbOps = {
     }
   },
 
-  async getCodeBattlesByUserId(userId) {
+  async getCodeBattlesByUserId(userId: string) {
     console.log('🔵 [DB] Getting code battles for user ID:', userId);
 
     try {
-      const { data, error } = await supabase
-        .from('code_battles')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+      const { data, error } = await withTimeout(
+        supabase
+          .from('code_battles')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false }),
+        5000
+      );
 
       if (error) {
         console.error('❌ [DB] Error getting code battles:', error);
@@ -802,10 +890,13 @@ export const dbOps = {
     console.log('🔵 [DB] Getting all code battles');
 
     try {
-      const { data, error } = await supabase
-        .from('code_battles')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data, error } = await withTimeout(
+        supabase
+          .from('code_battles')
+          .select('*')
+          .order('created_at', { ascending: false }),
+        5000
+      );
 
       if (error) {
         console.error('❌ [DB] Error getting all code battles:', error);
@@ -820,14 +911,17 @@ export const dbOps = {
     }
   },
 
-  async updateCodeBattle(id, updates) {
+  async updateCodeBattle(id: string, updates: any) {
     console.log('🔵 [DB] Updating code battle with ID:', id);
 
     try {
-      const { error } = await supabase
-        .from('code_battles')
-        .update(updates)
-        .eq('id', id);
+      const { error } = await withTimeout(
+        supabase
+          .from('code_battles')
+          .update(updates)
+          .eq('id', id),
+        5000
+      );
 
       if (error) {
         console.error('❌ [DB] Error updating code battle:', error);
@@ -841,14 +935,17 @@ export const dbOps = {
     }
   },
 
-  async deleteCodeBattle(id) {
+  async deleteCodeBattle(id: string) {
     console.log('🔵 [DB] Deleting code battle with ID:', id);
 
     try {
-      const { error } = await supabase
-        .from('code_battles')
-        .delete()
-        .eq('id', id);
+      const { error } = await withTimeout(
+        supabase
+          .from('code_battles')
+          .delete()
+          .eq('id', id),
+        5000
+      );
 
       if (error) {
         console.error('❌ [DB] Error deleting code battle:', error);
@@ -879,12 +976,12 @@ export const getDatabaseStats = async () => {
     console.log('📊 [DB] Fetching counts for all tables...');
 
     const [users, projects, planets, devlogs, achievements, battles] = await Promise.all([
-      supabase.from('users').select('*', { count: 'exact', head: true }),
-      supabase.from('projects').select('*', { count: 'exact', head: true }),
-      supabase.from('dev_planets').select('*', { count: 'exact', head: true }),
-      supabase.from('devlogs').select('*', { count: 'exact', head: true }),
-      supabase.from('achievements').select('*', { count: 'exact', head: true }),
-      supabase.from('code_battles').select('*', { count: 'exact', head: true })
+      withTimeout(supabase.from('users').select('*', { count: 'exact', head: true }), 3000),
+      withTimeout(supabase.from('projects').select('*', { count: 'exact', head: true }), 3000),
+      withTimeout(supabase.from('dev_planets').select('*', { count: 'exact', head: true }), 3000),
+      withTimeout(supabase.from('devlogs').select('*', { count: 'exact', head: true }), 3000),
+      withTimeout(supabase.from('achievements').select('*', { count: 'exact', head: true }), 3000),
+      withTimeout(supabase.from('code_battles').select('*', { count: 'exact', head: true }), 3000)
     ]);
 
     stats.users = users.count || 0;

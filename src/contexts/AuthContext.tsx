@@ -230,7 +230,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const checkSession = async () => {
       console.log('🔵 [AUTH] Starting fast session check...');
       
-      // Set a hard timeout to prevent hanging
+      // Set a hard timeout to prevent hanging - reduced to 1 second
       const timeoutId = setTimeout(() => {
         console.log('⚠️ [AUTH] Session check timeout - proceeding without session');
         setAuthState({
@@ -238,7 +238,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           isAuthenticated: false,
           isLoading: false,
         });
-      }, 2000); // 2 second hard timeout
+      }, 1000); // 1 second hard timeout
 
       try {
         const sessionResponse = await supabase.auth.getSession();
@@ -269,7 +269,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               isAuthenticated: false,
               isLoading: false,
             });
-          }, 3000);
+          }, 2000);
           
           try {
             const user = await loadUserData(session.user.id);
