@@ -229,13 +229,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // Check for existing session with timeout
+    // Check for existing session with timeout and proper error handling
     const checkSession = async () => {
       try {
-        // Set a timeout to prevent hanging - increased from 5000ms to 15000ms
+        // Set a timeout to prevent hanging
         const sessionPromise = supabase.auth.getSession();
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Session check timeout')), 15000)
+          setTimeout(() => reject(new Error('Session check timeout')), 30000)
         );
 
         const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any;
@@ -252,11 +252,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setAuthState(prev => ({ ...prev, isLoading: false }));
           }
         } else {
+          // No previous session found
+          console.log('No previous session found');
           setAuthState(prev => ({ ...prev, isLoading: false }));
         }
       } catch (error) {
         console.error('Session check error:', error);
-        // Don't hang on error - just set as not authenticated
+        
+        // Notify user about session check failure
+        if (error instanceof Error && error.message === 'Session check timeout') {
+          console.log('Session check timed out - no previous session found');
+        } else {
+          console.log('Session check failed - no previous session found');
+        }
+        
+        // Set as not authenticated regardless of error type
         setAuthState({
           user: null,
           isAuthenticated: false,
