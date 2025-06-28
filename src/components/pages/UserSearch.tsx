@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Search, User, MapPin, Globe, Calendar, Star, GitFork, ExternalLink, Zap, Sparkles } from 'lucide-react';
 import { GlassPanel } from '../ui/GlassPanel';
@@ -43,52 +43,57 @@ export const UserSearch: React.FC<UserSearchProps> = ({ onNavigateToUser }) => {
     return { level, currentLevelXp: xp - totalXp, requiredXp };
   };
 
-  useEffect(() => {
-    if (searchTerm.trim()) {
-      setIsLoading(true);
-      
-      const searchUsers = async () => {
-        try {
-          const { data: users, error } = await supabase
-            .from('users')
-            .select(`
-              id,
-              username,
-              email,
-              avatar,
-              bio,
-              location,
-              website,
-              xp,
-              level,
-              created_at
-            `)
-            .or(`username.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,bio.ilike.%${searchTerm}%`)
-            .limit(20);
-
-          if (error) {
-            console.error('Search error:', error);
-            toast.error('Search failed');
-            setSearchResults([]);
-          } else {
-            setSearchResults(users || []);
-          }
-        } catch (error) {
-          console.error('Search error:', error);
-          toast.error('Search failed');
-          setSearchResults([]);
-        } finally {
-          setIsLoading(false);
-        }
-      };
-
-      const timer = setTimeout(searchUsers, 300);
-      return () => clearTimeout(timer);
-    } else {
+  // Debounced search function
+  const searchUsers = useCallback(async (term: string) => {
+    if (!term.trim()) {
       setSearchResults([]);
       setIsLoading(false);
+      return;
     }
-  }, [searchTerm]);
+
+    setIsLoading(true);
+    try {
+      const { data: users, error } = await supabase
+        .from('users')
+        .select(`
+          id,
+          username,
+          email,
+          avatar,
+          bio,
+          location,
+          website,
+          xp,
+          level,
+          created_at
+        `)
+        .or(`username.ilike.%${term}%,email.ilike.%${term}%,bio.ilike.%${term}%`)
+        .limit(20);
+
+      if (error) {
+        console.error('Search error:', error);
+        toast.error('Search failed');
+        setSearchResults([]);
+      } else {
+        setSearchResults(users || []);
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      toast.error('Search failed');
+      setSearchResults([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Debounce search with shorter delay
+    const timer = setTimeout(() => {
+      searchUsers(searchTerm);
+    }, 150); // Reduced from 300ms to 150ms
+
+    return () => clearTimeout(timer);
+  }, [searchTerm, searchUsers]);
 
   const handleUserClick = (userId: string) => {
     console.log('Clicking user with ID:', userId); // Debug log

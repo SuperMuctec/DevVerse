@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Filter, TrendingUp, User, Heart, Star } from 'lucide-react';
 import { GlassPanel } from '../ui/GlassPanel';
@@ -42,39 +42,39 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser, 
     return filter ? filter.label : categoryId.charAt(0).toUpperCase() + categoryId.slice(1);
   };
 
-  // Load planets from database on component mount
-  useEffect(() => {
-    const loadPlanets = async () => {
-      try {
-        const { data: planets, error } = await supabase
-          .from('dev_planets')
-          .select(`
-            *,
-            users (username)
-          `)
-          .order('created_at', { ascending: false });
+  // Load planets from database
+  const loadPlanets = useCallback(async () => {
+    try {
+      const { data: planets, error } = await supabase
+        .from('dev_planets')
+        .select(`
+          *,
+          users (username)
+        `)
+        .order('created_at', { ascending: false });
 
-        if (error) {
-          console.error('Failed to load planets:', error);
-          return;
-        }
-        
-        const planetsWithOwners = planets.map((planet: any) => ({
-          ...planet,
-          owner: planet.users?.username || 'Unknown',
-          ownerId: planet.user_id
-        }));
-        
-        setAllPlanets(planetsWithOwners);
-      } catch (error) {
+      if (error) {
         console.error('Failed to load planets:', error);
-      } finally {
-        setIsLoading(false);
+        return;
       }
-    };
-
-    loadPlanets();
+      
+      const planetsWithOwners = planets.map((planet: any) => ({
+        ...planet,
+        owner: planet.users?.username || 'Unknown',
+        ownerId: planet.user_id
+      }));
+      
+      setAllPlanets(planetsWithOwners);
+    } catch (error) {
+      console.error('Failed to load planets:', error);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadPlanets();
+  }, [loadPlanets]);
 
   // Load user's liked planets
   useEffect(() => {
