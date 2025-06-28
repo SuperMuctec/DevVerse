@@ -3,9 +3,11 @@ import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Eye, EyeOff, Mail, Lock, Rocket } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, Rocket, Database } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { GlassPanel } from '../ui/GlassPanel';
+import { dbOps } from '../../lib/database';
+import { toast } from 'react-hot-toast';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -21,6 +23,8 @@ interface LoginPageProps {
 export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isTestingDB, setIsTestingDB] = useState(false);
+  const [testResults, setTestResults] = useState<any[]>([]);
   const { login } = useAuth();
 
   const {
@@ -37,6 +41,31 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
       await login(data.email, data.password);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleTestDatabase = async () => {
+    setIsTestingDB(true);
+    try {
+      // Test database insert
+      const insertResult = await dbOps.testDatabaseInsert();
+      
+      if (insertResult.success) {
+        toast.success('✅ Database insert successful!');
+        
+        // Get all test records to show
+        const recordsResult = await dbOps.getTestRecords();
+        if (recordsResult.success) {
+          setTestResults(recordsResult.data || []);
+        }
+      } else {
+        toast.error(`❌ Database insert failed: ${insertResult.error}`);
+      }
+    } catch (error) {
+      console.error('Database test error:', error);
+      toast.error('❌ Database test failed');
+    } finally {
+      setIsTestingDB(false);
     }
   };
 
@@ -230,14 +259,72 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
               >
                 {isLoading ? 'Launching...' : 'Launch Into DevVerse³'}
               </motion.button>
+
+              {/* Test Database Button */}
+              <motion.button
+                type="button"
+                onClick={handleTestDatabase}
+                disabled={isTestingDB}
+                className="w-full bg-gradient-to-r from-green-500 to-blue-500 py-3 rounded-lg font-orbitron font-bold text-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                whileHover={{
+                  scale: 1.02,
+                  boxShadow: '0 0 30px rgba(0, 255, 0, 0.5)',
+                  rotateX: 5
+                }}
+                whileTap={{ scale: 0.98 }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.2, duration: 0.6 }}
+              >
+                <div className="flex items-center justify-center space-x-2">
+                  <motion.div
+                    animate={isTestingDB ? { rotateZ: 360 } : {}}
+                    transition={{ duration: 1, repeat: isTestingDB ? Infinity : 0, ease: "linear" }}
+                  >
+                    <Database className="w-5 h-5" />
+                  </motion.div>
+                  <span>{isTestingDB ? 'Testing Database...' : 'Test Database Connection'}</span>
+                </div>
+              </motion.button>
             </form>
+
+            {/* Test Results */}
+            {testResults.length > 0 && (
+              <motion.div
+                className="mt-6 p-4 bg-green-500/10 border border-green-500/30 rounded-lg"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                <h3 className="font-semibold text-green-400 mb-2 flex items-center space-x-2">
+                  <Database className="w-4 h-4" />
+                  <span>Database Test Results ({testResults.length} records)</span>
+                </h3>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {testResults.slice(0, 3).map((record, index) => (
+                    <div key={record.id} className="text-sm text-white/80 bg-white/5 p-2 rounded">
+                      <div className="font-mono text-xs text-green-300">ID: {record.id}</div>
+                      <div className="text-white/70">{record.message}</div>
+                      <div className="text-xs text-white/50">
+                        {new Date(record.created_at).toLocaleString()}
+                      </div>
+                    </div>
+                  ))}
+                  {testResults.length > 3 && (
+                    <div className="text-xs text-white/50 text-center">
+                      +{testResults.length - 3} more records...
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
 
             {/* Switch to Register */}
             <motion.div
               className="mt-6 text-center"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1.2, duration: 0.6 }}
+              transition={{ delay: 1.4, duration: 0.6 }}
             >
               <p className="text-white/70">
                 New to the galaxy?{' '}

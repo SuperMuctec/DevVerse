@@ -2,6 +2,58 @@ import { supabase } from './supabase';
 import { v4 as uuidv4 } from 'uuid';
 
 export const dbOps = {
+  // Test database connection with a simple insert
+  async testDatabaseInsert() {
+    console.log('🔵 [DB] Testing database insert...');
+    
+    try {
+      const testMessage = `Test record created at ${new Date().toISOString()}`;
+      
+      const { data, error } = await supabase
+        .from('test')
+        .insert({
+          message: testMessage
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('❌ [DB] Test insert failed:', error);
+        return { success: false, error: error.message };
+      }
+      
+      console.log('✅ [DB] Test insert successful:', data);
+      return { success: true, data };
+    } catch (error) {
+      console.error('❌ [DB] Test insert error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
+  // Get all test records
+  async getTestRecords() {
+    console.log('🔵 [DB] Getting test records...');
+    
+    try {
+      const { data, error } = await supabase
+        .from('test')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10);
+      
+      if (error) {
+        console.error('❌ [DB] Error getting test records:', error);
+        return { success: false, error: error.message };
+      }
+      
+      console.log('✅ [DB] Test records retrieved:', data);
+      return { success: true, data };
+    } catch (error) {
+      console.error('❌ [DB] Test records error:', error);
+      return { success: false, error: error.message };
+    }
+  },
+
   // Test database connection
   async testConnection() {
     console.log('🔵 [DB] Testing database connection...');
