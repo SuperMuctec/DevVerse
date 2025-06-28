@@ -208,35 +208,87 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // Simple session check without complex timeout handling
+    // Ultra-fast session check with hard timeout
     const checkSession = async () => {
-      console.log('🔵 [AUTH] Checking existing session...');
+      console.log('🔵 [AUTH] Starting fast session check...');
       
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (session?.user) {
-          console.log('✅ [AUTH] Found existing session for user:', session.user.id);
-          const user = await loadUserData(session.user.id);
-          if (user) {
-            setAuthState({
-              user,
-              isAuthenticated: true,
-              isLoading: false,
-            });
-            return;
-          }
-        }
-        
-        // No session or failed to load user data
-        console.log('ℹ️ [AUTH] No valid session found');
+      // Set a hard timeout to prevent hanging
+      const timeoutId = setTimeout(() => {
+        console.log('⚠️ [AUTH] Session check timeout - proceeding without session');
         setAuthState({
           user: null,
           isAuthenticated: false,
           isLoading: false,
         });
+      }, 2000); // 2 second hard timeout
+
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        // Clear timeout since we got a response
+        clearTimeout(timeoutId);
+        
+        if (error) {
+          console.warn('⚠️ [AUTH] Session check error:', error);
+          setAuthState({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+          });
+          return;
+        }
+        
+        if (session?.user) {
+          console.log('✅ [AUTH] Found existing session for user:', session.user.id);
+          
+          // Try to load user data with timeout
+          const userDataTimeout = setTimeout(() => {
+            console.log('⚠️ [AUTH] User data loading timeout - proceeding without user data');
+            setAuthState({
+              user: null,
+              isAuthenticated: false,
+              isLoading: false,
+            });
+          }, 3000);
+          
+          try {
+            const user = await loadUserData(session.user.id);
+            clearTimeout(userDataTimeout);
+            
+            if (user) {
+              setAuthState({
+                user,
+                isAuthenticated: true,
+                isLoading: false,
+              });
+            } else {
+              console.log('⚠️ [AUTH] Failed to load user data');
+              setAuthState({
+                user: null,
+                isAuthenticated: false,
+                isLoading: false,
+              });
+            }
+          } catch (userError) {
+            clearTimeout(userDataTimeout);
+            console.error('❌ [AUTH] Error loading user data:', userError);
+            setAuthState({
+              user: null,
+              isAuthenticated: false,
+              isLoading: false,
+            });
+          }
+        } else {
+          console.log('ℹ️ [AUTH] No existing session found');
+          setAuthState({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+          });
+        }
       } catch (error) {
-        console.log('ℹ️ [AUTH] Session check failed - starting fresh');
+        clearTimeout(timeoutId);
+        console.log('ℹ️ [AUTH] Session check failed - starting fresh:', error);
         setAuthState({
           user: null,
           isAuthenticated: false,
