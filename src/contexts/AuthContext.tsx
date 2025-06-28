@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, AuthState } from '../types';
 import { supabase } from '../lib/supabase';
+import { useNotifications } from './NotificationContext';
 import { toast } from 'react-hot-toast';
 import bcrypt from 'bcryptjs';
 
@@ -28,6 +29,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isAuthenticated: false,
     isLoading: true,
   });
+
+  // Get notifications context if available
+  let addNotification: any = null;
+  try {
+    const notificationContext = useNotifications();
+    addNotification = notificationContext.addNotification;
+  } catch {
+    // Notifications context not available yet
+  }
 
   const loadUserData = async (userId: string) => {
     try {
@@ -195,10 +205,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const updatedUser = { ...authState.user, xp: newXp, level: newLevel };
         setAuthState(prev => ({ ...prev, user: updatedUser }));
         
-        toast.success(`+${amount} XP earned! 🌟`);
+        // Add notification for XP gain
+        if (addNotification) {
+          addNotification({
+            title: 'XP Gained!',
+            message: `You earned ${amount} XP! 🌟`,
+            type: 'success'
+          });
+        }
         
         if (newLevel > oldLevel) {
-          toast.success(`🎉 Level up! You're now level ${newLevel}!`, { duration: 6000 });
+          // Add notification for level up
+          if (addNotification) {
+            addNotification({
+              title: 'Level Up!',
+              message: `Congratulations! You're now level ${newLevel}! 🎉`,
+              type: 'success'
+            });
+          }
         }
       } catch (error) {
         console.error('Error adding XP:', error);
@@ -261,7 +285,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return false;
   }
 
-  toast.success('Welcome back to DevVerse³!');
+  // Add welcome notification
+  if (addNotification) {
+    addNotification({
+      title: 'Welcome back!',
+      message: 'Successfully logged into DevVerse³ 🚀',
+      type: 'success'
+    });
+  }
+
   return true;
 };
 
@@ -355,8 +387,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           icon: 'user',
         });
       
-      toast.success('Welcome to DevVerse³! Your planet has been created!');
-      toast.success('Achievement unlocked: The Beginning! 🎉');
+      // Add welcome notifications
+      if (addNotification) {
+        addNotification({
+          title: 'Welcome to DevVerse³!',
+          message: 'Your planet has been created! 🌍',
+          type: 'success'
+        });
+        
+        addNotification({
+          title: 'Achievement Unlocked!',
+          message: 'The Beginning - You\'ve joined the galaxy! 🎉',
+          type: 'success'
+        });
+      }
       
       // The auth state change listener will handle setting the user data
       return true;
@@ -375,7 +419,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isAuthenticated: false,
         isLoading: false,
       });
-      toast.success('Logged out successfully');
+      
+      // Add logout notification
+      if (addNotification) {
+        addNotification({
+          title: 'Logged out',
+          message: 'See you in the galaxy soon! 👋',
+          type: 'info'
+        });
+      }
     } catch (error) {
       console.error('Logout error:', error);
       toast.error('Logout failed');
@@ -447,6 +499,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         const updatedUser = { ...authState.user, ...updates };
         setAuthState(prev => ({ ...prev, user: updatedUser }));
+        
+        // Add update notification
+        if (addNotification) {
+          addNotification({
+            title: 'Profile Updated',
+            message: 'Your profile has been successfully updated! ✨',
+            type: 'success'
+          });
+        }
       } catch (error) {
         console.error('Error updating user:', error);
         toast.error('Failed to update profile');

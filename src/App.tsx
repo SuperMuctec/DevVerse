@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import { Navbar } from './components/navigation/Navbar';
 import { StarField } from './components/ui/StarField';
 import { MagneticCursor } from './components/ui/MagneticCursor';
+import { NotificationContainer } from './components/ui/NotificationContainer';
+import { NotificationButton } from './components/ui/NotificationButton';
 import { GalaxyView } from './components/pages/GalaxyView';
 import { StackBuilder } from './components/pages/StackBuilder';
 import { StackShowroom } from './components/pages/StackShowroom';
@@ -63,6 +66,8 @@ const AppContent: React.FC = () => {
         <StarField />
         <MagneticCursor />
         <Navbar currentPage={currentPage} onPageChange={setCurrentPage} />
+        <NotificationContainer />
+        <NotificationButton />
         <main className="relative z-10">
           <UserProfile 
             userId={selectedUserId} 
@@ -80,6 +85,8 @@ const AppContent: React.FC = () => {
         <StarField />
         <MagneticCursor />
         <Navbar currentPage={currentPage} onPageChange={setCurrentPage} />
+        <NotificationContainer />
+        <NotificationButton />
         <main className="relative z-10">
           <PlanetDetail 
             planetId={selectedPlanetId} 
@@ -122,6 +129,8 @@ const AppContent: React.FC = () => {
       <StarField />
       <MagneticCursor />
       <Navbar currentPage={currentPage} onPageChange={setCurrentPage} />
+      <NotificationContainer />
+      <NotificationButton />
       <main className="relative z-10">
         {renderPage()}
       </main>
@@ -132,21 +141,23 @@ const AppContent: React.FC = () => {
 function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <AppContent />
-        <Toaster
-          position="top-right"
-          toastOptions={{
-            duration: 4000,
-            style: {
-              background: 'rgba(255, 255, 255, 0.1)',
-              backdropFilter: 'blur(10px)',
-              color: '#ffffff',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-            },
-          }}
-        />
-      </AuthProvider>
+      <NotificationProvider>
+        <AuthProvider>
+          <AppContent />
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              duration: 4000,
+              style: {
+                background: 'rgba(255, 255, 255, 0.1)',
+                backdropFilter: 'blur(10px)',
+                color: '#ffffff',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+              },
+            }}
+          />
+        </AuthProvider>
+      </NotificationProvider>
     </BrowserRouter>
   );
 }
