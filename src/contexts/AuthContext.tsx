@@ -446,20 +446,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
-      // Create default planet using logged database operation
+      // Create default planet using logged database operation with error handling
       try {
+        console.log('🔵 [AUTH] Creating default planet...');
         await dbOps.createOrUpdatePlanet({
           user_id: authData.user.id,
           name: `${username}'s Planet`,
         });
         console.log('✅ [AUTH] Default planet created successfully');
       } catch (planetError) {
-        console.error('❌ [AUTH] Planet creation error:', planetError);
-        // Continue anyway as the user is created
+        console.warn('⚠️ [AUTH] Planet creation warning:', planetError);
+        // Don't fail registration if planet creation fails
+        // The planet can be created later when the user visits the builder
       }
 
       // Award achievement for registering using logged database operation
       try {
+        console.log('🔵 [AUTH] Creating beginning achievement...');
         await dbOps.createAchievement({
           user_id: authData.user.id,
           achievement_id: 'beginning',
@@ -469,15 +472,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         console.log('✅ [AUTH] Beginning achievement created successfully');
       } catch (achievementError) {
-        console.error('❌ [AUTH] Achievement creation error:', achievementError);
-        // Continue anyway as the user is created
+        console.warn('⚠️ [AUTH] Achievement creation warning:', achievementError);
+        // Don't fail registration if achievement creation fails
       }
       
       // Add welcome notifications
       if (addNotification) {
         addNotification({
           title: 'Welcome to DevVerse³!',
-          message: 'Your planet has been created! 🌍',
+          message: 'Your account has been created! 🌍',
           type: 'success'
         });
         
