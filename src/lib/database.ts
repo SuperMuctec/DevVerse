@@ -12,6 +12,7 @@ export const dbOps = {
         id: userData.id,
         username: userData.username,
         email: userData.email,
+        password_hash: 'supabase_auth', // Placeholder since we use Supabase Auth
         avatar: userData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.username}`
       })
       .select()
@@ -19,6 +20,12 @@ export const dbOps = {
 
     if (error) {
       console.error('❌ [DB] Error creating user:', error);
+      console.error('❌ [DB] Error details:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      });
       throw error;
     }
 
