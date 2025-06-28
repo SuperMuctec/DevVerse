@@ -1,12 +1,15 @@
-import React, { Suspense, useEffect, useState } from 'react';
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Environment } from '@react-three/drei';
+import React, { Suspense, useEffect, useState, lazy } from 'react';
 import { motion } from 'framer-motion';
-import { DevPlanet3D } from '../ui/DevPlanet3D';
 import { GlassPanel } from '../ui/GlassPanel';
 import { FloatingElements } from '../ui/FloatingElements';
 import { AnimatedBackground } from '../ui/AnimatedBackground';
 import { supabase } from '../../lib/supabase';
+
+// Lazy load 3D components only when needed
+const Canvas = lazy(() => import('@react-three/fiber').then(module => ({ default: module.Canvas })));
+const OrbitControls = lazy(() => import('@react-three/drei').then(module => ({ default: module.OrbitControls })));
+const Environment = lazy(() => import('@react-three/drei').then(module => ({ default: module.Environment })));
+const DevPlanet3D = lazy(() => import('../ui/DevPlanet3D').then(module => ({ default: module.DevPlanet3D })));
 
 interface GalaxyViewProps {
   onNavigate: (page: string) => void;
@@ -15,6 +18,7 @@ interface GalaxyViewProps {
 export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
   const [planets, setPlanets] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [show3D, setShow3D] = useState(false);
 
   // Load planets from database
   useEffect(() => {
@@ -64,6 +68,18 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
     loadPlanets();
   }, []);
 
+  // Only show 3D on desktop and after a delay to improve initial load
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const isDesktop = window.innerWidth >= 768;
+      if (isDesktop && !isLoading) {
+        setShow3D(true);
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [isLoading]);
+
   return (
     <div className="min-h-screen pt-16 sm:pt-20 lg:pt-44 overflow-hidden">
       <FloatingElements />
@@ -76,33 +92,37 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
         transition={{ duration: 1 }}
         className="relative min-h-screen flex items-center justify-center overflow-hidden"
       >
-        {/* 3D Canvas - Hidden on mobile for performance */}
-        <div className="hidden md:block absolute inset-0">
-          <Canvas camera={{ position: [0, 0, 10], fov: 50 }}>
+        {/* 3D Canvas - Only on desktop and lazy loaded */}
+        {show3D && (
+          <div className="hidden md:block absolute inset-0">
             <Suspense fallback={null}>
-              <ambientLight intensity={0.2} />
-              <pointLight position={[10, 10, 10]} intensity={1} />
-              
-              {!isLoading && planets.map((planet) => (
-                <DevPlanet3D
-                  key={planet.id}
-                  planet={planet}
-                  onClick={() => console.log(`Clicked on ${planet.name}`)}
-                />
-              ))}
-              
-              <OrbitControls
-                enableZoom={true}
-                enablePan={true}
-                enableRotate={true}
-                zoomSpeed={0.6}
-                panSpeed={0.5}
-                rotateSpeed={0.4}
-              />
-              <Environment preset="night" />
+              <Canvas camera={{ position: [0, 0, 10], fov: 50 }}>
+                <Suspense fallback={null}>
+                  <ambientLight intensity={0.2} />
+                  <pointLight position={[10, 10, 10]} intensity={1} />
+                  
+                  {planets.map((planet) => (
+                    <DevPlanet3D
+                      key={planet.id}
+                      planet={planet}
+                      onClick={() => console.log(`Clicked on ${planet.name}`)}
+                    />
+                  ))}
+                  
+                  <OrbitControls
+                    enableZoom={true}
+                    enablePan={true}
+                    enableRotate={true}
+                    zoomSpeed={0.6}
+                    panSpeed={0.5}
+                    rotateSpeed={0.4}
+                  />
+                  <Environment preset="night" />
+                </Suspense>
+              </Canvas>
             </Suspense>
-          </Canvas>
-        </div>
+          </div>
+        )}
 
         {/* Overlay Content */}
         <div className="relative z-10 w-full px-4">
