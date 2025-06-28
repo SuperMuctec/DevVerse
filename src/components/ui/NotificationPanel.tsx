@@ -15,14 +15,14 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
   const getIcon = (type: string) => {
     switch (type) {
       case 'success':
-        return <CheckCircle className="w-4 h-4 text-green-400" />;
+        return <CheckCircle className="w-3 h-3 text-green-400" />;
       case 'error':
-        return <AlertCircle className="w-4 h-4 text-red-400" />;
+        return <AlertCircle className="w-3 h-3 text-red-400" />;
       case 'warning':
-        return <AlertTriangle className="w-4 h-4 text-yellow-400" />;
+        return <AlertTriangle className="w-3 h-3 text-yellow-400" />;
       case 'info':
       default:
-        return <Info className="w-4 h-4 text-blue-400" />;
+        return <Info className="w-3 h-3 text-blue-400" />;
     }
   };
 
@@ -48,7 +48,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] lg:hidden"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200]"
             onClick={onClose}
           />
 
@@ -58,11 +58,11 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: '100%' }}
             transition={{ type: "spring", duration: 0.5 }}
-            className="fixed top-0 right-0 h-full w-full max-w-sm z-[201] p-4 lg:hidden"
+            className="fixed top-0 right-0 h-full w-full max-w-sm z-[201] p-4"
           >
             <GlassPanel glowColor="#00ffff" className="h-full flex flex-col">
               {/* Header */}
-              <div className="flex items-center justify-between mb-4 pb-4 border-b border-white/10">
+              <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/10">
                 <div className="flex items-center space-x-2">
                   <motion.div
                     animate={{ 
@@ -75,9 +75,9 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
                       ease: "easeInOut" 
                     }}
                   >
-                    <Bell className="w-5 h-5 text-cyber-blue" />
+                    <Bell className="w-4 h-4 text-cyber-blue" />
                   </motion.div>
-                  <h2 className="font-orbitron text-lg font-bold text-white">
+                  <h2 className="font-orbitron text-base font-bold text-white">
                     Notifications
                   </h2>
                   {notifications.length > 0 && (
@@ -87,32 +87,32 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
                   )}
                 </div>
                 
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-1">
                   {notifications.length > 0 && (
                     <motion.button
                       onClick={clearAll}
-                      className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                      className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
                       title="Clear all"
                     >
-                      <Trash2 className="w-4 h-4 text-white/70" />
+                      <Trash2 className="w-3 h-3 text-white/70" />
                     </motion.button>
                   )}
                   
                   <motion.button
                     onClick={onClose}
-                    className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                    className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
                     whileHover={{ scale: 1.1, rotate: 90 }}
                     whileTap={{ scale: 0.9 }}
                   >
-                    <X className="w-4 h-4 text-white/70" />
+                    <X className="w-3 h-3 text-white/70" />
                   </motion.button>
                 </div>
               </div>
 
               {/* Notifications List */}
-              <div className="flex-1 overflow-y-auto space-y-3">
+              <div className="flex-1 overflow-y-auto space-y-2">
                 {notifications.length > 0 ? (
                   <AnimatePresence>
                     {notifications.map((notification, index) => (
@@ -122,18 +122,18 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, x: 100, scale: 0.9 }}
                         transition={{ 
-                          delay: index * 0.1,
-                          duration: 0.4,
+                          delay: index * 0.05,
+                          duration: 0.3,
                           type: "spring"
                         }}
-                        className={`relative p-3 rounded-lg border transition-all duration-300 ${
+                        className={`relative p-2.5 rounded-lg border transition-all duration-300 cursor-pointer ${
                           notification.read 
                             ? 'bg-white/5 border-white/10' 
                             : 'bg-cyber-blue/10 border-cyber-blue/30'
                         }`}
                         onClick={() => markAsRead(notification.id)}
                       >
-                        <div className="flex items-start space-x-3">
+                        <div className="flex items-start space-x-2">
                           <motion.div
                             animate={!notification.read ? { 
                               scale: [1, 1.2, 1],
@@ -144,18 +144,19 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
                               repeat: Infinity, 
                               ease: "easeInOut" 
                             }}
+                            className="flex-shrink-0 mt-0.5"
                           >
                             {getIcon(notification.type)}
                           </motion.div>
                           
                           <div className="flex-1 min-w-0">
-                            <h4 className="font-semibold text-white text-sm">
+                            <h4 className="font-semibold text-white text-xs leading-tight">
                               {notification.title}
                             </h4>
-                            <p className="text-white/80 text-sm mt-1 line-clamp-2">
+                            <p className="text-white/80 text-xs mt-1 line-clamp-2 leading-tight">
                               {notification.message}
                             </p>
-                            <p className="text-white/50 text-xs mt-2">
+                            <p className="text-white/50 text-xs mt-1.5">
                               {getTimeAgo(notification.timestamp)}
                             </p>
                           </div>
@@ -169,14 +170,14 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
                             whileHover={{ scale: 1.1, rotate: 90 }}
                             whileTap={{ scale: 0.9 }}
                           >
-                            <X className="w-3 h-3 text-white/70" />
+                            <X className="w-2.5 h-2.5 text-white/70" />
                           </motion.button>
                         </div>
 
                         {/* Unread indicator */}
                         {!notification.read && (
                           <motion.div
-                            className="absolute top-2 left-2 w-2 h-2 bg-cyber-blue rounded-full"
+                            className="absolute top-1.5 left-1.5 w-1.5 h-1.5 bg-cyber-blue rounded-full"
                             animate={{ 
                               scale: [1, 1.5, 1],
                               opacity: [1, 0.5, 1]
@@ -193,7 +194,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
                   </AnimatePresence>
                 ) : (
                   <motion.div 
-                    className="text-center py-12"
+                    className="text-center py-8"
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.6 }}
@@ -208,7 +209,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
                         scale: { duration: 2, repeat: Infinity, ease: "easeInOut" }
                       }}
                     >
-                      <Bell className="w-12 h-12 text-white/30 mx-auto mb-4" />
+                      <Bell className="w-8 h-8 text-white/30 mx-auto mb-3" />
                     </motion.div>
                     <p className="text-white/70 text-sm">No notifications yet</p>
                     <p className="text-white/50 text-xs mt-1">

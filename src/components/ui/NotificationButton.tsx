@@ -13,7 +13,7 @@ export const NotificationButton: React.FC = () => {
       {/* Mobile Notification Button */}
       <motion.button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-50 lg:hidden w-14 h-14 bg-gradient-to-r from-cyber-blue to-cyber-pink rounded-full flex items-center justify-center shadow-lg"
+        className="fixed bottom-6 right-6 z-50 lg:hidden w-12 h-12 bg-gradient-to-r from-cyber-blue to-cyber-pink rounded-full flex items-center justify-center shadow-lg"
         whileHover={{ 
           scale: 1.1,
           boxShadow: '0 0 30px rgba(0, 255, 255, 0.6)'
@@ -41,15 +41,25 @@ export const NotificationButton: React.FC = () => {
             ease: "easeInOut" 
           }}
         >
-          <Bell className="w-6 h-6 text-white" />
+          <Bell className="w-5 h-5 text-white" />
         </motion.div>
         
         {/* Unread count badge */}
         {unreadCount > 0 && (
           <motion.div
             initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center"
+            animate={{ 
+              scale: 1,
+              boxShadow: [
+                '0 0 10px rgba(255, 0, 0, 0.5)',
+                '0 0 20px rgba(255, 0, 0, 0.8)',
+                '0 0 10px rgba(255, 0, 0, 0.5)'
+              ]
+            }}
+            transition={{
+              boxShadow: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+            }}
+            className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center"
           >
             <motion.span 
               className="text-white text-xs font-bold"
