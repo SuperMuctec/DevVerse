@@ -1,4 +1,4 @@
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -8,30 +8,18 @@ import { StarField } from './components/ui/StarField';
 import { MagneticCursor } from './components/ui/MagneticCursor';
 import { NotificationContainer } from './components/ui/NotificationContainer';
 import { NotificationButton } from './components/ui/NotificationButton';
+import { GalaxyView } from './components/pages/GalaxyView';
+import { StackBuilder } from './components/pages/StackBuilder';
+import { StackShowroom } from './components/pages/StackShowroom';
+import { DevLogs } from './components/pages/DevLogs';
+import { CodeArena } from './components/pages/CodeArena';
+import { UserPanel } from './components/pages/UserPanel';
+import { UserSearch } from './components/pages/UserSearch';
+import { UserProfile } from './components/pages/UserProfile';
+import { PlanetDetail } from './components/pages/PlanetDetail';
+import { Nebula } from './components/pages/Nebula';
 import { LoginPage } from './components/auth/LoginPage';
 import { RegisterPage } from './components/auth/RegisterPage';
-
-// Lazy load all page components
-const GalaxyView = lazy(() => import('./components/pages/GalaxyView').then(module => ({ default: module.GalaxyView })));
-const StackBuilder = lazy(() => import('./components/pages/StackBuilder').then(module => ({ default: module.StackBuilder })));
-const StackShowroom = lazy(() => import('./components/pages/StackShowroom').then(module => ({ default: module.StackShowroom })));
-const DevLogs = lazy(() => import('./components/pages/DevLogs').then(module => ({ default: module.DevLogs })));
-const CodeArena = lazy(() => import('./components/pages/CodeArena').then(module => ({ default: module.CodeArena })));
-const UserPanel = lazy(() => import('./components/pages/UserPanel').then(module => ({ default: module.UserPanel })));
-const UserSearch = lazy(() => import('./components/pages/UserSearch').then(module => ({ default: module.UserSearch })));
-const UserProfile = lazy(() => import('./components/pages/UserProfile').then(module => ({ default: module.UserProfile })));
-const PlanetDetail = lazy(() => import('./components/pages/PlanetDetail').then(module => ({ default: module.PlanetDetail })));
-const Nebula = lazy(() => import('./components/pages/Nebula').then(module => ({ default: module.Nebula })));
-
-// Loading component
-const PageLoader: React.FC = () => (
-  <div className="min-h-screen pt-20 sm:pt-44 px-4 flex items-center justify-center">
-    <div className="text-center">
-      <div className="w-16 h-16 border-4 border-cyber-blue border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-      <p className="text-white/70 font-orbitron">Loading...</p>
-    </div>
-  </div>
-);
 
 const AppContent: React.FC = () => {
   const [currentPage, setCurrentPage] = useState('galaxy');
@@ -81,12 +69,10 @@ const AppContent: React.FC = () => {
         <NotificationContainer />
         <NotificationButton />
         <main className="relative z-10">
-          <Suspense fallback={<PageLoader />}>
-            <UserProfile 
-              userId={selectedUserId} 
-              onBack={() => setSelectedUserId(null)} 
-            />
-          </Suspense>
+          <UserProfile 
+            userId={selectedUserId} 
+            onBack={() => setSelectedUserId(null)} 
+          />
         </main>
       </div>
     );
@@ -102,13 +88,11 @@ const AppContent: React.FC = () => {
         <NotificationContainer />
         <NotificationButton />
         <main className="relative z-10">
-          <Suspense fallback={<PageLoader />}>
-            <PlanetDetail 
-              planetId={selectedPlanetId} 
-              onBack={() => setSelectedPlanetId(null)}
-              onNavigateToUser={setSelectedUserId}
-            />
-          </Suspense>
+          <PlanetDetail 
+            planetId={selectedPlanetId} 
+            onBack={() => setSelectedPlanetId(null)}
+            onNavigateToUser={setSelectedUserId}
+          />
         </main>
       </div>
     );
@@ -148,9 +132,7 @@ const AppContent: React.FC = () => {
       <NotificationContainer />
       <NotificationButton />
       <main className="relative z-10">
-        <Suspense fallback={<PageLoader />}>
-          {renderPage()}
-        </Suspense>
+        {renderPage()}
       </main>
     </div>
   );
