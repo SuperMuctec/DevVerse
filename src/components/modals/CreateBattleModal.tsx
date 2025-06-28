@@ -253,7 +253,8 @@ export const CreateBattleModal: React.FC<CreateBattleModalProps> = ({
   const generateChallenge = async () => {
     setIsGenerating(true);
     try {
-      // Removed artificial delay - generate immediately
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
       const challenge = generateAIChallenge(difficulty);
       
       setValue('problemTitle', challenge.title);
