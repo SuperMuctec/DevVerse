@@ -30,7 +30,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
     isAuthenticated: false,
-    isLoading: false, // Start with false to avoid hanging
+    isLoading: true,
   });
 
   // Get notifications context if available
@@ -229,14 +229,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // Simplified session check - no timeout, immediate fallback
+    // Check for existing session immediately without timeout
     const checkSession = async () => {
       try {
-        // Try to get session quickly
         const { data: { session } } = await supabase.auth.getSession();
         
         if (session?.user) {
-          console.log('Found existing session for user:', session.user.id);
           const user = await loadUserData(session.user.id);
           if (user) {
             setAuthState({
@@ -244,20 +242,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               isAuthenticated: true,
               isLoading: false,
             });
-            return;
+          } else {
+            setAuthState({
+              user: null,
+              isAuthenticated: false,
+              isLoading: false,
+            });
           }
+        } else {
+          // No previous session found
+          console.log('No previous session found');
+          setAuthState({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+          });
         }
-        
-        // No session or failed to load user data
-        console.log('No session found or failed to load user data');
-        setAuthState({
-          user: null,
-          isAuthenticated: false,
-          isLoading: false,
-        });
       } catch (error) {
         console.error('Session check error:', error);
-        // Always set loading to false on error
+        console.log('Session check failed - no previous session found');
+        
+        // Set as not authenticated regardless of error type
         setAuthState({
           user: null,
           isAuthenticated: false,
@@ -266,7 +271,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
 
-    // Start session check immediately
     checkSession();
 
     // Listen for auth changes
