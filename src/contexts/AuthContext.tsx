@@ -247,6 +247,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.log('ℹ️ [AUTH] Session check failed - no previous session found');
         }
         
+        // Clear any stale session data to prevent refresh token errors
+        try {
+          await supabase.auth.signOut();
+        } catch (signOutError) {
+          console.log('ℹ️ [AUTH] Session cleanup completed');
+        }
+        
         // Set as not authenticated regardless of error type
         setAuthState({
           user: null,
@@ -398,10 +405,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (authError) {
-        console.error('❌ [AUTH] Auth creation error:', authError);
         if (authError.message.includes('already registered')) {
+          console.warn('⚠️ [AUTH] Auth creation warning: User already registered');
           toast.error('Email already exists');
         } else {
+          console.error('❌ [AUTH] Auth creation error:', authError);
           toast.error('Registration failed');
         }
         return false;
