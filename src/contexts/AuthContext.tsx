@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, AuthState } from '../types';
 import { supabase } from '../lib/supabase';
-import { useNotifications } from './NotificationContext';
 import { toast } from 'react-hot-toast';
 import bcrypt from 'bcryptjs';
 
@@ -37,6 +36,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Get notifications context if available
   let addNotification: any = null;
   try {
+    const { useNotifications } = require('./NotificationContext');
     const notificationContext = useNotifications();
     addNotification = notificationContext.addNotification;
   } catch {
@@ -229,10 +229,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // Check for existing session
+    // Check for existing session with timeout
     const checkSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        // Set a timeout to prevent hanging
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Session check timeout')), 5000)
+        );
+
+        const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any;
         
         if (session?.user) {
           const user = await loadUserData(session.user.id);
@@ -250,7 +256,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (error) {
         console.error('Session check error:', error);
-        setAuthState(prev => ({ ...prev, isLoading: false }));
+        // Don't hang on error - just set as not authenticated
+        setAuthState({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+        });
       }
     };
 
