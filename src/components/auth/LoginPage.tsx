@@ -168,12 +168,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
                     className="w-full pl-10 pr-12 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-blue focus:ring-1 focus:ring-cyber-blue transition-all duration-300 hover:bg-white/15"
                     placeholder="Enter your password"
                   />
-                  <motion.button
+                  <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white transition-colors flex items-center justify-center w-6 h-6"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}
                     aria-label="Toggle password visibility"
                   >
                     {showPassword ? (
@@ -181,7 +179,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onSwitchToRegister }) => {
                     ) : (
                       <Eye className="w-5 h-5" />
                     )}
-                  </motion.button>
+                  </button>
                 </div>
                 {errors.password && (
                   <motion.p

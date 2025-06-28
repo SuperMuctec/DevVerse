@@ -217,15 +217,13 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) =
                     className="w-full pl-10 pr-12 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300 hover:bg-white/15"
                     placeholder="Create a secure password"
                   />
-                  <motion.button
+                  <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white transition-colors flex items-center justify-center w-6 h-6"
-                    whileHover={{ scale: 1.1, rotate: 10 }}
-                    whileTap={{ scale: 0.9 }}
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </motion.button>
+                  </button>
                 </div>
                 {errors.password && (
                   <motion.p 
@@ -262,15 +260,13 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) =
                     className="w-full pl-10 pr-12 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-pink focus:ring-1 focus:ring-cyber-pink transition-all duration-300 hover:bg-white/15"
                     placeholder="Confirm your password"
                   />
-                  <motion.button
+                  <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                     className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white transition-colors flex items-center justify-center w-6 h-6"
-                    whileHover={{ scale: 1.1, rotate: -10 }}
-                    whileTap={{ scale: 0.9 }}
                   >
                     {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </motion.button>
+                  </button>
                 </div>
                 {errors.confirmPassword && (
                   <motion.p 
