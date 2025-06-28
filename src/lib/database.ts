@@ -41,12 +41,24 @@ export const dbOps = {
   },
 
   async getUserByUsername(username) {
-    console.log('🔵 [DB] Getting user by username:', username);
+  console.log('🔵 [DB] Getting user by username:', username);
+
+  try {
     const { datac, errorc } = await supabase.from('users').select('*');
     console.log("📦 All users:", datac);
-    console.error("❌ Error:", errorc);
-    const { data, error } = await supabase.from('users').select('*').eq('username', username).maybeSingle();
-    console.log("47")
+    if (errorc) console.error("❌ Error fetching all users:", errorc);
+
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 3000);
+
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('username', username)
+      .maybeSingle({ signal: controller.signal });
+
+    console.log("47");
+
     if (error && error.code !== 'PGRST116') {
       console.error('❌ [DB] Error getting user by username:', error);
       throw error;
@@ -54,7 +66,16 @@ export const dbOps = {
 
     console.log('✅ [DB] User by username result:', data ? 'Found user' : 'No user found');
     return data;
-  },
+
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      console.error('🚫 Supabase query timed out');
+    } else {
+      console.error('🔥 Unexpected error:', err);
+    }
+  }
+},
+
 
   async getUserById(id) {
     console.log('🔵 [DB] Getting user by ID:', id);
