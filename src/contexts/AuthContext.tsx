@@ -240,13 +240,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setAuthState(prev => ({ ...prev, isLoading: false }));
         }
       } catch (error) {
-        console.error('❌ [AUTH] Session check error:', error);
-        
-        // Notify user about session check failure
+        // Handle timeout errors as informational, not critical errors
         if (error instanceof Error && error.message === 'Session check timeout') {
-          console.log('⚠️ [AUTH] Session check timed out - no previous session found');
+          console.log('ℹ️ [AUTH] Session check timed out - no previous session found');
         } else {
-          console.log('⚠️ [AUTH] Session check failed - no previous session found');
+          console.log('ℹ️ [AUTH] Session check failed - no previous session found');
         }
         
         // Set as not authenticated regardless of error type
