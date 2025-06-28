@@ -12,7 +12,6 @@ export const dbOps = {
         id: userData.id,
         username: userData.username,
         email: userData.email,
-        password_hash: 'managed_by_supabase_auth', // Placeholder since auth is handled by Supabase Auth
         avatar: userData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.username}`
       })
       .select()
@@ -30,13 +29,9 @@ export const dbOps = {
   async getUserByEmail(email) {
     console.log('🔵 [DB] Getting user by email:', email);
 
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', email)
-      .maybeSingle();
-
-    if (error) {
+    const { data, error } = await supabase.from('users').select('*').eq('email', email).maybeSingle();
+    console.log(data)
+    if (error && error.code !== 'PGRST116') {
       console.error('❌ [DB] Error getting user by email:', error);
       throw error;
     }
@@ -46,33 +41,40 @@ export const dbOps = {
   },
 
   async getUserByUsername(username) {
-    console.log('🔵 [DB] Getting user by username:', username);
+  console.log('🔵 [DB] getUserByUsername: Checking username =', username);
 
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('username', username)
-      .maybeSingle();
+  // Log all users first to debug
+  const { data: allUsers, error: allUsersError } = await supabase.from('users').select('*');
+  console.log('📦 [DB] All users:', allUsers);
+  if (allUsersError) console.error('❌ [DB] Error fetching all users:', allUsersError);
 
-    if (error) {
-      console.error('❌ [DB] Error getting user by username:', error);
-      throw error;
-    }
+  // This is the real query
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('username', username)
+    .maybeSingle();
 
-    console.log('✅ [DB] User by username result:', data ? 'Found user' : 'No user found');
-    return data;
-  },
+  console.log('🟢 [DB] After query');
+  console.log('📄 [DB] Matching user data:', data);
+
+  if (error && error.code !== 'PGRST116') {
+    console.error('❌ [DB] Error querying username:', error);
+    throw error;
+  }
+
+  console.log('✅ [DB] getUserByUsername result:', data ? 'Found' : 'Not found');
+  return data;
+},
+
+
 
   async getUserById(id) {
     console.log('🔵 [DB] Getting user by ID:', id);
 
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', id)
-      .maybeSingle();
+    const { data, error } = await supabase.from('users').select('*').eq('id', id).single();
 
-    if (error) {
+    if (error && error.code !== 'PGRST116') {
       console.error('❌ [DB] Error getting user by ID:', error);
       throw error;
     }
@@ -82,38 +84,29 @@ export const dbOps = {
   },
 
   async updateUser(id, updates) {
-    console.log('🔵 [DB] Updating user with ID:', id, 'Updates:', updates);
+    console.log('🔵 [DB] Updating user with ID:', id);
 
-    const { data, error } = await supabase
-      .from('users')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
+    const { error } = await supabase.from('users').update(updates).eq('id', id);
 
     if (error) {
       console.error('❌ [DB] Error updating user:', error);
       throw error;
     }
 
-    console.log('✅ [DB] User updated successfully:', data);
-    return data;
+    console.log('✅ [DB] User updated successfully');
   },
 
   async getAllUsers() {
     console.log('🔵 [DB] Getting all users');
 
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('users').select('*').order('created_at', { ascending: false });
 
     if (error) {
       console.error('❌ [DB] Error getting all users:', error);
       throw error;
     }
 
-    console.log('✅ [DB] All users retrieved successfully, count:', data?.length || 0);
+    console.log('✅ [DB] All users retrieved successfully');
     return data || [];
   },
 
@@ -166,6 +159,32 @@ export const dbOps = {
     return data || [];
   },
 
+  async updateProject(id, updates) {
+    console.log('🔵 [DB] Updating project with ID:', id);
+
+    const { error } = await supabase.from('projects').update(updates).eq('id', id);
+
+    if (error) {
+      console.error('❌ [DB] Error updating project:', error);
+      throw error;
+    }
+
+    console.log('✅ [DB] Project updated successfully');
+  },
+
+  async deleteProject(id) {
+    console.log('🔵 [DB] Deleting project with ID:', id);
+
+    const { error } = await supabase.from('projects').delete().eq('id', id);
+
+    if (error) {
+      console.error('❌ [DB] Error deleting project:', error);
+      throw error;
+    }
+
+    console.log('✅ [DB] Project deleted successfully');
+  },
+
   // Dev Planets
   async createOrUpdatePlanet(planetData) {
     console.log('🔵 [DB] Creating or updating planet with data:', planetData);
@@ -185,7 +204,10 @@ export const dbOps = {
         likes: planetData.likes || 0,
         views: planetData.views || 0,
         categories: planetData.categories || [],
-      }, { onConflict: 'user_id' })
+      }, { 
+        onConflict: 'user_id',
+        ignoreDuplicates: false 
+      })
       .select()
       .single();
 
@@ -207,13 +229,43 @@ export const dbOps = {
       .eq('user_id', userId)
       .maybeSingle();
 
-    if (error) {
+    if (error && error.code !== 'PGRST116') {
       console.error('❌ [DB] Error getting planet:', error);
       throw error;
     }
 
     console.log('✅ [DB] Planet retrieved successfully:', data ? 'Found planet' : 'No planet found');
     return data;
+  },
+
+  async getAllPlanets() {
+    console.log('🔵 [DB] Getting all planets');
+
+    const { data, error } = await supabase
+      .from('dev_planets')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('❌ [DB] Error getting all planets:', error);
+      throw error;
+    }
+
+    console.log('✅ [DB] All planets retrieved successfully, count:', data?.length || 0);
+    return data || [];
+  },
+
+  async updatePlanet(id, updates) {
+    console.log('🔵 [DB] Updating planet with ID:', id);
+
+    const { error } = await supabase.from('dev_planets').update(updates).eq('id', id);
+
+    if (error) {
+      console.error('❌ [DB] Error updating planet:', error);
+      throw error;
+    }
+
+    console.log('✅ [DB] Planet updated successfully');
   },
 
   // DevLogs
@@ -259,19 +311,62 @@ export const dbOps = {
     return data || [];
   },
 
+  async getAllDevLogs() {
+    console.log('🔵 [DB] Getting all devlogs');
+
+    const { data, error } = await supabase
+      .from('devlogs')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('❌ [DB] Error getting all devlogs:', error);
+      throw error;
+    }
+
+    console.log('✅ [DB] All devlogs retrieved successfully, count:', data?.length || 0);
+    return data || [];
+  },
+
+  async updateDevLog(id, updates) {
+    console.log('🔵 [DB] Updating devlog with ID:', id);
+
+    const { error } = await supabase.from('devlogs').update(updates).eq('id', id);
+
+    if (error) {
+      console.error('❌ [DB] Error updating devlog:', error);
+      throw error;
+    }
+
+    console.log('✅ [DB] DevLog updated successfully');
+  },
+
+  async deleteDevLog(id) {
+    console.log('🔵 [DB] Deleting devlog with ID:', id);
+
+    const { error } = await supabase.from('devlogs').delete().eq('id', id);
+
+    if (error) {
+      console.error('❌ [DB] Error deleting devlog:', error);
+      throw error;
+    }
+
+    console.log('✅ [DB] DevLog deleted successfully');
+  },
+
   // Achievements
   async createAchievement(achievementData) {
     console.log('🔵 [DB] Creating achievement with data:', achievementData);
 
     const { data, error } = await supabase
       .from('achievements')
-      .upsert({
+      .insert({
         user_id: achievementData.user_id,
         achievement_id: achievementData.achievement_id,
         name: achievementData.name,
         description: achievementData.description,
         icon: achievementData.icon,
-      }, { onConflict: 'user_id,achievement_id' })
+      })
       .select()
       .single();
 
@@ -300,6 +395,19 @@ export const dbOps = {
 
     console.log('✅ [DB] Achievements retrieved successfully, count:', data?.length || 0);
     return data || [];
+  },
+
+  async deleteAchievement(id) {
+    console.log('🔵 [DB] Deleting achievement with ID:', id);
+
+    const { error } = await supabase.from('achievements').delete().eq('id', id);
+
+    if (error) {
+      console.error('❌ [DB] Error deleting achievement:', error);
+      throw error;
+    }
+
+    console.log('✅ [DB] Achievement deleted successfully');
   },
 
   // Code Battles
@@ -349,6 +457,49 @@ export const dbOps = {
     console.log('✅ [DB] Code battles retrieved successfully, count:', data?.length || 0);
     return data || [];
   },
+
+  async getAllCodeBattles() {
+    console.log('🔵 [DB] Getting all code battles');
+
+    const { data, error } = await supabase
+      .from('code_battles')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('❌ [DB] Error getting all code battles:', error);
+      throw error;
+    }
+
+    console.log('✅ [DB] All code battles retrieved successfully, count:', data?.length || 0);
+    return data || [];
+  },
+
+  async updateCodeBattle(id, updates) {
+    console.log('🔵 [DB] Updating code battle with ID:', id);
+
+    const { error } = await supabase.from('code_battles').update(updates).eq('id', id);
+
+    if (error) {
+      console.error('❌ [DB] Error updating code battle:', error);
+      throw error;
+    }
+
+    console.log('✅ [DB] Code battle updated successfully');
+  },
+
+  async deleteCodeBattle(id) {
+    console.log('🔵 [DB] Deleting code battle with ID:', id);
+
+    const { error } = await supabase.from('code_battles').delete().eq('id', id);
+
+    if (error) {
+      console.error('❌ [DB] Error deleting code battle:', error);
+      throw error;
+    }
+
+    console.log('✅ [DB] Code battle deleted successfully');
+  },
 };
 
 export const getDatabaseStats = async () => {
@@ -382,7 +533,7 @@ export const getDatabaseStats = async () => {
     stats.achievements = achievements.count || 0;
     stats.battles = battles.count || 0;
 
-    console.log('✅ [DB] Database statistics retrieved successfully:', stats);
+    console.log('✅ [DB] Database statistics retrieved successfully');
   } catch (error) {
     console.error('❌ [DB] Failed to get database stats:', error);
   }
