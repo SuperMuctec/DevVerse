@@ -30,7 +30,7 @@ export const dbOps = {
     console.log('🔵 [DB] Getting user by email:', email);
 
     const { data, error } = await supabase.from('users').select('*').eq('email', email).single();
-
+    console.log(data)
     if (error && error.code !== 'PGRST116') {
       console.error('❌ [DB] Error getting user by email:', error);
       throw error;
@@ -44,7 +44,7 @@ export const dbOps = {
     console.log('🔵 [DB] Getting user by username:', username);
 
     const { data, error } = await supabase.from('users').select('*').eq('username', username).single();
-
+    console.log(data)
     if (error && error.code !== 'PGRST116') {
       console.error('❌ [DB] Error getting user by username:', error);
       throw error;
