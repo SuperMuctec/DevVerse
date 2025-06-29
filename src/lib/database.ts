@@ -303,20 +303,17 @@ export const dbOps = {
     console.log('🔵 [DB] Performing comprehensive user existence check:', { email, username });
     
     try {
-      // Check both auth and public table in parallel
-      const [authExists, publicCheck] = await Promise.all([
-        this.checkUserInAuth(email),
-        this.checkUserInPublicTable(email, username)
-      ]);
+      // Only check public table, not auth system
+      const publicCheck = await this.checkUserInPublicTable(email, username);
       
       const result = {
         email,
         username,
-        existsInAuth: authExists,
+        existsInAuth: false, // We no longer check auth system
         existsInPublic: publicCheck.exists,
         publicConflictType: publicCheck.type,
         publicUser: publicCheck.user,
-        canRegister: !authExists && !publicCheck.exists
+        canRegister: !publicCheck.exists // Only check public table
       };
       
       console.log('✅ [DB] User existence check complete:', result);
@@ -337,9 +334,6 @@ export const dbOps = {
       
       if (!existenceCheck.canRegister) {
         const conflicts = [];
-        if (existenceCheck.existsInAuth) {
-          conflicts.push('Supabase Auth');
-        }
         if (existenceCheck.existsInPublic) {
           conflicts.push(`public table (${existenceCheck.publicConflictType})`);
         }
