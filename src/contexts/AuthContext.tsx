@@ -13,6 +13,8 @@ interface AuthContextType extends AuthState {
   loadUserProjects: () => Promise<void>;
   loadUserPlanet: () => Promise<void>;
   loadUserAchievements: () => Promise<void>;
+  // Notification helper
+  addNotification: (notification: any) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -51,14 +53,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   // Get notifications context if available
-  let addNotification: any = null;
+  let notificationContext: any = null;
   try {
     const { useNotifications } = require('./NotificationContext');
-    const notificationContext = useNotifications();
-    addNotification = notificationContext.addNotification;
+    notificationContext = useNotifications();
   } catch {
     // Notifications context not available yet
   }
+
+  const addNotification = (notification: any) => {
+    if (notificationContext?.addNotification) {
+      notificationContext.addNotification(notification);
+    }
+  };
 
   // Load only essential user data for fast initialization
   const loadUserData = async (userId: string) => {
@@ -129,8 +136,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ...prev,
         user: prev.user ? { ...prev.user, projects: formattedProjects } : null
       }));
+
+      // Add notification for projects loaded
+      addNotification({
+        title: 'Projects Loaded',
+        message: `${formattedProjects.length} projects loaded successfully! 📁`,
+        type: 'info'
+      });
     } catch (error) {
       console.error('❌ [AUTH] Error loading projects:', error);
+      addNotification({
+        title: 'Projects Load Failed',
+        message: 'Failed to load your projects. Please try again.',
+        type: 'error'
+      });
     }
   };
 
@@ -166,6 +185,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           categories: planetData.categories || [],
         };
         console.log('✅ [AUTH] Planet loaded successfully:', planet);
+        
+        addNotification({
+          title: 'Planet Loaded',
+          message: `Your planet "${planet.name}" is ready! 🌍`,
+          type: 'info'
+        });
       } else {
         // Create default planet if none exists
         planet = {
@@ -184,6 +209,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           categories: [],
         };
         console.log('✅ [AUTH] Default planet created:', planet);
+        
+        addNotification({
+          title: 'Planet Created',
+          message: 'Your default planet has been created! Visit the Builder to customize it. 🚀',
+          type: 'info'
+        });
       }
 
       setAuthState(prev => ({
@@ -192,6 +223,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }));
     } catch (error) {
       console.error('❌ [AUTH] Error loading planet:', error);
+      addNotification({
+        title: 'Planet Load Failed',
+        message: 'Failed to load your planet. Please try again.',
+        type: 'error'
+      });
     }
   };
 
@@ -219,8 +255,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ...prev,
         user: prev.user ? { ...prev.user, achievements: formattedAchievements } : null
       }));
+
+      // Add notification for achievements loaded
+      if (formattedAchievements.length > 0) {
+        addNotification({
+          title: 'Achievements Loaded',
+          message: `${formattedAchievements.length} achievements unlocked! 🏆`,
+          type: 'info'
+        });
+      }
     } catch (error) {
       console.error('❌ [AUTH] Error loading achievements:', error);
+      addNotification({
+        title: 'Achievements Load Failed',
+        message: 'Failed to load your achievements. Please try again.',
+        type: 'error'
+      });
     }
   };
 
@@ -245,15 +295,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 isAuthenticated: true,
                 isLoading: false,
               });
+              
+              // Add session restored notification
+              addNotification({
+                title: 'Session Restored',
+                message: 'Welcome back to DevVerse³! 🌌',
+                type: 'info'
+              });
               return;
             }
           } else {
             console.log('⚠️ [AUTH] Session expired, removing...');
             localStorage.removeItem('devverse_session');
+            
+            addNotification({
+              title: 'Session Expired',
+              message: 'Your session has expired. Please log in again.',
+              type: 'warning'
+            });
           }
         } catch (error) {
           console.error('❌ [AUTH] Error parsing session data:', error);
           localStorage.removeItem('devverse_session');
+          
+          addNotification({
+            title: 'Session Error',
+            message: 'There was an issue with your session. Please log in again.',
+            type: 'error'
+          });
         }
       }
       
@@ -300,28 +369,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('✅ [AUTH] XP updated successfully. Old XP:', authState.user.xp, 'New XP:', newXp);
         
         // Add notification for XP gain
-        if (addNotification) {
-          addNotification({
-            title: 'XP Gained!',
-            message: `You earned ${amount} XP! 🌟`,
-            type: 'success'
-          });
-        }
+        addNotification({
+          title: 'XP Gained!',
+          message: `You earned ${amount} XP! 🌟`,
+          type: 'success'
+        });
         
         if (newLevel > oldLevel) {
           console.log('🎉 [AUTH] Level up! Old level:', oldLevel, 'New level:', newLevel);
           // Add notification for level up
-          if (addNotification) {
-            addNotification({
-              title: 'Level Up!',
-              message: `Congratulations! You're now level ${newLevel}! 🎉`,
-              type: 'success'
-            });
-          }
+          addNotification({
+            title: 'Level Up!',
+            message: `Congratulations! You're now level ${newLevel}! 🎉`,
+            type: 'success'
+          });
         }
       } catch (error) {
         console.error('❌ [AUTH] Error adding XP:', error);
         toast.error('Failed to update XP');
+        
+        addNotification({
+          title: 'XP Update Failed',
+          message: 'Failed to update your XP. Please try again.',
+          type: 'error'
+        });
       }
     }
   };
@@ -336,6 +407,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!userData) {
         console.log('⚠️ [AUTH] User not found in database');
         toast.error('Invalid email or password');
+        
+        addNotification({
+          title: 'Login Failed',
+          message: 'Invalid email or password. Please check your credentials.',
+          type: 'error'
+        });
         return false;
       }
 
@@ -345,6 +422,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!isPasswordValid) {
         console.log('⚠️ [AUTH] Password verification failed');
         toast.error('Invalid email or password');
+        
+        addNotification({
+          title: 'Login Failed',
+          message: 'Invalid email or password. Please check your credentials.',
+          type: 'error'
+        });
         return false;
       }
 
@@ -369,13 +452,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('✅ [AUTH] Login successful');
 
         // Add welcome notification
-        if (addNotification) {
-          addNotification({
-            title: 'Welcome back!',
-            message: 'Successfully logged into DevVerse³ 🚀',
-            type: 'success'
-          });
-        }
+        addNotification({
+          title: 'Welcome back!',
+          message: 'Successfully logged into DevVerse³ 🚀',
+          type: 'success'
+        });
 
         return true;
       }
@@ -384,6 +465,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('❌ [AUTH] Login error:', error);
       toast.error('Login failed');
+      
+      addNotification({
+        title: 'Login Error',
+        message: 'An unexpected error occurred during login. Please try again.',
+        type: 'error'
+      });
       return false;
     }
   };
@@ -396,6 +483,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const existingUser = await dbOps.getUserByEmail(email);
       if (existingUser) {
         console.warn('⚠️ [AUTH] Email already exists');
+        
+        addNotification({
+          title: 'Registration Failed',
+          message: 'Email address is already registered. Please use a different email.',
+          type: 'error'
+        });
         return { success: false, message: 'Email already exists' };
       }
 
@@ -403,6 +496,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const existingUsername = await dbOps.getUserByUsername(username);
       if (existingUsername) {
         console.warn('⚠️ [AUTH] Username already exists');
+        
+        addNotification({
+          title: 'Registration Failed',
+          message: 'Username is already taken. Please choose a different username.',
+          type: 'error'
+        });
         return { success: false, message: 'Username already exists' };
       }
 
@@ -429,14 +528,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Check if it's a username conflict
         if (userError.message?.includes('duplicate') || userError.message?.includes('unique')) {
+          addNotification({
+            title: 'Registration Failed',
+            message: 'Username is already taken. Please choose a different username.',
+            type: 'error'
+          });
           return { success: false, message: 'Username already exists' };
         } else {
+          addNotification({
+            title: 'Registration Failed',
+            message: 'An error occurred during registration. Please try again.',
+            type: 'error'
+          });
           return { success: false, message: 'Registration failed' };
         }
       }
 
       // Registration successful
       console.log('✅ [AUTH] Registration completed successfully');
+      
+      // Add success notification
+      addNotification({
+        title: 'Registration Successful!',
+        message: 'Welcome to DevVerse³! Your account has been created successfully. 🎉',
+        type: 'success'
+      });
       
       // Create planet and achievement in the background (don't wait for them)
       setTimeout(async () => {
@@ -447,6 +563,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             name: `${username}'s Planet`,
           });
           console.log('✅ [AUTH] Default planet created successfully');
+          
+          addNotification({
+            title: 'Planet Created',
+            message: 'Your Dev Planet has been created! Visit the Builder to customize it. 🌍',
+            type: 'info'
+          });
         } catch (planetError) {
           console.warn('⚠️ [AUTH] Planet creation failed (will be created later):', planetError);
         }
@@ -461,6 +583,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             icon: 'user',
           });
           console.log('✅ [AUTH] Beginning achievement created successfully');
+          
+          addNotification({
+            title: 'Achievement Unlocked!',
+            message: 'The Beginning - Welcome to your coding journey! 🏆',
+            type: 'success'
+          });
         } catch (achievementError) {
           console.warn('⚠️ [AUTH] Achievement creation failed (will be awarded later):', achievementError);
         }
@@ -469,6 +597,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: true, message: 'Registration successful! Your Dev Planet has been created.' };
     } catch (error) {
       console.error('❌ [AUTH] Registration error:', error);
+      
+      addNotification({
+        title: 'Registration Error',
+        message: 'An unexpected error occurred during registration. Please try again.',
+        type: 'error'
+      });
       return { success: false, message: 'Registration failed' };
     }
   };
@@ -489,16 +623,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('✅ [AUTH] Logout successful');
       
       // Add logout notification
-      if (addNotification) {
-        addNotification({
-          title: 'Logged out',
-          message: 'See you in the galaxy soon! 👋',
-          type: 'info'
-        });
-      }
+      addNotification({
+        title: 'Logged out',
+        message: 'See you in the galaxy soon! 👋',
+        type: 'info'
+      });
     } catch (error) {
       console.error('❌ [AUTH] Logout error:', error);
       toast.error('Logout failed');
+      
+      addNotification({
+        title: 'Logout Error',
+        message: 'An error occurred during logout. Please try again.',
+        type: 'error'
+      });
     }
   };
 
@@ -533,6 +671,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             categories: updates.planet.categories,
           });
           console.log('✅ [AUTH] Planet updated successfully');
+          
+          addNotification({
+            title: 'Planet Updated',
+            message: `Your planet "${updates.planet.name}" has been updated! 🌍`,
+            type: 'success'
+          });
         }
 
         // Update projects if provided
@@ -561,6 +705,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           }
           console.log('✅ [AUTH] Projects updated successfully');
+          
+          addNotification({
+            title: 'Projects Updated',
+            message: 'Your projects have been updated successfully! 📁',
+            type: 'success'
+          });
         }
 
         const updatedUser = { ...authState.user, ...updates };
@@ -569,16 +719,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('✅ [AUTH] User updated successfully');
         
         // Add update notification
-        if (addNotification) {
-          addNotification({
-            title: 'Profile Updated',
-            message: 'Your profile has been successfully updated! ✨',
-            type: 'success'
-          });
-        }
+        addNotification({
+          title: 'Profile Updated',
+          message: 'Your profile has been successfully updated! ✨',
+          type: 'success'
+        });
       } catch (error) {
         console.error('❌ [AUTH] Error updating user:', error);
         toast.error('Failed to update profile');
+        
+        addNotification({
+          title: 'Update Failed',
+          message: 'Failed to update your profile. Please try again.',
+          type: 'error'
+        });
       }
     }
   };
@@ -595,6 +749,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loadUserProjects,
         loadUserPlanet,
         loadUserAchievements,
+        addNotification,
       }}
     >
       {children}

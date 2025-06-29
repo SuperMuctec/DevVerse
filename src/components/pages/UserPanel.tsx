@@ -70,7 +70,7 @@ export const UserPanel: React.FC = () => {
   const [dbStats, setDbStats] = useState<any>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
   const [isLoadingProjects, setIsLoadingProjects] = useState(false);
-  const { user, updateUser, addXP, loadUserProjects } = useAuth();
+  const { user, updateUser, addXP, loadUserProjects, addNotification } = useAuth();
 
   const profileForm = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
@@ -92,24 +92,64 @@ export const UserPanel: React.FC = () => {
     if (activeTab === 'projects' && user && !user.projects && !isLoadingProjects) {
       setIsLoadingProjects(true);
       loadUserProjects().finally(() => setIsLoadingProjects(false));
+      
+      // Add notification for projects tab
+      addNotification({
+        title: 'Projects Tab',
+        message: 'Loading your projects... 📁',
+        type: 'info'
+      });
+    } else if (activeTab === 'profile') {
+      // Add notification for profile tab
+      addNotification({
+        title: 'Profile Tab',
+        message: 'Viewing your profile settings. ⚙️',
+        type: 'info'
+      });
+    } else if (activeTab === 'security') {
+      // Add notification for security tab
+      addNotification({
+        title: 'Security Tab',
+        message: 'Manage your security settings. 🔒',
+        type: 'info'
+      });
     }
-  }, [activeTab, user, loadUserProjects, isLoadingProjects]);
+  }, [activeTab, user, loadUserProjects, isLoadingProjects, addNotification]);
 
   // Load database stats when database tab is active
   useEffect(() => {
     if (activeTab === 'database') {
       loadDatabaseStats();
+      
+      // Add notification for database tab
+      addNotification({
+        title: 'Database Tab',
+        message: 'Viewing database statistics. 📊',
+        type: 'info'
+      });
     }
-  }, [activeTab]);
+  }, [activeTab, addNotification]);
 
   const loadDatabaseStats = async () => {
     setIsLoadingStats(true);
     try {
       const stats = await getDatabaseStats();
       setDbStats(stats);
+      
+      addNotification({
+        title: 'Database Stats Loaded',
+        message: 'Database statistics loaded successfully! 📊',
+        type: 'success'
+      });
     } catch (error) {
       console.error('Failed to load database stats:', error);
       toast.error('Failed to load database statistics');
+      
+      addNotification({
+        title: 'Database Stats Failed',
+        message: 'Failed to load database statistics. Please try again.',
+        type: 'error'
+      });
     } finally {
       setIsLoadingStats(false);
     }
@@ -165,13 +205,19 @@ export const UserPanel: React.FC = () => {
         );
         
         setProjectsWithLanguages(projectsWithLangs);
+        
+        addNotification({
+          title: 'Project Languages Loaded',
+          message: 'GitHub language statistics loaded for your projects! 📊',
+          type: 'info'
+        });
       };
 
       loadProjectLanguages();
     } else {
       setProjectsWithLanguages([]);
     }
-  }, [user?.projects]);
+  }, [user?.projects, addNotification]);
 
   // Calculate user level based on XP
   const calculateLevel = (xp: number) => {
@@ -212,12 +258,24 @@ export const UserPanel: React.FC = () => {
         addXP(50);
         
         toast.success('Achievement unlocked: Biography! ✍️');
+        
+        addNotification({
+          title: 'Achievement Unlocked!',
+          message: 'Biography - You wrote your first bio! ✍️',
+          type: 'success'
+        });
       } catch (error) {
         console.error('Failed to create achievement:', error);
       }
     }
     
     toast.success('Profile updated successfully!');
+    
+    addNotification({
+      title: 'Profile Updated',
+      message: 'Your profile has been updated successfully! ✨',
+      type: 'success'
+    });
   };
 
   const onPasswordSubmit = (data: PasswordFormData) => {
@@ -225,10 +283,22 @@ export const UserPanel: React.FC = () => {
     console.log('Password change:', data);
     passwordForm.reset();
     toast.success('Password updated successfully!');
+    
+    addNotification({
+      title: 'Password Updated',
+      message: 'Your password has been updated successfully! 🔒',
+      type: 'success'
+    });
   };
 
   const handleAvatarSave = (croppedImage: string) => {
     updateUser({ avatar: croppedImage });
+    
+    addNotification({
+      title: 'Avatar Updated',
+      message: 'Your profile picture has been updated successfully! 📸',
+      type: 'success'
+    });
   };
 
   const handleCreateProject = (data: CreateProjectData) => {
@@ -266,12 +336,24 @@ export const UserPanel: React.FC = () => {
         // Award additional XP for the creator achievement
         addXP(50);
         toast.success('Achievement unlocked: Creator! 💻');
+        
+        addNotification({
+          title: 'Achievement Unlocked!',
+          message: 'Creator - You created your first project! 💻',
+          type: 'success'
+        });
       }).catch(error => {
         console.error('Failed to create achievement:', error);
       });
     }
 
     toast.success('Project created successfully!');
+    
+    addNotification({
+      title: 'Project Created',
+      message: `"${data.name}" project has been created successfully! 📁`,
+      type: 'success'
+    });
   };
 
   const formatFileSize = (bytes: number) => {
@@ -345,7 +427,14 @@ export const UserPanel: React.FC = () => {
                     className="w-20 h-20 rounded-full border-2 border-cyber-blue"
                   />
                   <motion.button
-                    onClick={() => setShowProfilePicture(true)}
+                    onClick={() => {
+                      setShowProfilePicture(true);
+                      addNotification({
+                        title: 'Avatar Update',
+                        message: 'Starting to update your profile picture... 📸',
+                        type: 'info'
+                      });
+                    }}
                     className="absolute bottom-0 right-0 w-6 h-6 bg-cyber-blue rounded-full flex items-center justify-center cursor-pointer hover:bg-cyber-pink transition-colors"
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.9 }}
@@ -384,7 +473,14 @@ export const UserPanel: React.FC = () => {
                 {tabs.map((tab) => (
                   <motion.button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
+                    onClick={() => {
+                      setActiveTab(tab.id as any);
+                      addNotification({
+                        title: `${tab.label} Tab`,
+                        message: `Switched to ${tab.label} tab. ⚙️`,
+                        type: 'info'
+                      });
+                    }}
                     className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-300 ${
                       activeTab === tab.id
                         ? 'bg-cyber-blue/20 text-cyber-blue border border-cyber-blue/50'
@@ -410,7 +506,14 @@ export const UserPanel: React.FC = () => {
                     Profile Settings
                   </h2>
                   <motion.button
-                    onClick={() => setIsEditing(!isEditing)}
+                    onClick={() => {
+                      setIsEditing(!isEditing);
+                      addNotification({
+                        title: isEditing ? 'Edit Cancelled' : 'Edit Mode',
+                        message: isEditing ? 'Profile edit cancelled.' : 'Now editing your profile. Make your changes!',
+                        type: 'info'
+                      });
+                    }}
                     className="flex items-center space-x-2 px-4 py-2 bg-cyber-pink/20 text-cyber-pink rounded-lg hover:bg-cyber-pink/30 transition-colors"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
@@ -538,7 +641,14 @@ export const UserPanel: React.FC = () => {
                     Your Projects ({user?.projects?.length || 0})
                   </h2>
                   <motion.button
-                    onClick={() => setShowCreateProject(true)}
+                    onClick={() => {
+                      setShowCreateProject(true);
+                      addNotification({
+                        title: 'Create Project',
+                        message: 'Starting to create a new project... 📁',
+                        type: 'info'
+                      });
+                    }}
                     className="flex items-center space-x-2 bg-gradient-to-r from-cyber-green to-cyber-blue px-4 py-2 rounded-lg font-semibold text-white hover:scale-105 transition-transform"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
@@ -570,12 +680,26 @@ export const UserPanel: React.FC = () => {
                                 <motion.h3 
                                   className="font-orbitron text-lg font-bold text-white group-hover:text-cyber-green transition-colors cursor-pointer"
                                   whileHover={{ scale: 1.02 }}
-                                  onClick={() => window.open(project.githubUrl, '_blank')}
+                                  onClick={() => {
+                                    window.open(project.githubUrl, '_blank');
+                                    addNotification({
+                                      title: 'Opening GitHub',
+                                      message: `Opening ${project.name} on GitHub... 🔗`,
+                                      type: 'info'
+                                    });
+                                  }}
                                 >
                                   {project.name}
                                 </motion.h3>
                                 <motion.button
-                                  onClick={() => window.open(project.githubUrl, '_blank')}
+                                  onClick={() => {
+                                    window.open(project.githubUrl, '_blank');
+                                    addNotification({
+                                      title: 'Opening GitHub',
+                                      message: `Opening ${project.name} on GitHub... 🔗`,
+                                      type: 'info'
+                                    });
+                                  }}
                                   className="p-1 text-white/50 hover:text-cyber-green transition-colors"
                                   whileHover={{ scale: 1.2, rotate: 15 }}
                                   whileTap={{ scale: 0.9 }}
@@ -656,7 +780,14 @@ export const UserPanel: React.FC = () => {
                         <Code className="w-16 h-16 text-white/30 mx-auto mb-4" />
                         <p className="text-white/70 mb-4">No projects yet</p>
                         <motion.button
-                          onClick={() => setShowCreateProject(true)}
+                          onClick={() => {
+                            setShowCreateProject(true);
+                            addNotification({
+                              title: 'Create First Project',
+                              message: 'Starting to create your first project... 🚀',
+                              type: 'info'
+                            });
+                          }}
                           className="bg-gradient-to-r from-cyber-green to-cyber-blue px-6 py-3 rounded-lg font-semibold text-white hover:scale-105 transition-transform"
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
@@ -756,6 +887,13 @@ export const UserPanel: React.FC = () => {
                       className="w-full text-left px-4 py-3 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        addNotification({
+                          title: 'Account Deletion',
+                          message: 'Account deletion is disabled in this demo. Your data is safe! ⚠️',
+                          type: 'warning'
+                        });
+                      }}
                     >
                       Delete Account
                     </motion.button>
@@ -771,7 +909,14 @@ export const UserPanel: React.FC = () => {
                     Database Statistics
                   </h2>
                   <motion.button
-                    onClick={loadDatabaseStats}
+                    onClick={() => {
+                      loadDatabaseStats();
+                      addNotification({
+                        title: 'Refreshing Stats',
+                        message: 'Refreshing database statistics... 🔄',
+                        type: 'info'
+                      });
+                    }}
                     disabled={isLoadingStats}
                     className="flex items-center space-x-2 px-4 py-2 bg-cyber-blue/20 text-cyber-blue rounded-lg hover:bg-cyber-blue/30 transition-colors disabled:opacity-50"
                     whileHover={{ scale: 1.05 }}
@@ -843,13 +988,27 @@ export const UserPanel: React.FC = () => {
 
         <CreateProjectModal
           isOpen={showCreateProject}
-          onClose={() => setShowCreateProject(false)}
+          onClose={() => {
+            setShowCreateProject(false);
+            addNotification({
+              title: 'Project Creation Cancelled',
+              message: 'You cancelled creating a project. Your draft was not saved.',
+              type: 'info'
+            });
+          }}
           onSubmit={handleCreateProject}
         />
 
         <ProfilePictureModal
           isOpen={showProfilePicture}
-          onClose={() => setShowProfilePicture(false)}
+          onClose={() => {
+            setShowProfilePicture(false);
+            addNotification({
+              title: 'Avatar Update Cancelled',
+              message: 'You cancelled updating your profile picture.',
+              type: 'info'
+            });
+          }}
           onSave={handleAvatarSave}
           currentAvatar={user?.avatar}
         />

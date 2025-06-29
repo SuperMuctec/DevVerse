@@ -18,7 +18,7 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser, 
   const [allPlanets, setAllPlanets] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [likedPlanets, setLikedPlanets] = useState<Set<string>>(new Set());
-  const { user } = useAuth();
+  const { user, addNotification } = useAuth();
 
   const filters = [
     { id: 'all', label: 'All Planets', color: '#ffffff' },
@@ -56,6 +56,12 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser, 
 
         if (error) {
           console.error('Failed to load planets:', error);
+          
+          addNotification({
+            title: 'Planets Load Failed',
+            message: 'Failed to load planets. Please try again.',
+            type: 'error'
+          });
           return;
         }
         
@@ -66,15 +72,27 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser, 
         }));
         
         setAllPlanets(planetsWithOwners);
+        
+        addNotification({
+          title: 'Planets Loaded',
+          message: `${planetsWithOwners.length} planets loaded successfully! 🪐`,
+          type: 'info'
+        });
       } catch (error) {
         console.error('Failed to load planets:', error);
+        
+        addNotification({
+          title: 'Planets Load Failed',
+          message: 'Failed to load planets. Please try again.',
+          type: 'error'
+        });
       } finally {
         setIsLoading(false);
       }
     };
 
     loadPlanets();
-  }, []);
+  }, [addNotification]);
 
   // Load user's liked planets
   useEffect(() => {
@@ -90,6 +108,12 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser, 
     
     if (!user) {
       toast.error('Please log in to like planets');
+      
+      addNotification({
+        title: 'Login Required',
+        message: 'Please log in to like planets.',
+        type: 'warning'
+      });
       return;
     }
 
@@ -106,6 +130,12 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser, 
       if (error) {
         console.error('Error updating likes:', error);
         toast.error('Failed to update like');
+        
+        addNotification({
+          title: 'Like Update Failed',
+          message: 'Failed to update like. Please try again.',
+          type: 'error'
+        });
         return;
       }
 
@@ -114,9 +144,21 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser, 
       if (isLiked) {
         newLikedPlanets.delete(planetId);
         toast.success('Removed like');
+        
+        addNotification({
+          title: 'Like Removed',
+          message: 'You removed your like from this planet.',
+          type: 'info'
+        });
       } else {
         newLikedPlanets.add(planetId);
         toast.success('Planet liked! ❤️');
+        
+        addNotification({
+          title: 'Planet Liked!',
+          message: 'You liked this planet! The owner will appreciate it. ❤️',
+          type: 'success'
+        });
       }
       
       setLikedPlanets(newLikedPlanets);
@@ -132,6 +174,12 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser, 
     } catch (error) {
       console.error('Error handling like:', error);
       toast.error('Failed to update like');
+      
+      addNotification({
+        title: 'Like Update Failed',
+        message: 'Failed to update like. Please try again.',
+        type: 'error'
+      });
     }
   };
 
@@ -267,14 +315,30 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser, 
                 type="text"
                 placeholder="Search planets by name or owner..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  if (e.target.value) {
+                    addNotification({
+                      title: 'Searching Planets',
+                      message: `Searching for "${e.target.value}" in planets... 🔍`,
+                      type: 'info'
+                    });
+                  }
+                }}
                 className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-blue focus:ring-1 focus:ring-cyber-blue transition-all duration-300"
               />
             </motion.div>
             <div className="flex gap-2">
               <motion.select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
+                onChange={(e) => {
+                  setSortBy(e.target.value);
+                  addNotification({
+                    title: 'Planets Sorted',
+                    message: `Planets sorted by ${e.target.options[e.target.selectedIndex].text} 📊`,
+                    type: 'info'
+                  });
+                }}
                 className="px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-cyber-blue focus:ring-1 focus:ring-cyber-blue transition-all duration-300"
                 whileHover={{ scale: 1.02, rotateY: 5 }}
               >
@@ -291,7 +355,14 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser, 
             {filters.map((filter, index) => (
               <motion.button
                 key={filter.id}
-                onClick={() => setSelectedFilter(filter.id)}
+                onClick={() => {
+                  setSelectedFilter(filter.id);
+                  addNotification({
+                    title: 'Filter Applied',
+                    message: `Showing ${filter.label} planets 🔍`,
+                    type: 'info'
+                  });
+                }}
                 className={`px-3 sm:px-4 py-2 rounded-lg font-sora text-sm transition-all duration-300 ${
                   selectedFilter === filter.id
                     ? 'border-2'
@@ -354,7 +425,14 @@ export const StackShowroom: React.FC<StackShowroomProps> = ({ onNavigateToUser, 
                     duration: 0.6,
                     type: "spring"
                   }}
-                  onClick={() => onNavigateToPlanet(planet.id)}
+                  onClick={() => {
+                    onNavigateToPlanet(planet.id);
+                    addNotification({
+                      title: 'Planet Viewed',
+                      message: `Exploring "${planet.name}" by ${planet.owner} 🚀`,
+                      type: 'info'
+                    });
+                  }}
                   className="cursor-pointer"
                 >
                   <GlassPanel 

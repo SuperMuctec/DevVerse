@@ -28,7 +28,7 @@ export const CodeArena: React.FC = () => {
   const [codeHistory, setCodeHistory] = useState<{[key: string]: {[key: string]: string}}>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isHintUsed, setIsHintUsed] = useState(false);
-  const { user, addXP } = useAuth();
+  const { user, addXP, addNotification } = useAuth();
 
   // Load user challenges and stats
   useEffect(() => {
@@ -64,16 +64,29 @@ export const CodeArena: React.FC = () => {
 
           const history = JSON.parse(localStorage.getItem(`code_history_${user.id}`) || '{}');
           setCodeHistory(history);
+
+          // Add notification for arena access
+          addNotification({
+            title: 'Arena Accessed',
+            message: `Welcome to the Code Arena! You have ${formattedChallenges.length} challenges. ⚔️`,
+            type: 'info'
+          });
         } catch (error) {
           console.error('Failed to load challenges:', error);
           toast.error('Failed to load challenges');
+          
+          addNotification({
+            title: 'Arena Load Failed',
+            message: 'Failed to load your challenges. Please try again.',
+            type: 'error'
+          });
         }
       }
       setIsLoading(false);
     };
 
     loadChallenges();
-  }, [user?.id]);
+  }, [user?.id, addNotification]);
 
   // Reset hint usage when starting a new challenge
   useEffect(() => {
@@ -91,6 +104,13 @@ export const CodeArena: React.FC = () => {
         setTimeLeft(prev => {
           if (prev <= 1) {
             setShowTimeUpModal(true);
+            
+            // Add notification for time up
+            addNotification({
+              title: 'Time\'s Up!',
+              message: 'Better luck next time! Keep practicing to improve. ⏰',
+              type: 'warning'
+            });
             return 0;
           }
           return prev - 1;
@@ -98,7 +118,7 @@ export const CodeArena: React.FC = () => {
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [selectedBattle, timeLeft]);
+  }, [selectedBattle, timeLeft, addNotification]);
 
   // Save code to history when it changes
   useEffect(() => {
@@ -170,10 +190,28 @@ export const CodeArena: React.FC = () => {
       addXP(50);
 
       toast.success('Challenge created successfully!');
-      toast.success('Achievement unlocked: A Warrior! ⚔️');
+      
+      // Add notifications
+      addNotification({
+        title: 'Challenge Created!',
+        message: `"${data.title}" challenge has been created successfully! 🎯`,
+        type: 'success'
+      });
+      
+      addNotification({
+        title: 'Achievement Unlocked!',
+        message: 'A Warrior - You created your first challenge! ⚔️',
+        type: 'success'
+      });
     } catch (error) {
       console.error('Failed to create challenge:', error);
       toast.error('Failed to create challenge');
+      
+      addNotification({
+        title: 'Challenge Creation Failed',
+        message: 'Failed to create your challenge. Please try again.',
+        type: 'error'
+      });
     }
   };
 
@@ -182,12 +220,24 @@ export const CodeArena: React.FC = () => {
       const hintUsageKey = `hint_used_${selectedBattle.id}_${user.id}`;
       localStorage.setItem(hintUsageKey, 'true');
       setIsHintUsed(true);
+      
+      addNotification({
+        title: 'AI Hint Used',
+        message: 'AI hint activated! Use it wisely to solve the challenge. 💡',
+        type: 'info'
+      });
     }
   };
 
   const handleTimeUpClose = () => {
     setShowTimeUpModal(false);
     setSelectedBattle(null);
+    
+    addNotification({
+      title: 'Returned to Arena',
+      message: 'Ready for another challenge? Keep practicing! 💪',
+      type: 'info'
+    });
   };
 
   const formatTime = (seconds: number) => {
@@ -233,6 +283,12 @@ export const CodeArena: React.FC = () => {
 
     if (!code.trim()) {
       setTestResults({ passed: 0, total: testCases.length, details: ['Error: No code provided'] });
+      
+      addNotification({
+        title: 'Test Failed',
+        message: 'Please write some code before running tests! 📝',
+        type: 'warning'
+      });
       return;
     }
 
@@ -285,6 +341,13 @@ export const CodeArena: React.FC = () => {
 
     setTestResults({ passed, total: testCases.length, details: results });
     toast.success(`Tests completed: ${passed}/${testCases.length} passed`);
+    
+    // Add notification for test results
+    addNotification({
+      title: 'Tests Completed',
+      message: `${passed}/${testCases.length} tests passed! ${passed === testCases.length ? '🎉' : '💪'}`,
+      type: passed === testCases.length ? 'success' : 'info'
+    });
   };
 
   const submitSolution = () => {
@@ -302,10 +365,27 @@ export const CodeArena: React.FC = () => {
       localStorage.setItem(`arena_stats_${user.id}`, JSON.stringify(newStats));
       setUserStats(newStats);
 
+      // Award XP based on difficulty
+      const xpReward = selectedBattle.difficulty === 'easy' ? 50 : selectedBattle.difficulty === 'medium' ? 100 : 200;
+      addXP(xpReward);
+
       toast.success('Challenge completed successfully! 🎉');
+      
+      addNotification({
+        title: 'Challenge Completed!',
+        message: `"${selectedBattle.title}" completed successfully! You earned ${xpReward} XP! 🏆`,
+        type: 'success'
+      });
+      
       setSelectedBattle(null);
     } else {
       toast.error('Some tests failed. Keep trying!');
+      
+      addNotification({
+        title: 'Tests Failed',
+        message: 'Some tests failed. Review your solution and try again! 🔍',
+        type: 'warning'
+      });
     }
   };
 
@@ -319,6 +399,12 @@ export const CodeArena: React.FC = () => {
     setCode(savedCode);
     setTestResults(null);
     toast.success(`Started ${battle.title}!`);
+    
+    addNotification({
+      title: 'Challenge Started!',
+      message: `"${battle.title}" challenge is now active. Good luck! ⚡`,
+      type: 'info'
+    });
   };
 
   const resumeChallenge = (battle: CodeBattle) => {
@@ -327,6 +413,12 @@ export const CodeArena: React.FC = () => {
     setCode(savedCode);
     setTimeLeft(0);
     setTestResults(null);
+    
+    addNotification({
+      title: 'Challenge Resumed',
+      message: `Viewing "${battle.title}" solution. Keep improving! 📖`,
+      type: 'info'
+    });
   };
 
   // Handle language change
@@ -346,6 +438,12 @@ export const CodeArena: React.FC = () => {
       // Load code for new language or use boilerplate
       const savedCode = newHistory[selectedBattle.id]?.[newLanguage] || getInitialCode(selectedBattle.problem, newLanguage);
       setCode(savedCode);
+      
+      addNotification({
+        title: 'Language Changed',
+        message: `Switched to ${newLanguage}. Code auto-saved! 💾`,
+        type: 'info'
+      });
     }
     setLanguage(newLanguage);
   };

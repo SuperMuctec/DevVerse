@@ -62,6 +62,13 @@ export const CreateDevLogModal: React.FC<CreateDevLogModalProps> = ({
     }
   };
 
+  // Handle form submission only when explicitly called
+  const handleExplicitSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleSubmit(handleFormSubmit)(e);
+  };
+
   const nextPage = async () => {
     let fieldsToValidate: (keyof DevLogFormData)[] = [];
     
@@ -88,13 +95,6 @@ export const CreateDevLogModal: React.FC<CreateDevLogModalProps> = ({
     setCurrentPage(1);
     reset();
     onClose();
-  };
-
-  // Handle form submission only when explicitly called
-  const handleExplicitSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    handleSubmit(handleFormSubmit)(e);
   };
 
   const renderPage = () => {

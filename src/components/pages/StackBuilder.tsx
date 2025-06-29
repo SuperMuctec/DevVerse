@@ -8,7 +8,7 @@ import { dbOps } from '../../lib/database';
 import { toast } from 'react-hot-toast';
 
 export const StackBuilder: React.FC = () => {
-  const { user, updateUser, loadUserPlanet, addXP } = useAuth();
+  const { user, updateUser, loadUserPlanet, addXP, addNotification } = useAuth();
   const [planetName, setPlanetName] = useState('');
   const [stack, setStack] = useState({
     languages: [],
@@ -26,10 +26,17 @@ export const StackBuilder: React.FC = () => {
         await loadUserPlanet();
       }
       setIsLoading(false);
+      
+      // Add notification for stack builder access
+      addNotification({
+        title: 'Stack Builder',
+        message: 'Welcome to the Stack Builder! Customize your dev planet. 🌍',
+        type: 'info'
+      });
     };
 
     loadPlanetData();
-  }, [user, loadUserPlanet]);
+  }, [user, loadUserPlanet, addNotification]);
 
   // Update form when planet data is loaded
   useEffect(() => {
@@ -67,12 +74,24 @@ export const StackBuilder: React.FC = () => {
         ...prev,
         [category]: prev[category].filter(item => item !== tech)
       }));
+      
+      addNotification({
+        title: 'Tech Removed',
+        message: `Removed ${tech} from your ${category} stack. ❌`,
+        type: 'info'
+      });
     } else {
       // Add if not selected (toggle on)
       setStack(prev => ({
         ...prev,
         [category]: [...prev[category], tech]
       }));
+      
+      addNotification({
+        title: 'Tech Added',
+        message: `Added ${tech} to your ${category} stack! ✅`,
+        type: 'success'
+      });
     }
   };
 
@@ -81,23 +100,55 @@ export const StackBuilder: React.FC = () => {
       ...prev,
       [category]: prev[category].filter(item => item !== tech)
     }));
+    
+    addNotification({
+      title: 'Tech Removed',
+      message: `Removed ${tech} from your ${category} stack. ❌`,
+      type: 'info'
+    });
   };
 
   const toggleCategory = (categoryId: string) => {
     if (selectedCategories.includes(categoryId)) {
       // Remove if already selected (toggle off)
       setSelectedCategories(prev => prev.filter(id => id !== categoryId));
+      
+      const category = categoryOptions.find(c => c.id === categoryId);
+      addNotification({
+        title: 'Category Removed',
+        message: `Removed ${category?.label} category from your planet. ❌`,
+        type: 'info'
+      });
     } else if (selectedCategories.length < 2) {
       // Add if not selected and under limit (toggle on)
       setSelectedCategories(prev => [...prev, categoryId]);
+      
+      const category = categoryOptions.find(c => c.id === categoryId);
+      addNotification({
+        title: 'Category Added',
+        message: `Added ${category?.label} category to your planet! ✅`,
+        type: 'success'
+      });
     } else {
       toast.error('You can select maximum 2 categories');
+      
+      addNotification({
+        title: 'Category Limit Reached',
+        message: 'You can select a maximum of 2 categories. Remove one first.',
+        type: 'warning'
+      });
     }
   };
 
   const deployPlanet = async () => {
     if (!planetName.trim()) {
       toast.error('Please enter a planet name');
+      
+      addNotification({
+        title: 'Planet Name Required',
+        message: 'Please enter a name for your planet.',
+        type: 'warning'
+      });
       return;
     }
 
@@ -154,13 +205,37 @@ export const StackBuilder: React.FC = () => {
         addXP(50);
 
         toast.success('Planet deployed successfully! 🚀');
-        toast.success('Achievement unlocked: A God! 🌍');
+        
+        // Add notifications
+        addNotification({
+          title: 'Planet Deployed!',
+          message: `"${planetName}" has been deployed to the galaxy! 🚀`,
+          type: 'success'
+        });
+        
+        addNotification({
+          title: 'Achievement Unlocked!',
+          message: 'A God - You created your first planet! 🌍',
+          type: 'success'
+        });
       } else {
         toast.success('Planet updated successfully! 🚀');
+        
+        addNotification({
+          title: 'Planet Updated!',
+          message: `"${planetName}" has been updated successfully! 🌍`,
+          type: 'success'
+        });
       }
     } catch (error) {
       console.error('Error deploying planet:', error);
       toast.error('Failed to deploy planet');
+      
+      addNotification({
+        title: 'Planet Deployment Failed',
+        message: 'Failed to deploy your planet. Please try again.',
+        type: 'error'
+      });
     }
   };
 
@@ -495,7 +570,16 @@ export const StackBuilder: React.FC = () => {
                     <motion.input
                       type="text"
                       value={planetName}
-                      onChange={(e) => setPlanetName(e.target.value)}
+                      onChange={(e) => {
+                        setPlanetName(e.target.value);
+                        if (e.target.value && e.target.value !== user?.planet?.name) {
+                          addNotification({
+                            title: 'Planet Name Updated',
+                            message: `Planet name changed to "${e.target.value}" 🪐`,
+                            type: 'info'
+                          });
+                        }
+                      }}
                       className="w-full pl-10 sm:pl-12 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-blue focus:ring-1 focus:ring-cyber-blue transition-all duration-300"
                       placeholder="Enter your planet name"
                       whileFocus={{ 

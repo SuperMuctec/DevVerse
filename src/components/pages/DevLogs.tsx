@@ -15,7 +15,7 @@ export const DevLogs: React.FC = () => {
   const [sortBy, setSortBy] = useState('recent');
   const [devLogs, setDevLogs] = useState<DevLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { user, addXP } = useAuth();
+  const { user, addXP, addNotification } = useAuth();
 
   // Load devlogs from database on component mount
   useEffect(() => {
@@ -32,6 +32,12 @@ export const DevLogs: React.FC = () => {
         if (error) {
           console.error('Failed to load devlogs:', error);
           toast.error('Failed to load devlogs');
+          
+          addNotification({
+            title: 'DevLogs Load Failed',
+            message: 'Failed to load DevLogs. Please try again.',
+            type: 'error'
+          });
           return;
         }
 
@@ -46,16 +52,28 @@ export const DevLogs: React.FC = () => {
         }));
         
         setDevLogs(formattedDevLogs);
+        
+        addNotification({
+          title: 'DevLogs Loaded',
+          message: `${formattedDevLogs.length} DevLogs loaded successfully! 📚`,
+          type: 'info'
+        });
       } catch (error) {
         console.error('Failed to load devlogs:', error);
         toast.error('Failed to load devlogs');
+        
+        addNotification({
+          title: 'DevLogs Load Failed',
+          message: 'Failed to load DevLogs. Please try again.',
+          type: 'error'
+        });
       } finally {
         setIsLoading(false);
       }
     };
 
     loadDevLogs();
-  }, []);
+  }, [addNotification]);
 
   const handleCreateDevLog = async (data: CreateDevLogData) => {
     if (!user) return;
@@ -74,6 +92,12 @@ export const DevLogs: React.FC = () => {
       if (error) {
         console.error('Failed to create devlog:', error);
         toast.error('Failed to create devlog');
+        
+        addNotification({
+          title: 'DevLog Creation Failed',
+          message: 'Failed to create your DevLog. Please try again.',
+          type: 'error'
+        });
         return;
       }
 
@@ -112,10 +136,28 @@ export const DevLogs: React.FC = () => {
       addXP(50);
 
       toast.success('DevLog published successfully!');
-      toast.success('Achievement unlocked: Journalist! 📝');
+      
+      // Add notifications
+      addNotification({
+        title: 'DevLog Published!',
+        message: `"${data.title}" has been published successfully! 📝`,
+        type: 'success'
+      });
+      
+      addNotification({
+        title: 'Achievement Unlocked!',
+        message: 'Journalist - You published your first DevLog! 🏆',
+        type: 'success'
+      });
     } catch (error) {
       console.error('Failed to create devlog:', error);
       toast.error('Failed to create devlog');
+      
+      addNotification({
+        title: 'DevLog Creation Failed',
+        message: 'Failed to create your DevLog. Please try again.',
+        type: 'error'
+      });
     }
   };
 
@@ -125,6 +167,12 @@ export const DevLogs: React.FC = () => {
         ? { ...log, likes: log.likes + 1 }
         : log
     ));
+    
+    addNotification({
+      title: 'DevLog Liked',
+      message: 'You liked a DevLog! The author will appreciate it. ❤️',
+      type: 'success'
+    });
   };
 
   // Filter and sort devlogs
@@ -236,14 +284,30 @@ export const DevLogs: React.FC = () => {
                 type="text"
                 placeholder="Search devlogs by title, content, or author..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  if (e.target.value) {
+                    addNotification({
+                      title: 'Searching DevLogs',
+                      message: `Searching for "${e.target.value}" in DevLogs... 🔍`,
+                      type: 'info'
+                    });
+                  }
+                }}
                 className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-blue focus:ring-1 focus:ring-cyber-blue transition-all duration-300"
               />
             </motion.div>
             <div className="flex gap-2">
               <motion.select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
+                onChange={(e) => {
+                  setSortBy(e.target.value);
+                  addNotification({
+                    title: 'DevLogs Sorted',
+                    message: `DevLogs sorted by ${e.target.options[e.target.selectedIndex].text} 📊`,
+                    type: 'info'
+                  });
+                }}
                 className="px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white focus:outline-none focus:border-cyber-blue focus:ring-1 focus:ring-cyber-blue transition-all duration-300"
                 whileHover={{ scale: 1.02, rotateY: 5 }}
               >
@@ -253,7 +317,14 @@ export const DevLogs: React.FC = () => {
                 <option value="title" className="bg-space-dark">Title A-Z</option>
               </motion.select>
               <motion.button
-                onClick={() => setShowCreateDevLog(true)}
+                onClick={() => {
+                  setShowCreateDevLog(true);
+                  addNotification({
+                    title: 'Create DevLog',
+                    message: 'Starting to create a new DevLog... 📝',
+                    type: 'info'
+                  });
+                }}
                 className="flex items-center space-x-2 bg-gradient-to-r from-cyber-blue to-cyber-pink px-4 sm:px-6 py-3 rounded-lg font-orbitron font-bold text-white transition-all duration-300"
                 whileHover={{ 
                   scale: 1.05,
@@ -331,7 +402,9 @@ export const DevLogs: React.FC = () => {
                           <span>{log.createdAt.toLocaleDateString()}</span>
                         </motion.div>
                         <motion.button
-                          onClick={() => handleLike(log.id)}
+                          onClick={() => {
+                            handleLike(log.id);
+                          }}
                           className="flex items-center space-x-2 hover:text-red-400 transition-colors"
                           whileHover={{ 
                             scale: 1.1,
@@ -434,7 +507,14 @@ export const DevLogs: React.FC = () => {
                 {searchTerm ? 'No devlogs found matching your search.' : 'No devlogs yet. Be the first to share your journey!'}
               </p>
               <motion.button
-                onClick={() => setShowCreateDevLog(true)}
+                onClick={() => {
+                  setShowCreateDevLog(true);
+                  addNotification({
+                    title: 'Create First DevLog',
+                    message: 'Starting to create your first DevLog... 🚀',
+                    type: 'info'
+                  });
+                }}
                 className="bg-gradient-to-r from-cyber-blue to-cyber-pink px-6 py-3 rounded-lg font-orbitron font-bold text-white transition-all duration-300"
                 whileHover={{ 
                   scale: 1.05,
@@ -451,7 +531,14 @@ export const DevLogs: React.FC = () => {
 
         <CreateDevLogModal
           isOpen={showCreateDevLog}
-          onClose={() => setShowCreateDevLog(false)}
+          onClose={() => {
+            setShowCreateDevLog(false);
+            addNotification({
+              title: 'DevLog Creation Cancelled',
+              message: 'You cancelled creating a DevLog. Your draft was not saved.',
+              type: 'info'
+            });
+          }}
           onSubmit={handleCreateDevLog}
         />
       </div>
