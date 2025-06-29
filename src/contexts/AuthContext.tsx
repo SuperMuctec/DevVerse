@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, AuthState } from '../types';
-import { supabase } from '../lib/supabase';
 import { dbOps } from '../lib/database';
 import { toast } from 'react-hot-toast';
 
@@ -226,124 +225,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    // Ultra-fast session check with hard timeout
+    // Check for existing session in localStorage
     const checkSession = async () => {
-      console.log('🔵 [AUTH] Starting fast session check...');
+      console.log('🔵 [AUTH] Checking for existing session...');
       
-      // Set a hard timeout to prevent hanging - reduced to 1 second
-      const timeoutId = setTimeout(() => {
-        console.log('⚠️ [AUTH] Session check timeout - proceeding without session');
-        setAuthState({
-          user: null,
-          isAuthenticated: false,
-          isLoading: false,
-        });
-      }, 1000); // 1 second hard timeout
-
-      try {
-        const sessionResponse = await supabase.auth.getSession();
-        const session = sessionResponse.data.session;
-        const error = sessionResponse.error;
-        
-        // Clear timeout since we got a response
-        clearTimeout(timeoutId);
-        
-        if (error) {
-          console.warn('⚠️ [AUTH] Session check error:', error);
-          setAuthState({
-            user: null,
-            isAuthenticated: false,
-            isLoading: false,
-          });
-          return;
-        }
-        
-        if (session?.user) {
-          console.log('✅ [AUTH] Found existing session for user:', session.user.id);
+      const sessionData = localStorage.getItem('devverse_session');
+      if (sessionData) {
+        try {
+          const { userId, expiresAt } = JSON.parse(sessionData);
           
-          // Try to load user data with timeout
-          const userDataTimeout = setTimeout(() => {
-            console.log('⚠️ [AUTH] User data loading timeout - proceeding without user data');
-            setAuthState({
-              user: null,
-              isAuthenticated: false,
-              isLoading: false,
-            });
-          }, 2000);
-          
-          try {
-            const user = await loadUserData(session.user.id);
-            clearTimeout(userDataTimeout);
+          // Check if session is still valid
+          if (new Date().getTime() < expiresAt) {
+            console.log('✅ [AUTH] Found valid session for user:', userId);
             
+            const user = await loadUserData(userId);
             if (user) {
               setAuthState({
                 user,
                 isAuthenticated: true,
                 isLoading: false,
               });
-            } else {
-              console.log('⚠️ [AUTH] Failed to load user data');
-              setAuthState({
-                user: null,
-                isAuthenticated: false,
-                isLoading: false,
-              });
+              return;
             }
-          } catch (userError) {
-            clearTimeout(userDataTimeout);
-            console.error('❌ [AUTH] Error loading user data:', userError);
-            setAuthState({
-              user: null,
-              isAuthenticated: false,
-              isLoading: false,
-            });
+          } else {
+            console.log('⚠️ [AUTH] Session expired, removing...');
+            localStorage.removeItem('devverse_session');
           }
-        } else {
-          console.log('ℹ️ [AUTH] No existing session found');
-          setAuthState({
-            user: null,
-            isAuthenticated: false,
-            isLoading: false,
-          });
+        } catch (error) {
+          console.error('❌ [AUTH] Error parsing session data:', error);
+          localStorage.removeItem('devverse_session');
         }
-      } catch (error) {
-        clearTimeout(timeoutId);
-        console.log('ℹ️ [AUTH] Session check failed - starting fresh:', error);
-        setAuthState({
-          user: null,
-          isAuthenticated: false,
-          isLoading: false,
-        });
       }
+      
+      console.log('ℹ️ [AUTH] No valid session found');
+      setAuthState({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+      });
     };
 
     checkSession();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔵 [AUTH] Auth state change:', event, session?.user?.id);
-      
-      if (event === 'SIGNED_IN' && session?.user) {
-        // User just signed in, load their data
-        const user = await loadUserData(session.user.id);
-        if (user) {
-          setAuthState({
-            user,
-            isAuthenticated: true,
-            isLoading: false,
-          });
-        }
-      } else if (event === 'SIGNED_OUT') {
-        console.log('ℹ️ [AUTH] User signed out');
-        setAuthState({
-          user: null,
-          isAuthenticated: false,
-          isLoading: false,
-        });
-      }
-    });
-
-    return () => subscription.unsubscribe();
   }, []);
 
   const calculateLevel = (xp: number) => {
@@ -408,7 +330,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('🔵 [AUTH] Attempting login for email:', email);
     
     try {
-      // First, try to get user from our database to verify password hash
+      // Get user from our database to verify password hash
       const userData = await dbOps.getUserByEmail(email);
       
       if (!userData) {
@@ -426,36 +348,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
-      console.log('✅ [AUTH] Password verified, attempting Supabase auth...');
+      console.log('✅ [AUTH] Password verified, logging in user...');
 
-      // Now try Supabase auth (this might fail if password was changed in our system)
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      // Create session
+      const sessionData = {
+        userId: userData.id,
+        expiresAt: new Date().getTime() + (7 * 24 * 60 * 60 * 1000) // 7 days
+      };
+      localStorage.setItem('devverse_session', JSON.stringify(sessionData));
 
-      if (error) {
-        console.warn('⚠️ [AUTH] Supabase auth failed, but our password check passed:', error);
-        // In this case, we could either:
-        // 1. Update Supabase auth password to match our hash
-        // 2. Create a custom session
-        // For now, we'll treat it as a login failure
-        toast.error('Authentication service error');
-        return false;
-      }
-
-      console.log('✅ [AUTH] Login successful');
-
-      // Add welcome notification
-      if (addNotification) {
-        addNotification({
-          title: 'Welcome back!',
-          message: 'Successfully logged into DevVerse³ 🚀',
-          type: 'success'
+      // Load user data
+      const user = await loadUserData(userData.id);
+      if (user) {
+        setAuthState({
+          user,
+          isAuthenticated: true,
+          isLoading: false,
         });
+
+        console.log('✅ [AUTH] Login successful');
+
+        // Add welcome notification
+        if (addNotification) {
+          addNotification({
+            title: 'Welcome back!',
+            message: 'Successfully logged into DevVerse³ 🚀',
+            type: 'success'
+          });
+        }
+
+        return true;
       }
 
-      return true;
+      return false;
     } catch (error) {
       console.error('❌ [AUTH] Login error:', error);
       toast.error('Login failed');
@@ -467,42 +392,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('🔵 [AUTH] Attempting registration for username:', username, 'email:', email);
     
     try {
+      // Check if email already exists
+      const existingUser = await dbOps.getUserByEmail(email);
+      if (existingUser) {
+        console.warn('⚠️ [AUTH] Email already exists');
+        return { success: false, message: 'Email already exists' };
+      }
+
+      // Check if username already exists
+      const existingUsername = await dbOps.getUserByUsername(username);
+      if (existingUsername) {
+        console.warn('⚠️ [AUTH] Username already exists');
+        return { success: false, message: 'Username already exists' };
+      }
+
       // Generate password hash
       console.log('🔵 [AUTH] Generating password hash...');
       const passwordHash = await hashPassword(password);
       console.log('✅ [AUTH] Password hash generated');
 
-      // Create user in Supabase Auth first
-      console.log('🔵 [AUTH] Creating auth user...');
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      if (authError) {
-        if (authError.message.includes('already registered')) {
-          console.warn('⚠️ [AUTH] Email already exists');
-          return { success: false, message: 'Email already exists' };
-        } else {
-          console.error('❌ [AUTH] Auth creation error:', authError);
-          return { success: false, message: 'Registration failed' };
-        }
-      }
-
-      if (!authData.user) {
-        console.error('❌ [AUTH] No user data returned from auth signup');
-        return { success: false, message: 'Registration failed' };
-      }
-
-      console.log('✅ [AUTH] Auth user created with ID:', authData.user.id);
+      // Generate user ID
+      const userId = crypto.randomUUID();
 
       // Create user profile in our users table with password hash
       try {
         await dbOps.createUser({
-          id: authData.user.id,
+          id: userId,
           username,
           email,
-          password_hash: passwordHash, // Store the hashed password
+          password_hash: passwordHash,
           avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
         });
         console.log('✅ [AUTH] User profile created successfully with password hash');
@@ -525,7 +443,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           console.log('🔵 [AUTH] Creating default planet in background...');
           await dbOps.createOrUpdatePlanet({
-            user_id: authData.user.id,
+            user_id: userId,
             name: `${username}'s Planet`,
           });
           console.log('✅ [AUTH] Default planet created successfully');
@@ -536,7 +454,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           console.log('🔵 [AUTH] Creating beginning achievement in background...');
           await dbOps.createAchievement({
-            user_id: authData.user.id,
+            user_id: userId,
             achievement_id: 'beginning',
             name: 'The Beginning',
             description: 'User makes an account and Logs in',
@@ -559,7 +477,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('🔵 [AUTH] Attempting logout...');
     
     try {
-      await supabase.auth.signOut();
+      // Remove session from localStorage
+      localStorage.removeItem('devverse_session');
+      
       setAuthState({
         user: null,
         isAuthenticated: false,

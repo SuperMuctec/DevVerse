@@ -17,16 +17,6 @@ export const dbOps = {
     console.log('🔵 [DB] Testing database insert...');
     
     try {
-      // First, check authentication state with timeout
-      const sessionResponse = await withTimeout(supabase.auth.getSession(), 3000);
-      const session = sessionResponse.data.session;
-      const sessionError = sessionResponse.error;
-      
-      console.log('🔍 [DB] Current session:', session ? 'Authenticated' : 'Not authenticated');
-      console.log('🔍 [DB] Session error:', sessionError);
-      console.log('🔍 [DB] User ID:', session?.user?.id);
-      console.log('🔍 [DB] Access token present:', !!session?.access_token);
-      
       // Check if we can access the table at all with timeout
       console.log('🔍 [DB] Testing table access...');
       const { data: testAccess, error: accessError } = await withTimeout(
@@ -104,51 +94,6 @@ export const dbOps = {
     }
   },
 
-  // Test with manual authentication
-  async testWithAuth(email = 'test@example.com', password = 'testpassword123') {
-    console.log('🔵 [DB] Testing with manual authentication...');
-    
-    try {
-      // Try to sign in with timeout
-      const { data: authData, error: authError } = await withTimeout(
-        supabase.auth.signInWithPassword({
-          email,
-          password
-        }),
-        5000
-      );
-      
-      console.log('🔍 [DB] Auth result:', { user: authData.user?.id, error: authError });
-      
-      if (authError) {
-        console.log('🔍 [DB] Auth failed, trying to create test user...');
-        
-        // Try to create a test user with timeout
-        const { data: signUpData, error: signUpError } = await withTimeout(
-          supabase.auth.signUp({
-            email,
-            password
-          }),
-          5000
-        );
-        
-        console.log('🔍 [DB] SignUp result:', { user: signUpData.user?.id, error: signUpError });
-        
-        if (signUpError) {
-          return { success: false, error: `Auth failed: ${signUpError.message}` };
-        }
-      }
-      
-      // Now try the database operation
-      const insertResult = await this.testSimpleInsert();
-      return insertResult;
-      
-    } catch (error: any) {
-      console.error('❌ [DB] Auth test error:', error);
-      return { success: false, error: error.message };
-    }
-  },
-
   // Get all test records
   async getTestRecords() {
     console.log('🔵 [DB] Getting test records...');
@@ -201,7 +146,7 @@ export const dbOps = {
     }
   },
 
-  // Users - Updated for WebContainer compatibility
+  // Users - Updated for direct database access without Supabase auth
   async createUser(userData: any) {
     console.log('🔵 [DB] Creating user with data:', userData);
 
@@ -211,7 +156,7 @@ export const dbOps = {
         id: userData.id,
         username: userData.username,
         email: userData.email,
-        password_hash: userData.password_hash || 'supabase_auth_managed',
+        password_hash: userData.password_hash,
         avatar: userData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userData.username}`,
         bio: userData.bio || null,
         location: userData.location || null,
@@ -222,14 +167,11 @@ export const dbOps = {
 
       console.log('🔵 [DB] Attempting to insert:', JSON.stringify(insertData, null, 2));
 
-      // Use upsert with timeout
+      // Use insert with timeout
       const { data, error } = await withTimeout(
         supabase
           .from('users')
-          .upsert(insertData, { 
-            onConflict: 'id',
-            ignoreDuplicates: false 
-          })
+          .insert(insertData)
           .select()
           .single(),
         10000

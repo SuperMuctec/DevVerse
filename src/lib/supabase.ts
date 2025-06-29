@@ -12,8 +12,8 @@ console.log('🔵 [SUPABASE] Using anon key:', supabaseAnonKey ? 'Present' : 'Mi
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    autoRefreshToken: true,
-    persistSession: true,
+    autoRefreshToken: false,
+    persistSession: false,
     detectSessionInUrl: false
   },
   db: {
