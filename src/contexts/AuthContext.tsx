@@ -576,6 +576,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             name: `${username}'s Planet`,
           });
           console.log('✅ [AUTH] Default planet created successfully');
+          
+          // Add planet creation notification
+          if (addNotification) {
+            addNotification({
+              title: 'Planet Created! 🪐',
+              message: `Your dev planet "${username}'s Planet" has been created and is now orbiting in the galaxy! Visit the Builder to customize it.`,
+              type: 'success'
+            });
+          }
         } catch (planetError) {
           console.warn('⚠️ [AUTH] Planet creation failed (will be created later):', planetError);
         }
@@ -598,15 +607,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           if (addNotification) {
             addNotification({
-              title: 'Achievement Unlocked!',
-              message: 'The Beginning - You\'ve joined the galaxy! 🎉',
+              title: 'Achievement Unlocked! 🏆',
+              message: 'The Beginning - You\'ve joined the galaxy! Welcome to your coding adventure! 🎉',
               type: 'success'
             });
           }
         } catch (achievementError) {
           console.warn('⚠️ [AUTH] Achievement creation failed (will be awarded later):', achievementError);
         }
-      }, 100); // Small delay to ensure registration completes first
+      }, 1000); // 1 second delay to ensure registration completes first and notifications are visible
       
       return true;
     } catch (error) {
