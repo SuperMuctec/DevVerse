@@ -19,8 +19,8 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onPageChange }) => 
     { id: 'devlogs', icon: FileText, label: 'DevLogs' },
     { id: 'arena', icon: Trophy, label: 'Arena' },
     { id: 'nebula', icon: Trophy, label: 'Nebula' },
-    { id: 'search', icon: Search, label: 'Search' },
     { id: 'settings', icon: Settings, label: 'Control Deck' },
+    { id: 'search', icon: Search, label: 'Search' },
   ];
 
   // Calculate user level based on XP
