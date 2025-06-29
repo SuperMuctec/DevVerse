@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Eye, EyeOff, Mail, Lock, User, Rocket } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Rocket, CheckCircle, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { GlassPanel } from '../ui/GlassPanel';
 
@@ -27,6 +27,8 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) =
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const { register: registerUser } = useAuth();
 
   const {
@@ -40,11 +42,105 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) =
   const onSubmit = async (data: RegisterFormData) => {
     setIsLoading(true);
     try {
-      await registerUser(data.username, data.email, data.password);
+      const result = await registerUser(data.username, data.email, data.password);
+      if (result.success) {
+        setSuccessMessage(result.message || 'Registration successful!');
+        setRegistrationSuccess(true);
+      } else {
+        // Handle error - the error message will be shown via toast from the auth context
+        console.error('Registration failed:', result.message);
+      }
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (registrationSuccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8, rotateY: -20 }}
+          animate={{ opacity: 1, scale: 1, rotateY: 0 }}
+          transition={{ duration: 0.8, type: "spring" }}
+          className="w-full max-w-md"
+        >
+          <GlassPanel glowColor="#00ff00">
+            <div className="text-center">
+              <motion.div
+                initial={{ scale: 0, rotateZ: -180 }}
+                animate={{ scale: 1, rotateZ: 0 }}
+                transition={{ delay: 0.3, duration: 0.8, type: "spring" }}
+                className="mb-6"
+              >
+                <motion.div
+                  className="w-20 h-20 bg-gradient-to-r from-green-400 to-cyan-400 rounded-full flex items-center justify-center mx-auto"
+                  animate={{
+                    boxShadow: [
+                      '0 0 20px rgba(0, 255, 0, 0.5)',
+                      '0 0 40px rgba(0, 255, 255, 0.8)',
+                      '0 0 20px rgba(0, 255, 0, 0.5)'
+                    ]
+                  }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  <CheckCircle className="w-10 h-10 text-white" />
+                </motion.div>
+              </motion.div>
+
+              <motion.h1
+                className="font-orbitron text-2xl font-bold text-white mb-4"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5, duration: 0.6 }}
+              >
+                Registration Successful!
+              </motion.h1>
+
+              <motion.p
+                className="text-white/80 mb-6 leading-relaxed"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7, duration: 0.6 }}
+              >
+                {successMessage}
+              </motion.p>
+
+              <motion.div
+                className="bg-gradient-to-r from-green-500/20 to-cyan-500/20 p-4 rounded-lg border border-green-500/30 mb-6"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.9, duration: 0.5 }}
+              >
+                <h3 className="font-semibold text-green-400 mb-2 text-sm">🌍 What's Next?</h3>
+                <ul className="text-white/70 text-sm space-y-1 text-left">
+                  <li>• Your Dev Planet has been created</li>
+                  <li>• Visit the Builder to customize your tech stack</li>
+                  <li>• Explore other planets in the Showroom</li>
+                  <li>• Share your coding journey in DevLogs</li>
+                </ul>
+              </motion.div>
+
+              <motion.button
+                onClick={onSwitchToLogin}
+                className="w-full bg-gradient-to-r from-green-500 to-cyan-500 py-3 rounded-lg font-orbitron font-bold text-white transition-all duration-300 flex items-center justify-center space-x-2"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.1, duration: 0.6 }}
+                whileHover={{
+                  scale: 1.02,
+                  boxShadow: '0 0 30px rgba(0, 255, 0, 0.5)'
+                }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <span>Launch Into DevVerse³</span>
+                <ArrowRight className="w-4 h-4" />
+              </motion.button>
+            </div>
+          </GlassPanel>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4">

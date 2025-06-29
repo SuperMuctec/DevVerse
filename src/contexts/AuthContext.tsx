@@ -6,7 +6,7 @@ import { toast } from 'react-hot-toast';
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<boolean>;
-  register: (username: string, email: string, password: string) => Promise<boolean>;
+  register: (username: string, email: string, password: string) => Promise<{ success: boolean; message?: string }>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
   addXP: (amount: number) => void;
@@ -463,7 +463,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const register = async (username: string, email: string, password: string): Promise<boolean> => {
+  const register = async (username: string, email: string, password: string): Promise<{ success: boolean; message?: string }> => {
     console.log('🔵 [AUTH] Attempting registration for username:', username, 'email:', email);
     
     try {
@@ -471,9 +471,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('🔵 [AUTH] Generating password hash...');
       const passwordHash = await hashPassword(password);
       console.log('✅ [AUTH] Password hash generated');
-
-      // Skip username check to avoid hanging - let the database handle uniqueness
-      console.log('🔵 [AUTH] Skipping username check for faster registration...');
 
       // Create user in Supabase Auth first
       console.log('🔵 [AUTH] Creating auth user...');
@@ -485,18 +482,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (authError) {
         if (authError.message.includes('already registered')) {
           console.warn('⚠️ [AUTH] Email already exists');
-          toast.error('Email already exists');
+          return { success: false, message: 'Email already exists' };
         } else {
           console.error('❌ [AUTH] Auth creation error:', authError);
-          toast.error('Registration failed');
+          return { success: false, message: 'Registration failed' };
         }
-        return false;
       }
 
       if (!authData.user) {
         console.error('❌ [AUTH] No user data returned from auth signup');
-        toast.error('Registration failed');
-        return false;
+        return { success: false, message: 'Registration failed' };
       }
 
       console.log('✅ [AUTH] Auth user created with ID:', authData.user.id);
@@ -516,39 +511,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Check if it's a username conflict
         if (userError.message?.includes('duplicate') || userError.message?.includes('unique')) {
-          toast.error('Username already exists');
+          return { success: false, message: 'Username already exists' };
         } else {
-          toast.error('Registration failed');
+          return { success: false, message: 'Registration failed' };
         }
-        
-        // Clean up auth user if profile creation failed
-        try {
-          await supabase.auth.signOut();
-        } catch (cleanupError) {
-          console.error('Failed to cleanup auth user:', cleanupError);
-        }
-        
-        return false;
       }
 
-      // Registration successful - show immediate success
+      // Registration successful
       console.log('✅ [AUTH] Registration completed successfully');
       
-      // Add welcome notifications immediately
-      if (addNotification) {
-        addNotification({
-          title: 'Welcome to DevVerse³!',
-          message: 'Your account has been created! 🌍',
-          type: 'success'
-        });
-        
-        addNotification({
-          title: 'Getting Started',
-          message: 'Visit the Builder to create your dev planet! 🚀',
-          type: 'info'
-        });
-      }
-
       // Create planet and achievement in the background (don't wait for them)
       setTimeout(async () => {
         try {
@@ -572,29 +543,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             icon: 'user',
           });
           console.log('✅ [AUTH] Beginning achievement created successfully');
-          
-          // Award XP for the beginning achievement
-          if (authState.user) {
-            addXP(50);
-          }
-          
-          if (addNotification) {
-            addNotification({
-              title: 'Achievement Unlocked!',
-              message: 'The Beginning - You\'ve joined the galaxy! 🎉',
-              type: 'success'
-            });
-          }
         } catch (achievementError) {
           console.warn('⚠️ [AUTH] Achievement creation failed (will be awarded later):', achievementError);
         }
       }, 100); // Small delay to ensure registration completes first
       
-      return true;
+      return { success: true, message: 'Registration successful! Your Dev Planet has been created.' };
     } catch (error) {
       console.error('❌ [AUTH] Registration error:', error);
-      toast.error('Registration failed');
-      return false;
+      return { success: false, message: 'Registration failed' };
     }
   };
 
