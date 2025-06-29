@@ -90,6 +90,13 @@ export const CreateDevLogModal: React.FC<CreateDevLogModalProps> = ({
     onClose();
   };
 
+  // Handle form submission only when explicitly called
+  const handleExplicitSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleSubmit(handleFormSubmit)(e);
+  };
+
   const renderPage = () => {
     switch (currentPage) {
       case 1:
@@ -177,6 +184,12 @@ Next steps:
                   {...register('tags')}
                   className="w-full pl-8 pr-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-cyber-yellow focus:ring-1 focus:ring-cyber-yellow transition-all duration-300 text-xs"
                   placeholder="React, Three.js, 3D, TypeScript, WebGL"
+                  onKeyDown={(e) => {
+                    // Prevent Enter key from submitting the form
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                    }
+                  }}
                 />
               </div>
               <p className="mt-1 text-xs text-white/60">
@@ -254,33 +267,34 @@ Next steps:
                 </div>
               </div>
 
-              <form onSubmit={handleSubmit(handleFormSubmit)}>
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={currentPage}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    {renderPage()}
-                  </motion.div>
-                </AnimatePresence>
+              {/* Form - Only wrap the final submit in form */}
+              {currentPage < 3 ? (
+                <div>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={currentPage}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      {renderPage()}
+                    </motion.div>
+                  </AnimatePresence>
 
-                <div className="flex justify-between mt-4 pt-3 border-t border-white/10">
-                  <motion.button
-                    type="button"
-                    onClick={prevPage}
-                    disabled={currentPage === 1}
-                    className="flex items-center space-x-1 px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs"
-                    whileHover={{ scale: currentPage === 1 ? 1 : 1.02 }}
-                    whileTap={{ scale: currentPage === 1 ? 1 : 0.98 }}
-                  >
-                    <ArrowLeft className="w-3 h-3" />
-                    <span>Previous</span>
-                  </motion.button>
+                  <div className="flex justify-between mt-4 pt-3 border-t border-white/10">
+                    <motion.button
+                      type="button"
+                      onClick={prevPage}
+                      disabled={currentPage === 1}
+                      className="flex items-center space-x-1 px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+                      whileHover={{ scale: currentPage === 1 ? 1 : 1.02 }}
+                      whileTap={{ scale: currentPage === 1 ? 1 : 0.98 }}
+                    >
+                      <ArrowLeft className="w-3 h-3" />
+                      <span>Previous</span>
+                    </motion.button>
 
-                  {currentPage < 3 ? (
                     <motion.button
                       type="button"
                       onClick={nextPage}
@@ -291,7 +305,34 @@ Next steps:
                       <span>Next</span>
                       <ArrowRight className="w-3 h-3" />
                     </motion.button>
-                  ) : (
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleExplicitSubmit}>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={currentPage}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      {renderPage()}
+                    </motion.div>
+                  </AnimatePresence>
+
+                  <div className="flex justify-between mt-4 pt-3 border-t border-white/10">
+                    <motion.button
+                      type="button"
+                      onClick={prevPage}
+                      className="flex items-center space-x-1 px-3 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg font-semibold transition-colors text-xs"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <ArrowLeft className="w-3 h-3" />
+                      <span>Previous</span>
+                    </motion.button>
+
                     <motion.button
                       type="submit"
                       disabled={isLoading}
@@ -301,9 +342,9 @@ Next steps:
                     >
                       <span>{isLoading ? 'Publishing...' : 'Publish DevLog'}</span>
                     </motion.button>
-                  )}
-                </div>
-              </form>
+                  </div>
+                </form>
+              )}
             </GlassPanel>
           </motion.div>
         </motion.div>
