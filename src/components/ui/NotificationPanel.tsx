@@ -53,13 +53,13 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
             style={{ cursor: 'default' }}
           />
 
-          {/* Panel with highest z-index */}
+          {/* Panel positioned below navbar */}
           <motion.div
             initial={{ opacity: 0, x: '100%' }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: '100%' }}
             transition={{ type: "spring", duration: 0.5 }}
-            className="fixed top-0 right-0 h-full w-full max-w-sm z-[10000] p-4"
+            className="fixed top-20 sm:top-24 right-0 bottom-0 w-full max-w-sm z-[10000] p-4"
             style={{ cursor: 'default' }}
           >
             <GlassPanel glowColor="#00ffff" className="h-full flex flex-col">
