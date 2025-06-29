@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Rocket, User, Settings, FileText, Trophy, Zap, Star, LogOut, Search, Menu, X, Bell } from 'lucide-react';
+import { Rocket, User, Settings, FileText, Trophy, Zap, Star, LogOut, Search, Menu, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useNotifications } from '../../contexts/NotificationContext';
 
 interface NavbarProps {
   currentPage: string;
@@ -11,7 +10,6 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ currentPage, onPageChange }) => {
   const { user, logout } = useAuth();
-  const { unreadCount, clearAll } = useNotifications();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navItems = [
@@ -52,10 +50,6 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onPageChange }) => 
   const handleLogout = () => {
     logout();
     setIsMobileMenuOpen(false);
-  };
-
-  const handleNotificationClick = () => {
-    clearAll();
   };
 
   return (
@@ -161,67 +155,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onPageChange }) => 
                 ))}
               </div>
 
-              {/* Desktop Notification Button */}
-              <div className="hidden lg:flex items-center space-x-3">
-                <motion.button
-                  onClick={handleNotificationClick}
-                  className="relative p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
-                  whileHover={{ 
-                    scale: 1.1,
-                    rotateZ: 15
-                  }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  <motion.div
-                    animate={{ 
-                      rotateZ: [0, 15, -15, 0],
-                      scale: [1, 1.1, 1]
-                    }}
-                    transition={{ 
-                      duration: 2, 
-                      repeat: Infinity, 
-                      ease: "easeInOut" 
-                    }}
-                  >
-                    <Bell className="w-5 h-5" />
-                  </motion.div>
-                  
-                  {/* Unread count badge */}
-                  {unreadCount > 0 && (
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ 
-                        scale: 1,
-                        boxShadow: [
-                          '0 0 10px rgba(255, 0, 0, 0.5)',
-                          '0 0 20px rgba(255, 0, 0, 0.8)',
-                          '0 0 10px rgba(255, 0, 0, 0.5)'
-                        ]
-                      }}
-                      transition={{
-                        boxShadow: { duration: 2, repeat: Infinity, ease: "easeInOut" }
-                      }}
-                      className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center"
-                    >
-                      <motion.span 
-                        className="text-white text-xs font-bold"
-                        animate={{ 
-                          scale: [1, 1.2, 1]
-                        }}
-                        transition={{ 
-                          duration: 1, 
-                          repeat: Infinity, 
-                          ease: "easeInOut" 
-                        }}
-                      >
-                        {unreadCount > 9 ? '9+' : unreadCount}
-                      </motion.span>
-                    </motion.div>
-                  )}
-                </motion.button>
-              </div>
-
-              {/* Mobile Menu Button - Moved slightly left */}
+              {/* Mobile Menu Button */}
               <motion.button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 className="lg:hidden p-2 mr-1 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"

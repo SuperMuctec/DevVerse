@@ -19,9 +19,24 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
   index 
 }) => {
   const [isVisible, setIsVisible] = useState(true);
+  const [progress, setProgress] = useState(100);
 
   useEffect(() => {
     if (autoHide) {
+      const startTime = Date.now();
+      
+      const updateProgress = () => {
+        const elapsed = Date.now() - startTime;
+        const remaining = Math.max(0, 100 - (elapsed / hideDelay) * 100);
+        setProgress(remaining);
+        
+        if (remaining > 0) {
+          requestAnimationFrame(updateProgress);
+        }
+      };
+      
+      requestAnimationFrame(updateProgress);
+      
       const timer = setTimeout(() => {
         setIsVisible(false);
         setTimeout(() => onDismiss(notification.id), 300);
@@ -59,6 +74,20 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
     }
   };
 
+  const getProgressColor = (type: string) => {
+    switch (type) {
+      case 'success':
+        return '#10b981';
+      case 'error':
+        return '#ef4444';
+      case 'warning':
+        return '#f59e0b';
+      case 'info':
+      default:
+        return '#3b82f6';
+    }
+  };
+
   const handleDismiss = () => {
     setIsVisible(false);
     setTimeout(() => onDismiss(notification.id), 300);
@@ -79,15 +108,14 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
           className={`
             relative p-4 rounded-lg border backdrop-blur-md shadow-lg
             ${getColorClasses(notification.type)}
-            max-w-sm w-full
+            max-w-sm w-full cursor-pointer
           `}
           style={{
-            boxShadow: `0 0 20px ${
-              notification.type === 'success' ? '#10b981' :
-              notification.type === 'error' ? '#ef4444' :
-              notification.type === 'warning' ? '#f59e0b' :
-              '#3b82f6'
-            }40`
+            boxShadow: `0 0 20px ${getProgressColor(notification.type)}40`
+          }}
+          whileHover={{ 
+            scale: 1.02,
+            boxShadow: `0 0 30px ${getProgressColor(notification.type)}60`
           }}
         >
           <div className="flex items-start space-x-3">
@@ -115,24 +143,35 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
               </p>
             </div>
 
+            {/* Cross button */}
             <motion.button
               onClick={handleDismiss}
-              className="p-1 hover:bg-white/10 rounded-lg transition-colors flex-shrink-0"
-              whileHover={{ scale: 1.1, rotate: 90 }}
+              className="p-1.5 hover:bg-white/20 rounded-lg transition-colors flex-shrink-0 group"
+              whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
+              title="Dismiss notification"
             >
-              <X className="w-3 h-3 text-white/70" />
+              <motion.div
+                whileHover={{ rotate: 90 }}
+                transition={{ duration: 0.2 }}
+              >
+                <X className="w-4 h-4 text-white/70 group-hover:text-white" />
+              </motion.div>
             </motion.button>
           </div>
 
           {/* Progress bar for auto-hide */}
           {autoHide && (
-            <motion.div
-              className="absolute bottom-0 left-0 h-1 bg-white/30 rounded-b-lg"
-              initial={{ width: '100%' }}
-              animate={{ width: '0%' }}
-              transition={{ duration: hideDelay / 1000, ease: "linear" }}
-            />
+            <div className="absolute bottom-0 left-0 w-full h-1 bg-white/20 rounded-b-lg overflow-hidden">
+              <motion.div
+                className="h-full rounded-b-lg"
+                style={{ 
+                  backgroundColor: getProgressColor(notification.type),
+                  width: `${progress}%`
+                }}
+                transition={{ duration: 0.1, ease: "linear" }}
+              />
+            </div>
           )}
         </motion.div>
       )}
