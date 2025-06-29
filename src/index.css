@@ -232,13 +232,6 @@
     font-family: 'JetBrains Mono', monospace;
     font-weight: 400;
   }
-
-  /* Left sidebar layout adjustments */
-  @media (min-width: 1024px) {
-    .main-content {
-      margin-left: 4rem; /* 64px for the sidebar */
-    }
-  }
 }
 
 /* Custom scrollbar */

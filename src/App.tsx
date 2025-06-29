@@ -66,7 +66,7 @@ const AppContent: React.FC = () => {
         <MagneticCursor />
         <Navbar currentPage={currentPage} onPageChange={setCurrentPage} />
         <NotificationContainer />
-        <main className="relative z-10 lg:ml-16">
+        <main className="relative z-10">
           <UserProfile 
             userId={selectedUserId} 
             onBack={() => setSelectedUserId(null)} 
@@ -84,7 +84,7 @@ const AppContent: React.FC = () => {
         <MagneticCursor />
         <Navbar currentPage={currentPage} onPageChange={setCurrentPage} />
         <NotificationContainer />
-        <main className="relative z-10 lg:ml-16">
+        <main className="relative z-10">
           <PlanetDetail 
             planetId={selectedPlanetId} 
             onBack={() => setSelectedPlanetId(null)}
@@ -127,7 +127,7 @@ const AppContent: React.FC = () => {
       <MagneticCursor />
       <Navbar currentPage={currentPage} onPageChange={setCurrentPage} />
       <NotificationContainer />
-      <main className="relative z-10 lg:ml-16">
+      <main className="relative z-10">
         {renderPage()}
       </main>
     </div>
