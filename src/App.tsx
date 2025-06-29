@@ -7,6 +7,7 @@ import { Navbar } from './components/navigation/Navbar';
 import { StarField } from './components/ui/StarField';
 import { MagneticCursor } from './components/ui/MagneticCursor';
 import { NotificationButton } from './components/ui/NotificationButton';
+import { NotificationContainer } from './components/ui/NotificationContainer';
 import { GalaxyView } from './components/pages/GalaxyView';
 import { StackBuilder } from './components/pages/StackBuilder';
 import { StackShowroom } from './components/pages/StackShowroom';
@@ -66,6 +67,7 @@ const AppContent: React.FC = () => {
         <MagneticCursor />
         <Navbar currentPage={currentPage} onPageChange={setCurrentPage} />
         <NotificationButton />
+        <NotificationContainer />
         <main className="relative z-10">
           <UserProfile 
             userId={selectedUserId} 
@@ -84,6 +86,7 @@ const AppContent: React.FC = () => {
         <MagneticCursor />
         <Navbar currentPage={currentPage} onPageChange={setCurrentPage} />
         <NotificationButton />
+        <NotificationContainer />
         <main className="relative z-10">
           <PlanetDetail 
             planetId={selectedPlanetId} 
@@ -127,6 +130,7 @@ const AppContent: React.FC = () => {
       <MagneticCursor />
       <Navbar currentPage={currentPage} onPageChange={setCurrentPage} />
       <NotificationButton />
+      <NotificationContainer />
       <main className="relative z-10">
         {renderPage()}
       </main>

@@ -1,18 +1,21 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { Bell } from 'lucide-react';
 import { useNotifications } from '../../contexts/NotificationContext';
-import { NotificationPanel } from './NotificationPanel';
 
 export const NotificationButton: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const { unreadCount } = useNotifications();
+  const { unreadCount, clearAll } = useNotifications();
+
+  const handleClick = () => {
+    // Just clear all notifications when clicked
+    clearAll();
+  };
 
   return (
     <>
       {/* Mobile Notification Button */}
       <motion.button
-        onClick={() => setIsOpen(true)}
+        onClick={handleClick}
         className="fixed bottom-6 right-6 z-50 lg:hidden w-12 h-12 bg-gradient-to-r from-cyber-blue to-cyber-pink rounded-full flex items-center justify-center shadow-lg"
         whileHover={{ 
           scale: 1.1,
@@ -77,9 +80,6 @@ export const NotificationButton: React.FC = () => {
           </motion.div>
         )}
       </motion.button>
-
-      {/* Notification Panel */}
-      <NotificationPanel isOpen={isOpen} onClose={() => setIsOpen(false)} />
     </>
   );
 };

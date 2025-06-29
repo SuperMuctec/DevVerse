@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Rocket, User, Settings, FileText, Trophy, Zap, Star, LogOut, Search, Menu, X, Bell } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
-import { NotificationPanel } from '../ui/NotificationPanel';
 
 interface NavbarProps {
   currentPage: string;
@@ -12,9 +11,8 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ currentPage, onPageChange }) => {
   const { user, logout } = useAuth();
-  const { unreadCount } = useNotifications();
+  const { unreadCount, clearAll } = useNotifications();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false);
 
   const navItems = [
     { id: 'galaxy', icon: Rocket, label: 'Galaxy' },
@@ -54,6 +52,10 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onPageChange }) => 
   const handleLogout = () => {
     logout();
     setIsMobileMenuOpen(false);
+  };
+
+  const handleNotificationClick = () => {
+    clearAll();
   };
 
   return (
@@ -162,7 +164,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onPageChange }) => 
               {/* Desktop Notification Button */}
               <div className="hidden lg:flex items-center space-x-3">
                 <motion.button
-                  onClick={() => setIsNotificationPanelOpen(true)}
+                  onClick={handleNotificationClick}
                   className="relative p-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
                   whileHover={{ 
                     scale: 1.1,
@@ -470,12 +472,6 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, onPageChange }) => 
           </div>
         </motion.div>
       </motion.div>
-
-      {/* Desktop Notification Panel */}
-      <NotificationPanel 
-        isOpen={isNotificationPanelOpen} 
-        onClose={() => setIsNotificationPanelOpen(false)} 
-      />
     </>
   );
 };
