@@ -5,11 +5,12 @@
 @layer base {
   body {
     @apply bg-space-dark text-white overflow-x-hidden;
-    font-family: 'Sora', sans-serif;
+    font-family: 'JetBrains Mono', monospace;
   }
   
   html {
     scroll-behavior: smooth;
+    font-family: 'JetBrains Mono', monospace;
   }
 
   /* Hide cursor on mobile devices */
@@ -28,6 +29,11 @@
     overflow-x: hidden;
     width: 100%;
   }
+
+  /* Apply JetBrains Mono to all text elements */
+  h1, h2, h3, h4, h5, h6, p, span, div, button, input, textarea, select, label {
+    font-family: 'JetBrains Mono', monospace;
+  }
 }
 
 @layer components {
@@ -38,6 +44,8 @@
   
   .neon-text {
     text-shadow: 0 0 5px currentColor, 0 0 10px currentColor, 0 0 15px currentColor;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
   }
   
   .cyber-border {
@@ -93,6 +101,7 @@
     @apply transition-all duration-300 ease-out;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
+    font-family: 'JetBrains Mono', monospace;
   }
 
   /* Responsive grid improvements */
@@ -137,6 +146,7 @@
   /* Responsive typography */
   .heading-responsive {
     @apply text-2xl font-bold;
+    font-family: 'JetBrains Mono', monospace;
   }
 
   @media (min-width: 640px) {
@@ -173,6 +183,7 @@
     @apply px-4 py-2 text-sm;
     min-height: 44px; /* iOS touch target minimum */
     min-width: 44px;
+    font-family: 'JetBrains Mono', monospace;
   }
 
   @media (min-width: 640px) {
@@ -200,6 +211,26 @@
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
+  }
+
+  /* Font-specific classes */
+  .font-jetbrains {
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .font-orbitron {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+
+  .font-sora {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 400;
   }
 }
 
@@ -252,6 +283,7 @@
   /* Prevent zoom on input focus */
   input, select, textarea {
     font-size: 16px;
+    font-family: 'JetBrains Mono', monospace;
   }
 
   /* Optimize modal sizing */
@@ -315,6 +347,7 @@
   body {
     background: white !important;
     color: black !important;
+    font-family: 'JetBrains Mono', monospace;
   }
 }
 

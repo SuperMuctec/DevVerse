@@ -4,8 +4,10 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        'orbitron': ['Orbitron', 'monospace'],
-        'sora': ['Sora', 'sans-serif'],
+        'jetbrains': ['JetBrains Mono', 'monospace'],
+        'mono': ['JetBrains Mono', 'monospace'],
+        'sans': ['JetBrains Mono', 'monospace'],
+        'serif': ['JetBrains Mono', 'monospace'],
       },
       colors: {
         cyber: {
