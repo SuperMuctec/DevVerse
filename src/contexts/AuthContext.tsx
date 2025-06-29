@@ -479,13 +479,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('🔵 [AUTH] Attempting registration for username:', username, 'email:', email);
     
     try {
+      // COMPREHENSIVE USER EXISTENCE CHECK
+      console.log('🔵 [AUTH] Performing comprehensive user existence check...');
+      const existenceCheck = await dbOps.checkUserExists(email, username);
+      
+      if (!existenceCheck.canRegister) {
+        const conflicts = [];
+        if (existenceCheck.existsInAuth) {
+          conflicts.push('authentication system');
+        }
+        if (existenceCheck.existsInPublic) {
+          if (existenceCheck.publicConflictType === 'email') {
+            conflicts.push('email already registered');
+          } else if (existenceCheck.publicConflictType === 'username') {
+            conflicts.push('username already taken');
+          }
+        }
+        
+        const errorMessage = conflicts.length > 0 
+          ? `Registration failed: ${conflicts.join(', ')}`
+          : 'User already exists';
+        
+        console.error('❌ [AUTH] Registration blocked:', errorMessage);
+        toast.error(errorMessage);
+        return false;
+      }
+
+      console.log('✅ [AUTH] User existence check passed - proceeding with registration');
+
       // Generate password hash
       console.log('🔵 [AUTH] Generating password hash...');
       const passwordHash = await hashPassword(password);
       console.log('✅ [AUTH] Password hash generated');
-
-      // Skip username check to avoid hanging - let the database handle uniqueness
-      console.log('🔵 [AUTH] Skipping username check for faster registration...');
 
       // Create user in Supabase Auth first
       console.log('🔵 [AUTH] Creating auth user...');
@@ -496,7 +521,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (authError) {
         if (authError.message.includes('already registered')) {
-          console.warn('⚠️ [AUTH] Email already exists');
+          console.warn('⚠️ [AUTH] Email already exists in auth (missed by existence check)');
           toast.error('Email already exists');
         } else {
           console.error('❌ [AUTH] Auth creation error:', authError);
