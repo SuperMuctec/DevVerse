@@ -43,22 +43,24 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
+          {/* Backdrop with higher z-index */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200]"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[9999]"
             onClick={onClose}
+            style={{ cursor: 'default' }}
           />
 
-          {/* Panel */}
+          {/* Panel with highest z-index */}
           <motion.div
             initial={{ opacity: 0, x: '100%' }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: '100%' }}
             transition={{ type: "spring", duration: 0.5 }}
-            className="fixed top-0 right-0 h-full w-full max-w-sm z-[201] p-4"
+            className="fixed top-0 right-0 h-full w-full max-w-sm z-[10000] p-4"
+            style={{ cursor: 'default' }}
           >
             <GlassPanel glowColor="#00ffff" className="h-full flex flex-col">
               {/* Header */}
@@ -77,11 +79,11 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
                   >
                     <Bell className="w-4 h-4 text-cyber-blue" />
                   </motion.div>
-                  <h2 className="font-orbitron text-base font-bold text-white">
+                  <h2 className="font-jetbrains text-base font-bold text-white">
                     Notifications
                   </h2>
                   {notifications.length > 0 && (
-                    <span className="bg-cyber-blue/20 text-cyber-blue px-2 py-1 rounded-full text-xs">
+                    <span className="bg-cyber-blue/20 text-cyber-blue px-2 py-1 rounded-full text-xs font-jetbrains">
                       {notifications.length}
                     </span>
                   )}
@@ -150,13 +152,13 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
                           </motion.div>
                           
                           <div className="flex-1 min-w-0">
-                            <h4 className="font-semibold text-white text-xs leading-tight">
+                            <h4 className="font-semibold text-white text-xs leading-tight font-jetbrains">
                               {notification.title}
                             </h4>
-                            <p className="text-white/80 text-xs mt-1 line-clamp-2 leading-tight">
+                            <p className="text-white/80 text-xs mt-1 line-clamp-2 leading-tight font-jetbrains">
                               {notification.message}
                             </p>
-                            <p className="text-white/50 text-xs mt-1.5">
+                            <p className="text-white/50 text-xs mt-1.5 font-jetbrains">
                               {getTimeAgo(notification.timestamp)}
                             </p>
                           </div>
@@ -211,8 +213,8 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
                     >
                       <Bell className="w-8 h-8 text-white/30 mx-auto mb-3" />
                     </motion.div>
-                    <p className="text-white/70 text-sm">No notifications yet</p>
-                    <p className="text-white/50 text-xs mt-1">
+                    <p className="text-white/70 text-sm font-jetbrains">No notifications yet</p>
+                    <p className="text-white/50 text-xs mt-1 font-jetbrains">
                       You'll see updates about your DevVerse³ activity here
                     </p>
                   </motion.div>

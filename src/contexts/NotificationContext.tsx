@@ -29,7 +29,7 @@ export const useNotifications = () => {
   return context;
 };
 
-const MAX_NOTIFICATIONS = 5;
+const MAX_NOTIFICATIONS = 50; // Increased to store more notifications in panel
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -65,7 +65,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     setNotifications(prev => {
       const updated = [newNotification, ...prev];
-      // Keep only the latest 5 notifications
+      // Keep only the latest notifications
       return updated.slice(0, MAX_NOTIFICATIONS);
     });
   };

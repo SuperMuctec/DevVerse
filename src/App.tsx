@@ -6,7 +6,6 @@ import { NotificationProvider } from './contexts/NotificationContext';
 import { Navbar } from './components/navigation/Navbar';
 import { StarField } from './components/ui/StarField';
 import { MagneticCursor } from './components/ui/MagneticCursor';
-import { NotificationContainer } from './components/ui/NotificationContainer';
 import { NotificationButton } from './components/ui/NotificationButton';
 import { GalaxyView } from './components/pages/GalaxyView';
 import { StackBuilder } from './components/pages/StackBuilder';
@@ -33,7 +32,7 @@ const AppContent: React.FC = () => {
       <div className="min-h-screen bg-space-dark flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-cyber-blue border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-white font-orbitron">Initializing DevVerse³...</p>
+          <p className="text-white font-jetbrains">Initializing DevVerse³...</p>
         </div>
       </div>
     );
@@ -66,7 +65,6 @@ const AppContent: React.FC = () => {
         <StarField />
         <MagneticCursor />
         <Navbar currentPage={currentPage} onPageChange={setCurrentPage} />
-        <NotificationContainer />
         <NotificationButton />
         <main className="relative z-10">
           <UserProfile 
@@ -85,7 +83,6 @@ const AppContent: React.FC = () => {
         <StarField />
         <MagneticCursor />
         <Navbar currentPage={currentPage} onPageChange={setCurrentPage} />
-        <NotificationContainer />
         <NotificationButton />
         <main className="relative z-10">
           <PlanetDetail 
@@ -129,7 +126,6 @@ const AppContent: React.FC = () => {
       <StarField />
       <MagneticCursor />
       <Navbar currentPage={currentPage} onPageChange={setCurrentPage} />
-      <NotificationContainer />
       <NotificationButton />
       <main className="relative z-10">
         {renderPage()}
@@ -153,6 +149,7 @@ function App() {
                 backdropFilter: 'blur(10px)',
                 color: '#ffffff',
                 border: '1px solid rgba(255, 255, 255, 0.2)',
+                fontFamily: 'JetBrains Mono, monospace',
               },
             }}
           />
