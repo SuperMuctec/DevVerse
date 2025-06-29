@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Eye, EyeOff, Mail, Lock, User, Rocket, CheckCircle } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Rocket } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { GlassPanel } from '../ui/GlassPanel';
 
@@ -27,7 +27,6 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) =
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const { register: registerUser } = useAuth();
 
   const {
@@ -41,152 +40,11 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) =
   const onSubmit = async (data: RegisterFormData) => {
     setIsLoading(true);
     try {
-      const success = await registerUser(data.username, data.email, data.password);
-      if (success) {
-        setRegistrationSuccess(true);
-        // Auto-redirect to login after 3 seconds
-        setTimeout(() => {
-          onSwitchToLogin();
-        }, 3000);
-      }
+      await registerUser(data.username, data.email, data.password);
     } finally {
       setIsLoading(false);
     }
   };
-
-  // Show success message after registration
-  if (registrationSuccess) {
-    return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8, rotateY: -15 }}
-          animate={{ opacity: 1, scale: 1, rotateY: 0 }}
-          transition={{ duration: 0.8, type: "spring" }}
-          className="w-full max-w-md"
-          style={{ perspective: '1000px' }}
-        >
-          <div className="text-center mb-8">
-            <motion.div
-              className="flex items-center justify-center space-x-2 mb-4"
-              initial={{ scale: 0, rotateZ: -180 }}
-              animate={{ scale: 1, rotateZ: 0 }}
-              transition={{ delay: 0.3, duration: 0.8, type: "spring" }}
-            >
-              <motion.div
-                className="w-12 h-12 bg-gradient-to-r from-green-500 to-cyber-blue rounded-lg flex items-center justify-center"
-                animate={{ 
-                  rotateZ: [0, 360],
-                  scale: [1, 1.1, 1],
-                  boxShadow: [
-                    '0 0 20px rgba(0, 255, 0, 0.5)',
-                    '0 0 40px rgba(0, 255, 255, 0.8)',
-                    '0 0 20px rgba(0, 255, 0, 0.5)'
-                  ]
-                }}
-                transition={{ 
-                  rotateZ: { duration: 6, repeat: Infinity, ease: "linear" },
-                  scale: { duration: 2, repeat: Infinity, ease: "easeInOut" },
-                  boxShadow: { duration: 3, repeat: Infinity, ease: "easeInOut" }
-                }}
-              >
-                <CheckCircle className="w-8 h-8 text-white" />
-              </motion.div>
-              <motion.span 
-                className="font-orbitron text-3xl font-bold neon-text text-cyber-blue"
-                animate={{ 
-                  color: ['#00ffff', '#00ff00', '#00ffff'],
-                  textShadow: [
-                    '0 0 10px #00ffff',
-                    '0 0 20px #00ff00, 0 0 30px #00ff00',
-                    '0 0 10px #00ffff'
-                  ]
-                }}
-                transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-              >
-                DevVerse³
-              </motion.span>
-            </motion.div>
-          </div>
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8, rotateX: -20 }}
-            animate={{ opacity: 1, scale: 1, rotateX: 0 }}
-            transition={{ delay: 0.4, duration: 0.8 }}
-          >
-            <GlassPanel glowColor="#00ff00">
-              <motion.div 
-                className="text-center"
-                whileHover={{ scale: 1.02, rotateY: 5 }}
-              >
-                <motion.div
-                  className="mb-6"
-                  animate={{ 
-                    scale: [1, 1.1, 1],
-                    rotateZ: [0, 10, -10, 0]
-                  }}
-                  transition={{ 
-                    duration: 2, 
-                    repeat: Infinity, 
-                    ease: "easeInOut" 
-                  }}
-                >
-                  <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
-                </motion.div>
-                
-                <motion.h1 
-                  className="font-orbitron text-2xl sm:text-3xl font-bold text-white mb-4"
-                  animate={{
-                    textShadow: [
-                      '0 0 10px #00ff00',
-                      '0 0 20px #00ff00, 0 0 30px #00ff00',
-                      '0 0 10px #00ff00'
-                    ]
-                  }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                >
-                  You have been registered!
-                </motion.h1>
-                
-                <motion.p 
-                  className="text-white/80 text-lg mb-6"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.6, duration: 0.6 }}
-                >
-                  Your dev planet has been created and is now orbiting in the galaxy! 🪐
-                </motion.p>
-
-                <motion.button
-                  onClick={onSwitchToLogin}
-                  className="w-full bg-gradient-to-r from-green-500 to-cyber-blue py-3 px-6 rounded-lg font-orbitron font-bold text-white transition-all duration-300 mb-4"
-                  initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ delay: 0.8, duration: 0.6 }}
-                  whileHover={{ 
-                    scale: 1.05,
-                    rotateY: 10,
-                    boxShadow: '0 0 30px rgba(0, 255, 0, 0.6)'
-                  }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  Now Launch In
-                </motion.button>
-
-                <motion.p 
-                  className="text-white/60 text-sm"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 1, duration: 0.6 }}
-                >
-                  Redirecting automatically in 3 seconds...
-                </motion.p>
-              </motion.div>
-            </GlassPanel>
-          </motion.div>
-        </motion.div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4">

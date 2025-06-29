@@ -201,148 +201,11 @@ export const dbOps = {
     }
   },
 
-  // Check if user exists in Supabase Auth
-  async checkUserInAuth(email: string) {
-    console.log('🔵 [DB] Checking if user exists in Supabase Auth:', email);
-    
-    try {
-      // Try to sign in with a dummy password to check if user exists
-      // This will fail with different errors for existing vs non-existing users
-      const { error } = await withTimeout(
-        supabase.auth.signInWithPassword({
-          email,
-          password: 'dummy_password_check_12345'
-        }),
-        5000
-      );
-      
-      if (error) {
-        // Check error message to determine if user exists
-        if (error.message.includes('Invalid login credentials') || 
-            error.message.includes('Email not confirmed') ||
-            error.message.includes('Too many requests')) {
-          console.log('✅ [DB] User exists in Supabase Auth (invalid password)');
-          return true;
-        } else if (error.message.includes('User not found') ||
-                   error.message.includes('Invalid email')) {
-          console.log('✅ [DB] User does not exist in Supabase Auth');
-          return false;
-        } else {
-          console.warn('⚠️ [DB] Unexpected auth error:', error.message);
-          // Assume user doesn't exist for safety
-          return false;
-        }
-      }
-      
-      // If no error, user exists and password was correct (unlikely with dummy password)
-      console.log('✅ [DB] User exists in Supabase Auth (correct password)');
-      return true;
-    } catch (error: any) {
-      console.error('❌ [DB] Error checking user in auth:', error);
-      return false;
-    }
-  },
-
-  // Check if user exists in public users table
-  async checkUserInPublicTable(email: string, username?: string) {
-    console.log('🔵 [DB] Checking if user exists in public users table:', { email, username });
-    
-    try {
-      // Check by email
-      const { data: emailData, error: emailError } = await withTimeout(
-        supabase
-          .from('users')
-          .select('id, email, username')
-          .eq('email', email)
-          .maybeSingle(),
-        5000
-      );
-      
-      if (emailError && emailError.code !== 'PGRST116') {
-        console.error('❌ [DB] Error checking email in public table:', emailError);
-        throw emailError;
-      }
-      
-      if (emailData) {
-        console.log('✅ [DB] User found by email in public table:', emailData);
-        return { exists: true, type: 'email', user: emailData };
-      }
-      
-      // Check by username if provided
-      if (username) {
-        const { data: usernameData, error: usernameError } = await withTimeout(
-          supabase
-            .from('users')
-            .select('id, email, username')
-            .eq('username', username)
-            .maybeSingle(),
-          5000
-        );
-        
-        if (usernameError && usernameError.code !== 'PGRST116') {
-          console.error('❌ [DB] Error checking username in public table:', usernameError);
-          throw usernameError;
-        }
-        
-        if (usernameData) {
-          console.log('✅ [DB] User found by username in public table:', usernameData);
-          return { exists: true, type: 'username', user: usernameData };
-        }
-      }
-      
-      console.log('✅ [DB] User does not exist in public table');
-      return { exists: false, type: null, user: null };
-    } catch (error) {
-      console.error('❌ [DB] Error checking user in public table:', error);
-      throw error;
-    }
-  },
-
-  // Comprehensive user existence check
-  async checkUserExists(email: string, username?: string) {
-    console.log('🔵 [DB] Performing comprehensive user existence check:', { email, username });
-    
-    try {
-      // Only check public table, not auth system
-      const publicCheck = await this.checkUserInPublicTable(email, username);
-      
-      const result = {
-        email,
-        username,
-        existsInAuth: false, // We no longer check auth system
-        existsInPublic: publicCheck.exists,
-        publicConflictType: publicCheck.type,
-        publicUser: publicCheck.user,
-        canRegister: !publicCheck.exists // Only check public table
-      };
-      
-      console.log('✅ [DB] User existence check complete:', result);
-      return result;
-    } catch (error) {
-      console.error('❌ [DB] Error in comprehensive user check:', error);
-      throw error;
-    }
-  },
-
-  // Users - Updated with existence checks
+  // Users - Updated for WebContainer compatibility
   async createUser(userData: any) {
     console.log('🔵 [DB] Creating user with data:', userData);
 
     try {
-      // First, perform comprehensive existence check
-      const existenceCheck = await this.checkUserExists(userData.email, userData.username);
-      
-      if (!existenceCheck.canRegister) {
-        const conflicts = [];
-        if (existenceCheck.existsInPublic) {
-          conflicts.push(`public table (${existenceCheck.publicConflictType})`);
-        }
-        
-        const errorMessage = `User already exists in: ${conflicts.join(', ')}`;
-        console.error('❌ [DB] User creation blocked:', errorMessage);
-        throw new Error(errorMessage);
-      }
-
       // Prepare insert data with all required fields
       const insertData = {
         id: userData.id,
@@ -357,7 +220,7 @@ export const dbOps = {
         level: userData.level || 1
       };
 
-      console.log('🔵 [DB] User existence check passed, proceeding with insert');
+      console.log('🔵 [DB] Attempting to insert:', JSON.stringify(insertData, null, 2));
 
       // Use upsert with timeout
       const { data, error } = await withTimeout(

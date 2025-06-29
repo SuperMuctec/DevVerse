@@ -408,55 +408,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('🔵 [AUTH] Attempting login for email:', email);
     
     try {
-      // Try Supabase auth first (this is the primary authentication method)
-      console.log('🔵 [AUTH] Attempting Supabase authentication...');
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      // First, try to get user from our database to verify password hash
+      const userData = await dbOps.getUserByEmail(email);
+      
+      if (!userData) {
+        console.log('⚠️ [AUTH] User not found in database');
+        toast.error('Invalid email or password');
+        return false;
+      }
+
+      // Verify password against stored hash
+      const isPasswordValid = await verifyPassword(password, userData.password_hash);
+      
+      if (!isPasswordValid) {
+        console.log('⚠️ [AUTH] Password verification failed');
+        toast.error('Invalid email or password');
+        return false;
+      }
+
+      console.log('✅ [AUTH] Password verified, attempting Supabase auth...');
+
+      // Now try Supabase auth (this might fail if password was changed in our system)
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (authError) {
-        console.warn('⚠️ [AUTH] Supabase auth failed:', authError);
-        
-        // If Supabase auth fails, check if user exists in our database
-        console.log('🔵 [AUTH] Checking user in database...');
-        const userData = await dbOps.getUserByEmail(email);
-        
-        if (!userData) {
-          console.log('⚠️ [AUTH] User not found in database');
-          toast.error('Invalid email or password');
-          return false;
-        }
-
-        // Verify password against stored hash
-        const isPasswordValid = await verifyPassword(password, userData.password_hash);
-        
-        if (!isPasswordValid) {
-          console.log('⚠️ [AUTH] Password verification failed');
-          toast.error('Invalid email or password');
-          return false;
-        }
-
-        // Password is correct but Supabase auth failed
-        // This can happen if the user was created in our system but not in Supabase auth
-        console.log('🔵 [AUTH] Password correct but Supabase auth failed. Attempting to sync...');
-        
-        // Try to create the user in Supabase auth
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-        });
-
-        if (signUpError) {
-          console.error('❌ [AUTH] Failed to sync user to Supabase auth:', signUpError);
-          toast.error('Authentication service error. Please try again.');
-          return false;
-        }
-
-        console.log('✅ [AUTH] User synced to Supabase auth successfully');
-      } else {
-        console.log('✅ [AUTH] Supabase authentication successful');
+      if (error) {
+        console.warn('⚠️ [AUTH] Supabase auth failed, but our password check passed:', error);
+        // In this case, we could either:
+        // 1. Update Supabase auth password to match our hash
+        // 2. Create a custom session
+        // For now, we'll treat it as a login failure
+        toast.error('Authentication service error');
+        return false;
       }
+
+      console.log('✅ [AUTH] Login successful');
 
       // Add welcome notification
       if (addNotification) {
@@ -479,38 +467,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     console.log('🔵 [AUTH] Attempting registration for username:', username, 'email:', email);
     
     try {
-      // COMPREHENSIVE USER EXISTENCE CHECK
-      console.log('🔵 [AUTH] Performing comprehensive user existence check...');
-      const existenceCheck = await dbOps.checkUserExists(email, username);
-      
-      if (!existenceCheck.canRegister) {
-        const conflicts = [];
-        if (existenceCheck.existsInAuth) {
-          conflicts.push('authentication system');
-        }
-        if (existenceCheck.existsInPublic) {
-          if (existenceCheck.publicConflictType === 'email') {
-            conflicts.push('email already registered');
-          } else if (existenceCheck.publicConflictType === 'username') {
-            conflicts.push('username already taken');
-          }
-        }
-        
-        const errorMessage = conflicts.length > 0 
-          ? `Registration failed: ${conflicts.join(', ')}`
-          : 'User already exists';
-        
-        console.error('❌ [AUTH] Registration blocked:', errorMessage);
-        toast.error(errorMessage);
-        return false;
-      }
-
-      console.log('✅ [AUTH] User existence check passed - proceeding with registration');
-
       // Generate password hash
       console.log('🔵 [AUTH] Generating password hash...');
       const passwordHash = await hashPassword(password);
       console.log('✅ [AUTH] Password hash generated');
+
+      // Skip username check to avoid hanging - let the database handle uniqueness
+      console.log('🔵 [AUTH] Skipping username check for faster registration...');
 
       // Create user in Supabase Auth first
       console.log('🔵 [AUTH] Creating auth user...');
@@ -521,7 +484,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (authError) {
         if (authError.message.includes('already registered')) {
-          console.warn('⚠️ [AUTH] Email already exists in auth (missed by existence check)');
+          console.warn('⚠️ [AUTH] Email already exists');
           toast.error('Email already exists');
         } else {
           console.error('❌ [AUTH] Auth creation error:', authError);
@@ -571,6 +534,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Registration successful - show immediate success
       console.log('✅ [AUTH] Registration completed successfully');
       
+      // Add welcome notifications immediately
+      if (addNotification) {
+        addNotification({
+          title: 'Welcome to DevVerse³!',
+          message: 'Your account has been created! 🌍',
+          type: 'success'
+        });
+        
+        addNotification({
+          title: 'Getting Started',
+          message: 'Visit the Builder to create your dev planet! 🚀',
+          type: 'info'
+        });
+      }
+
       // Create planet and achievement in the background (don't wait for them)
       setTimeout(async () => {
         try {
@@ -598,6 +576,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Award XP for the beginning achievement
           if (authState.user) {
             addXP(50);
+          }
+          
+          if (addNotification) {
+            addNotification({
+              title: 'Achievement Unlocked!',
+              message: 'The Beginning - You\'ve joined the galaxy! 🎉',
+              type: 'success'
+            });
           }
         } catch (achievementError) {
           console.warn('⚠️ [AUTH] Achievement creation failed (will be awarded later):', achievementError);

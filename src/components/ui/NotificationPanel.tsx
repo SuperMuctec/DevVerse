@@ -15,14 +15,14 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
   const getIcon = (type: string) => {
     switch (type) {
       case 'success':
-        return <CheckCircle className="w-4 h-4 text-green-400" />;
+        return <CheckCircle className="w-3 h-3 text-green-400" />;
       case 'error':
-        return <AlertCircle className="w-4 h-4 text-red-400" />;
+        return <AlertCircle className="w-3 h-3 text-red-400" />;
       case 'warning':
-        return <AlertTriangle className="w-4 h-4 text-yellow-400" />;
+        return <AlertTriangle className="w-3 h-3 text-yellow-400" />;
       case 'info':
       default:
-        return <Info className="w-4 h-4 text-blue-400" />;
+        return <Info className="w-3 h-3 text-blue-400" />;
     }
   };
 
@@ -126,14 +126,14 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
                           duration: 0.3,
                           type: "spring"
                         }}
-                        className={`relative p-3 rounded-lg border transition-all duration-300 cursor-pointer ${
+                        className={`relative p-2.5 rounded-lg border transition-all duration-300 cursor-pointer ${
                           notification.read 
                             ? 'bg-white/5 border-white/10' 
                             : 'bg-cyber-blue/10 border-cyber-blue/30'
                         }`}
                         onClick={() => markAsRead(notification.id)}
                       >
-                        <div className="flex items-start space-x-3">
+                        <div className="flex items-start space-x-2">
                           <motion.div
                             animate={!notification.read ? { 
                               scale: [1, 1.2, 1],
@@ -150,13 +150,13 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
                           </motion.div>
                           
                           <div className="flex-1 min-w-0">
-                            <h4 className="font-semibold text-white text-sm leading-tight">
+                            <h4 className="font-semibold text-white text-xs leading-tight">
                               {notification.title}
                             </h4>
-                            <p className="text-white/80 text-sm mt-1 leading-tight">
+                            <p className="text-white/80 text-xs mt-1 line-clamp-2 leading-tight">
                               {notification.message}
                             </p>
-                            <p className="text-white/50 text-xs mt-2">
+                            <p className="text-white/50 text-xs mt-1.5">
                               {getTimeAgo(notification.timestamp)}
                             </p>
                           </div>
@@ -170,14 +170,14 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
                             whileHover={{ scale: 1.1, rotate: 90 }}
                             whileTap={{ scale: 0.9 }}
                           >
-                            <X className="w-3 h-3 text-white/70" />
+                            <X className="w-2.5 h-2.5 text-white/70" />
                           </motion.button>
                         </div>
 
                         {/* Unread indicator */}
                         {!notification.read && (
                           <motion.div
-                            className="absolute top-2 left-2 w-2 h-2 bg-cyber-blue rounded-full"
+                            className="absolute top-1.5 left-1.5 w-1.5 h-1.5 bg-cyber-blue rounded-full"
                             animate={{ 
                               scale: [1, 1.5, 1],
                               opacity: [1, 0.5, 1]

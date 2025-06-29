@@ -8,15 +8,13 @@ interface NotificationToastProps {
   onDismiss: (id: string) => void;
   autoHide?: boolean;
   hideDelay?: number;
-  onExpand?: (notification: Notification) => void;
 }
 
 export const NotificationToast: React.FC<NotificationToastProps> = ({
   notification,
   onDismiss,
   autoHide = true,
-  hideDelay = 4000,
-  onExpand
+  hideDelay = 4000
 }) => {
   useEffect(() => {
     if (autoHide) {
@@ -56,61 +54,47 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
     }
   };
 
-  const handleExpand = () => {
-    if (onExpand) {
-      onExpand(notification);
-    }
-  };
-
   return (
     <motion.div
       initial={{ opacity: 0, x: 300, scale: 0.8 }}
       animate={{ opacity: 1, x: 0, scale: 1 }}
       exit={{ opacity: 0, x: 300, scale: 0.8 }}
       transition={{ type: "spring", duration: 0.5 }}
-      className={`relative backdrop-blur-md border rounded-lg shadow-lg max-w-xs ${getColors()}`}
+      className={`relative backdrop-blur-md border rounded-lg p-3 shadow-lg max-w-xs ${getColors()}`}
     >
-      <div className="flex items-center p-2 space-x-2">
-        {/* Icon - clickable to expand */}
-        <motion.button
-          onClick={handleExpand}
-          className="flex-shrink-0 p-1 hover:bg-white/10 rounded-lg transition-colors"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-          title="Click to view full notification"
+      <div className="flex items-start space-x-2">
+        <motion.div
+          animate={{ 
+            scale: [1, 1.2, 1],
+            rotate: [0, 10, -10, 0]
+          }}
+          transition={{ 
+            duration: 2, 
+            repeat: Infinity, 
+            ease: "easeInOut" 
+          }}
+          className="flex-shrink-0 mt-0.5"
         >
-          <motion.div
-            animate={{ 
-              scale: [1, 1.2, 1],
-              rotate: [0, 10, -10, 0]
-            }}
-            transition={{ 
-              duration: 2, 
-              repeat: Infinity, 
-              ease: "easeInOut" 
-            }}
-          >
-            {getIcon()}
-          </motion.div>
-        </motion.button>
+          {getIcon()}
+        </motion.div>
         
-        {/* Content - truncated */}
         <div className="flex-1 min-w-0">
-          <h4 className="font-semibold text-white text-xs truncate">
+          <h4 className="font-semibold text-white text-sm">
             {notification.title}
           </h4>
-          <p className="text-white/80 text-xs truncate">
+          <p className="text-white/80 text-xs mt-1 line-clamp-2">
             {notification.message}
+          </p>
+          <p className="text-white/50 text-xs mt-1.5">
+            {notification.timestamp.toLocaleTimeString()}
           </p>
         </div>
 
-        {/* Close button */}
         <motion.button
           onClick={() => onDismiss(notification.id)}
-          className="flex-shrink-0 p-1 hover:bg-white/10 rounded-lg transition-colors"
+          className="p-1 hover:bg-white/10 rounded-lg transition-colors flex-shrink-0"
           whileHover={{ scale: 1.1, rotate: 90 }}
           whileTap={{ scale: 0.9 }}
-          title="Dismiss notification"
         >
           <X className="w-3 h-3 text-white/70" />
         </motion.button>
