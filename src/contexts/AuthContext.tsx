@@ -546,27 +546,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Registration successful - show immediate success
       console.log('✅ [AUTH] Registration completed successfully');
       
-      // Add welcome notifications immediately
-      if (addNotification) {
-        addNotification({
-          title: 'Welcome to DevVerse³!',
-          message: `Welcome aboard, ${username}! Your cosmic coding journey begins now! 🌍✨`,
-          type: 'success'
-        });
-        
-        addNotification({
-          title: 'Getting Started',
-          message: 'Visit the Builder to create your dev planet and showcase your tech stack! 🚀',
-          type: 'info'
-        });
-
-        addNotification({
-          title: 'Explore the Galaxy',
-          message: 'Check out the Showroom to discover other developers\' planets and get inspired! 🌌',
-          type: 'info'
-        });
-      }
-
       // Create planet and achievement in the background (don't wait for them)
       setTimeout(async () => {
         try {
@@ -576,15 +555,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             name: `${username}'s Planet`,
           });
           console.log('✅ [AUTH] Default planet created successfully');
-          
-          // Add planet creation notification
-          if (addNotification) {
-            addNotification({
-              title: 'Planet Created! 🪐',
-              message: `Your dev planet "${username}'s Planet" has been created and is now orbiting in the galaxy! Visit the Builder to customize it.`,
-              type: 'success'
-            });
-          }
         } catch (planetError) {
           console.warn('⚠️ [AUTH] Planet creation failed (will be created later):', planetError);
         }
@@ -604,18 +574,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (authState.user) {
             addXP(50);
           }
-          
-          if (addNotification) {
-            addNotification({
-              title: 'Achievement Unlocked! 🏆',
-              message: 'The Beginning - You\'ve joined the galaxy! Welcome to your coding adventure! 🎉',
-              type: 'success'
-            });
-          }
         } catch (achievementError) {
           console.warn('⚠️ [AUTH] Achievement creation failed (will be awarded later):', achievementError);
         }
-      }, 1000); // 1 second delay to ensure registration completes first and notifications are visible
+      }, 100); // Small delay to ensure registration completes first
       
       return true;
     } catch (error) {
