@@ -550,13 +550,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (addNotification) {
         addNotification({
           title: 'Welcome to DevVerse³!',
-          message: 'Your account has been created! 🌍',
+          message: `Welcome aboard, ${username}! Your cosmic coding journey begins now! 🌍✨`,
           type: 'success'
         });
         
         addNotification({
           title: 'Getting Started',
-          message: 'Visit the Builder to create your dev planet! 🚀',
+          message: 'Visit the Builder to create your dev planet and showcase your tech stack! 🚀',
+          type: 'info'
+        });
+
+        addNotification({
+          title: 'Explore the Galaxy',
+          message: 'Check out the Showroom to discover other developers\' planets and get inspired! 🌌',
           type: 'info'
         });
       }
