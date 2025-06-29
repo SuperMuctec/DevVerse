@@ -486,7 +486,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!existenceCheck.canRegister) {
         const conflicts = [];
         if (existenceCheck.existsInAuth) {
-          conflicts.push('email already registered in authentication system');
+          conflicts.push('authentication system');
         }
         if (existenceCheck.existsInPublic) {
           if (existenceCheck.publicConflictType === 'email') {
