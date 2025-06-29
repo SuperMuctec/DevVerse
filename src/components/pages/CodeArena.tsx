@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Zap, Clock, Trophy, Play, Code, CheckCircle, Plus, ArrowLeft, Eye, Sparkles, Target } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Zap, Clock, Trophy, Play, Code, CheckCircle, Plus, ArrowLeft, Eye, Sparkles, Target, X, AlertCircle } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 import { GlassPanel } from '../ui/GlassPanel';
 import { CreateBattleModal } from '../modals/CreateBattleModal';
@@ -17,6 +17,7 @@ export const CodeArena: React.FC = () => {
   const [timeLeft, setTimeLeft] = useState(0);
   const [testResults, setTestResults] = useState<{ passed: number; total: number; details: string[] } | null>(null);
   const [showCreateBattle, setShowCreateBattle] = useState(false);
+  const [showTimeUpModal, setShowTimeUpModal] = useState(false);
   const [userChallenges, setUserChallenges] = useState<CodeBattle[]>([]);
   const [userStats, setUserStats] = useState({
     challengesCompleted: 0,
@@ -89,7 +90,7 @@ export const CodeArena: React.FC = () => {
       const timer = setInterval(() => {
         setTimeLeft(prev => {
           if (prev <= 1) {
-            toast.error('Time\'s up!');
+            setShowTimeUpModal(true);
             return 0;
           }
           return prev - 1;
@@ -182,6 +183,11 @@ export const CodeArena: React.FC = () => {
       localStorage.setItem(hintUsageKey, 'true');
       setIsHintUsed(true);
     }
+  };
+
+  const handleTimeUpClose = () => {
+    setShowTimeUpModal(false);
+    setSelectedBattle(null);
   };
 
   const formatTime = (seconds: number) => {
@@ -672,6 +678,100 @@ export const CodeArena: React.FC = () => {
             </motion.div>
           </div>
         </div>
+
+        {/* Time Up Modal */}
+        <AnimatePresence>
+          {showTimeUpModal && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[200] flex items-center justify-center p-4"
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8, rotateY: -15 }}
+                animate={{ opacity: 1, scale: 1, rotateY: 0 }}
+                exit={{ opacity: 0, scale: 0.8, rotateY: 15 }}
+                transition={{ type: "spring", duration: 0.5 }}
+                className="w-full max-w-md"
+              >
+                <GlassPanel glowColor="#ff0000">
+                  <div className="text-center">
+                    <motion.div
+                      initial={{ scale: 0, rotateZ: -180 }}
+                      animate={{ scale: 1, rotateZ: 0 }}
+                      transition={{ delay: 0.2, duration: 0.8, type: "spring" }}
+                      className="mb-6"
+                    >
+                      <motion.div
+                        className="w-20 h-20 bg-gradient-to-r from-red-500 to-orange-500 rounded-full flex items-center justify-center mx-auto"
+                        animate={{
+                          boxShadow: [
+                            '0 0 20px rgba(255, 0, 0, 0.5)',
+                            '0 0 40px rgba(255, 100, 0, 0.8)',
+                            '0 0 20px rgba(255, 0, 0, 0.5)'
+                          ]
+                        }}
+                        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                      >
+                        <AlertCircle className="w-10 h-10 text-white" />
+                      </motion.div>
+                    </motion.div>
+
+                    <motion.h1
+                      className="font-orbitron text-2xl font-bold text-white mb-4"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.4, duration: 0.6 }}
+                    >
+                      Time's Up!
+                    </motion.h1>
+
+                    <motion.p
+                      className="text-white/80 mb-6 leading-relaxed"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.6, duration: 0.6 }}
+                    >
+                      Better luck next time! Don't give up - every attempt makes you stronger.
+                    </motion.p>
+
+                    <motion.div
+                      className="bg-gradient-to-r from-red-500/20 to-orange-500/20 p-4 rounded-lg border border-red-500/30 mb-6"
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.8, duration: 0.5 }}
+                    >
+                      <h3 className="font-semibold text-red-400 mb-2 text-sm">💡 Tips for Next Time</h3>
+                      <ul className="text-white/70 text-sm space-y-1 text-left">
+                        <li>• Break down the problem into smaller steps</li>
+                        <li>• Use the AI hint system for guidance</li>
+                        <li>• Practice similar problems to improve speed</li>
+                        <li>• Review the examples carefully before coding</li>
+                      </ul>
+                    </motion.div>
+
+                    <motion.button
+                      onClick={handleTimeUpClose}
+                      className="w-full bg-gradient-to-r from-red-500 to-orange-500 py-3 rounded-lg font-orbitron font-bold text-white transition-all duration-300 flex items-center justify-center space-x-2"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 1, duration: 0.6 }}
+                      whileHover={{
+                        scale: 1.02,
+                        boxShadow: '0 0 30px rgba(255, 0, 0, 0.5)'
+                      }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <X className="w-4 h-4" />
+                      <span>Back to Arena</span>
+                    </motion.button>
+                  </div>
+                </GlassPanel>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
