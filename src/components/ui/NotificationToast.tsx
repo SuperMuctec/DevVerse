@@ -88,7 +88,8 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
     }
   };
 
-  const handleDismiss = () => {
+  const handleDismiss = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setIsVisible(false);
     setTimeout(() => onDismiss(notification.id), 300);
   };
@@ -97,6 +98,7 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
     <AnimatePresence>
       {isVisible && (
         <motion.div
+          layout
           initial={{ opacity: 0, x: -100, scale: 0.8 }}
           animate={{ opacity: 1, x: 0, scale: 1 }}
           exit={{ opacity: 0, x: -100, scale: 0.8 }}
@@ -143,11 +145,11 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
               </p>
             </div>
 
-            {/* Cross button */}
+            {/* Enhanced Cross button */}
             <motion.button
               onClick={handleDismiss}
-              className="p-1.5 hover:bg-white/20 rounded-lg transition-colors flex-shrink-0 group"
-              whileHover={{ scale: 1.1 }}
+              className="p-2 hover:bg-white/20 rounded-lg transition-colors flex-shrink-0 group ml-2"
+              whileHover={{ scale: 1.15 }}
               whileTap={{ scale: 0.9 }}
               title="Dismiss notification"
             >
@@ -155,7 +157,7 @@ export const NotificationToast: React.FC<NotificationToastProps> = ({
                 whileHover={{ rotate: 90 }}
                 transition={{ duration: 0.2 }}
               >
-                <X className="w-4 h-4 text-white/70 group-hover:text-white" />
+                <X className="w-5 h-5 text-white/70 group-hover:text-white" />
               </motion.div>
             </motion.button>
           </div>

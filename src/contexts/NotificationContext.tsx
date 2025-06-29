@@ -29,7 +29,7 @@ export const useNotifications = () => {
   return context;
 };
 
-const MAX_NOTIFICATIONS = 50; // Increased to store more notifications in panel
+const MAX_NOTIFICATIONS = 50; // Store more notifications but only show 5 at a time
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -68,10 +68,14 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       // Keep only the latest notifications
       return updated.slice(0, MAX_NOTIFICATIONS);
     });
+
+    // Log for debugging
+    console.log('🔔 [NOTIFICATION] Added:', newNotification.title);
   };
 
   const removeNotification = (id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
+    console.log('🗑️ [NOTIFICATION] Removed:', id);
   };
 
   const markAsRead = (id: string) => {
@@ -82,6 +86,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const clearAll = () => {
     setNotifications([]);
+    console.log('🗑️ [NOTIFICATION] Cleared all notifications');
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
