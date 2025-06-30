@@ -319,43 +319,49 @@ export const dbOps = {
   },
 
   // Projects
-  async createProject(projectData: any) {
-    console.log('🔵 [DB] Creating project with data:', projectData);
+async createProject(projectData: any) {
+  console.log('🔵 [DB] Creating project with data:', projectData);
 
-    try {
-      const { data, error } = await withTimeout(
-        supabase
-          .from('projects')
-          .insert({
-            id: projectData.id || uuidv4(),
-            user_id: projectData.user_id,
-            name: projectData.name,
-            description: projectData.description,
-            language: projectData.language,
-            github_url: projectData.github_url,
-            homepage: projectData.homepage,
-            topics: projectData.topics || [],
-            is_private: projectData.is_private || false,
-            stars: projectData.stars || 0,
-            forks: projectData.forks || 0,
-          })
-          .select()
-          .single(),
-        5000
-      );
+  try {
+    const insertData = {
+  user_id: projectData.user_id,  // must be a valid UUID string
+  name: projectData.name,
+  description: projectData.description,
+  language: projectData.language,
+  github_url: projectData.github_url,
+  homepage: projectData.homepage,
+  topics: projectData.topics || [],
+  is_private: projectData.is_private || false,
+  stars: projectData.stars || 0,
+  forks: projectData.forks || 0
+}
 
-      if (error) {
-        console.error('❌ [DB] Error creating project:', error);
-        throw error;
-      }
 
-      console.log('✅ [DB] Project created successfully:', data);
-      return data;
-    } catch (error) {
-      console.error('❌ [DB] createProject failed:', error);
+    console.log('📦 [DB] Final project insert:', JSON.stringify(insertData, null, 2));
+
+    const { data, error } = await withTimeout(
+      supabase
+        .from('projects')
+        .insert(insertData)
+        .select()
+        .single(),
+      5000
+    );
+
+    if (error) {
+      console.error('❌ [DB] Error creating project:', error);
       throw error;
     }
-  },
+
+    console.log('✅ [DB] Project created successfully:', data);
+    return data;
+  } catch (error) {
+    console.error('❌ [DB] createProject failed:', error);
+    throw error;
+  }
+},
+
+
 
   async getProjectsByUserId(userId: string) {
     console.log('🔵 [DB] Getting projects for user ID:', userId);
