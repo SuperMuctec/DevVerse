@@ -130,6 +130,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
                   alt="DevVerse³ Logo"
                   className="w-16 h-16 sm:w-24 sm:h-24 md:w-32 md:h-32 mx-auto mb-4 opacity-90"
                   animate={{ 
+                    rotateZ: [0, 360],
                     scale: [1, 1.05, 1],
                     filter: [
                       'drop-shadow(0 0 20px rgba(0, 255, 255, 0.5))',
@@ -138,6 +139,7 @@ export const GalaxyView: React.FC<GalaxyViewProps> = ({ onNavigate }) => {
                     ]
                   }}
                   transition={{ 
+                    rotateZ: { duration: 20, repeat: Infinity, ease: "linear" },
                     scale: { duration: 3, repeat: Infinity, ease: "easeInOut" },
                     filter: { duration: 2, repeat: Infinity, ease: "easeInOut" }
                   }}

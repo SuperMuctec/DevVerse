@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Eye, EyeOff, Mail, Lock, User, Rocket, CheckCircle, ArrowRight } from 'lucide-react';
-import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { GlassPanel } from '../ui/GlassPanel';
 
@@ -22,10 +21,9 @@ type RegisterFormData = z.infer<typeof registerSchema>;
 
 interface RegisterPageProps {
   onSwitchToLogin: () => void;
-  onBack?: () => void;
 }
 
-export const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin, onBack }) => {
+export const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -146,19 +144,6 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onSwitchToLogin, onB
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
-      {/* Back Button */}
-      {onBack && (
-        <motion.button
-          onClick={onBack}
-          className="fixed top-6 left-6 z-50 flex items-center space-x-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
-          whileHover={{ scale: 1.05, x: -5 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back</span>
-        </motion.button>
-      )}
-
       <motion.div
         initial={{ opacity: 0, y: 30, rotateY: -15 }}
         animate={{ opacity: 1, y: 0, rotateY: 0 }}
