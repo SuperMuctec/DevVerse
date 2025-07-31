@@ -19,9 +19,10 @@ import { PlanetDetail } from './components/pages/PlanetDetail';
 import { Nebula } from './components/pages/Nebula';
 import { LoginPage } from './components/auth/LoginPage';
 import { RegisterPage } from './components/auth/RegisterPage';
+import { LandingPage } from './components/pages/LandingPage';
 
 const AppContent: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState('galaxy');
+  const [currentPage, setCurrentPage] = useState('landing');
   const [authPage, setAuthPage] = useState<'login' | 'register' | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedPlanetId, setSelectedPlanetId] = useState<string | null>(null);
@@ -38,22 +39,69 @@ const AppContent: React.FC = () => {
     );
   }
 
-  if (!isAuthenticated) {
+  // Show landing page first, regardless of authentication status
+  if (currentPage === 'landing') {
+    return (
+      <div className="magnetic-cursor min-h-screen bg-space-dark text-white relative overflow-x-hidden">
+        <StarField />
+        <MagneticCursor />
+        <LandingPage 
+          onLogin={() => setAuthPage('login')}
+          onRegister={() => setAuthPage('register')}
+          onEnterApp={() => setCurrentPage('galaxy')}
+          isAuthenticated={isAuthenticated}
+        />
+      </div>
+    );
+  }
+
+  // Show auth pages when requested
+  if (!isAuthenticated && authPage) {
     if (authPage === 'register') {
       return (
         <div className="magnetic-cursor min-h-screen bg-space-dark text-white relative overflow-x-hidden">
           <StarField />
           <MagneticCursor />
-          <RegisterPage onSwitchToLogin={() => setAuthPage('login')} />
+          <RegisterPage 
+            onSwitchToLogin={() => setAuthPage('login')}
+            onBack={() => {
+              setAuthPage(null);
+              setCurrentPage('landing');
+            }}
+          />
         </div>
       );
     }
 
+    if (authPage === 'login') {
+      return (
+        <div className="magnetic-cursor min-h-screen bg-space-dark text-white relative overflow-x-hidden">
+          <StarField />
+          <MagneticCursor />
+          <LoginPage 
+            onSwitchToRegister={() => setAuthPage('register')}
+            onBack={() => {
+              setAuthPage(null);
+              setCurrentPage('landing');
+            }}
+          />
+        </div>
+      );
+    }
+  }
+
+  // Redirect to landing if not authenticated and no auth page selected
+  if (!isAuthenticated && !authPage) {
     return (
       <div className="magnetic-cursor min-h-screen bg-space-dark text-white relative overflow-x-hidden">
         <StarField />
         <MagneticCursor />
-        <LoginPage onSwitchToRegister={() => setAuthPage('register')} />
+        <LandingPage 
+          onLogin={() => setAuthPage('login')}
+          onRegister={() => setAuthPage('register')}
+          onEnterApp={() => setCurrentPage('galaxy')}
+          isAuthenticated={isAuthenticated}
+        />
       </div>
     );
   }
